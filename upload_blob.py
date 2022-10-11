@@ -5,20 +5,14 @@ import random
 import string
 
 import pandas as pd
-from azure.storage.blob import (
-    BlobClient,
-    BlobSasPermissions,
-    BlobServiceClient,
-    ContentSettings,
-    generate_blob_sas,
-)
+from azure.storage.blob import (BlobClient, BlobSasPermissions,
+                                BlobServiceClient, ContentSettings,
+                                generate_blob_sas)
 
 # TODO
 # Luca make blob storage account and container / terraform?
 # Env variables: (put in .bashrc file on rpi), on mac it is .zshrc
 # upload some files
-
-
 
 class BlobStorageHandler:
     def __init__(self, container_name):
