@@ -11,13 +11,13 @@ repos:
     rev: 3.9.2
     hooks:
     - id: flake8
--   repo: local
-    hooks:
-    -   id: pytest
-        name: pytest
-        entry: pytest
-        language: system
-        always_run: true
-        pass_filenames: false
-        types: [python]
-        stages: [push]
+#-   repo: local -- uncomment when test are available
+#    hooks:
+#    -   id: pytest
+#        name: pytest
+#        entry: pytest
+#        language: system
+#        always_run: true
+#        pass_filenames: false
+#        types: [python]
+#        stages: [push]
