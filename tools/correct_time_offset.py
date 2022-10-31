@@ -1,6 +1,6 @@
+import datetime
 import glob
 import os
-import datetime
 
 from dateutil.relativedelta import relativedelta
 
