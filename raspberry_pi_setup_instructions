@@ -3,12 +3,20 @@
 # Packages
 sudo apt update; sudo apt upgrade; sudo apt autoremove; sudo reboot;
 
+# System monitoring
 sudo apt install htop
 sudo apt install s-tui
 # sudo apt install lm-sensor
 
+# SW dev.
 sudo apt install git
-sudo apt install venv
+sudo ssh-keygen
+sudo cat home/fish-pi/.ssh/id_rsa.pub
+# Copy key to account https://dev.azure.com/Axpo-AXP/
+# Clone repo using command from https://dev.azure.com/Axpo-AXP/AXH-Secret-Module-Development/_git/AXH-SonarFish
+
+# setup venv
+sudo apt install python3-venv python3-pip
 
 sudo apt install v4l-utils
 sudo apt install ffmpeg
