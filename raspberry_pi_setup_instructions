@@ -1,0 +1,23 @@
+# Raspberry Pi setup
+
+# Packages
+sudo apt update; sudo apt upgrade; sudo apt autoremove; sudo reboot;
+
+sudo apt install htop
+sudo apt install s-tui
+# sudo apt install lm-sensor
+
+sudo apt install git
+sudo apt install venv
+
+sudo apt install v4l-utils
+sudo apt install ffmpeg
+
+# Modify inputrc files (system and local) to scroll up history
+# sudo nano /etc/.inputrc 
+# sudo nano ~/.inputrc 
+
+# add these lines
+# "\e[A": history-search-backward
+# "\e[B": history-search-forward
+
