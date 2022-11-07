@@ -13,32 +13,25 @@ if __name__ == "__main__":
         "/Users/leivandresen/Documents/PROJECTS/SONAR_FISH/Field_test_Stroppel_20to24_10_22/"
         "weekend_backup/*.mp4")
     input_files_test = "/Users/leivandresen/Documents/Hydro_code/AXH-SonarFish/file_stitch_test/*.mp4"
-    save_dir = "/Users/leivandresen/Documents/Hydro_code/AXH-SonarFish/file_stitch_test/stitched/"
+    save_dir = "/Users/leivandresen/Documents/PROJECTS/SONAR_FISH/Field_test_Stroppel_20to24_10_22/" \
+               "weekend_backup/stitched/"
     os.makedirs(name=save_dir, exist_ok=True)
-    n_videos_to_join = 2
+    n_videos_to_join = 24
 
-    filenames = glob.glob(input_files_test)
+    filenames = glob.glob(input_files_local)
     filenames.sort()
 
-    current_start_file = 0
+    current_start_file = 3 + 24
+    epoch = dt.datetime.utcfromtimestamp(0)
     while current_start_file < len(filenames):
         interest = filenames[current_start_file:]
         if len(filenames[current_start_file:]) > n_videos_to_join:
             interest = filenames[current_start_file:(current_start_file+n_videos_to_join)]
 
-        # Sample "[0:0][1:0][2:0][3:0][4:0][5:0]concat=n=6:v=1:a=0[v]"
-        input_files = "".join([(" -i " + file) for file in interest])
-        # draw_text = " [v] drawtext=fontfile=roboto.ttf:fontsize=36:fontcolor=yellow:text='%{pts\:gmtime\:1456007118}'\""
-        input_params = (
-            "'"
-            + "".join([f"[{file_no}:0]" for file_no in np.arange(0, len(interest))])
-            + f"concat=n={len(interest)}:v=1:a=0[v]"
-            + "'"
-        )
-
         date_fmt = "%y-%m-%d_start_%H-%M-%S.mp4"
         datetime_start = dt.datetime.strptime(os.path.split(interest[0])[-1], date_fmt)
         datetime_end = dt.datetime.strptime(os.path.split(interest[-1])[-1], date_fmt) + relativedelta(minutes=10)
+        seconds_since_epoch_start = (datetime_start - epoch).total_seconds()
 
         new_filename = (
                 save_dir
@@ -47,8 +40,19 @@ if __name__ == "__main__":
                 + ".mp4"
         )
 
+        # Sample "[0:0][1:0][2:0][3:0][4:0][5:0]concat=n=6:v=1:a=0[v]"
+        input_files = "".join([(" -i " + file) for file in interest])
+        input_params = (
+                "\""
+                + "".join([f"[{file_no}:0]" for file_no in np.arange(0, len(interest))])
+                + f"concat=n={len(interest)}:v=1:a=0[v],"
+                + f"[v]drawtext=text='%{{pts\:gmtime\:{seconds_since_epoch_start}}}'"
+                  f":x=(w-550):y=(h-130):fontfile=OpenSans.ttf:fontsize=40:fontcolor=white[v]"
+                + "\""
+        )
+
         command = (
-                "ffmpeg "
+                "ffmpeg -y"
                 + input_files
                 + " -filter_complex "
                 + input_params
@@ -84,7 +88,6 @@ if __name__ == "__main__":
             print("Command: " + command)
             print("Output of subprocess: \n")
             print(e.output)
-            print("\nSleeping 2 seconds...\n")
             quit()
 
         current_start_file += len(interest)
