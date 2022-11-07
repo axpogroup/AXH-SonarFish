@@ -28,7 +28,7 @@ if __name__ == "__main__":
         interest = filenames[current_start_file:]
         if len(filenames[current_start_file:]) > n_videos_to_join:
             interest = filenames[
-                current_start_file: (current_start_file + n_videos_to_join)
+                current_start_file : (current_start_file + n_videos_to_join)
             ]
 
         # Sample "[0:0][1:0][2:0][3:0][4:0][5:0]concat=n=6:v=1:a=0[v]"

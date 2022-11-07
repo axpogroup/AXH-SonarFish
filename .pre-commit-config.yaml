@@ -13,6 +13,7 @@ repos:
     hooks:
     - id: flake8
       args: [ --max-line-length=120,
+              --ignore=E203,W605
       ]
 #-   repo: local -- uncomment when test are available
 #    hooks:

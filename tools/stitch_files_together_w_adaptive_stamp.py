@@ -49,7 +49,7 @@ if __name__ == "__main__":
         interest = filenames[current_start_file:]
         if len(filenames[current_start_file:]) > n_videos_to_join:
             interest = filenames[
-                current_start_file: (current_start_file + n_videos_to_join)
+                current_start_file : (current_start_file + n_videos_to_join)
             ]
 
         date_fmt = "%y-%m-%d_start_%H-%M-%S.mp4"
