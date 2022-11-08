@@ -45,7 +45,7 @@ if __name__ == "__main__":
     filenames = glob.glob(input_files_local)
     filenames.sort()
 
-    current_start_file = 3 + 24 + 24
+    current_start_file = 3
     epoch = dt.datetime.utcfromtimestamp(0)
     while current_start_file < len(filenames):
         interest = filenames[current_start_file:]
@@ -128,3 +128,4 @@ if __name__ == "__main__":
             quit()
 
         current_start_file += len(interest)
+        quit()
