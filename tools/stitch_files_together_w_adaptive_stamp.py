@@ -21,13 +21,13 @@ def check_time_gaps(filename_list, date_format):
         delta_s = (datetime_start_2 - datetime_end_1).total_seconds()
         time_diffs.append(delta_s)
 
-    time_diffs.sort()
-    print("Biggest time gaps: ", time_diffs[-10:])
+    # time_diffs.sort()
+    # print("Biggest time gaps: ", time_diffs[-10:])
+    return time_diffs
 
 
 if __name__ == "__main__":
-    # This script changes the filenames since the raspberry pi had the wrong system time
-    input_files_stick = "/Volumes/SONAR_STICK/recordings_stroppel_weekend/*.mp4"
+    input_files_stick = "/Volumes/SONAR_STICK/Stroppel_ongoing/*.mp4"
     input_files_local = (
         "/Users/leivandresen/Documents/PROJECTS/SONAR_FISH/Field_test_Stroppel_20to24_10_22/"
         "weekend_backup/*.mp4"
@@ -36,25 +36,45 @@ if __name__ == "__main__":
         "/Users/leivandresen/Documents/Hydro_code/AXH-SonarFish/file_stitch_test/*.mp4"
     )
     save_dir = (
-        "/Users/leivandresen/Documents/PROJECTS/SONAR_FISH/Field_test_Stroppel_20to24_10_22/"
-        "weekend_backup/stitched_final/"
+        "/Volumes/SONAR_STICK/recordings_stroppel_ongoing_4h_compressed/"
     )
     os.makedirs(name=save_dir, exist_ok=True)
+    date_fmt = "%y-%m-%d_start_%H-%M-%S.mp4"
     n_videos_to_join = 24
 
-    filenames = glob.glob(input_files_local)
+    filenames = glob.glob(input_files_stick)
     filenames.sort()
 
-    current_start_file = 3
+    set_start_date = True
+    start_date = dt.datetime.strptime("22-11-07_start_00-00-00.mp4", date_fmt)
+    if set_start_date:
+        for i in range(0, len(filenames)):
+            datetime_file = dt.datetime.strptime(
+                os.path.split(filenames[i])[-1], date_fmt
+            )
+            if datetime_file > start_date:
+                filenames = filenames[i:]
+                break
+
+    current_start_file = 0
     epoch = dt.datetime.utcfromtimestamp(0)
     while current_start_file < len(filenames):
         interest = filenames[current_start_file:]
-        if len(filenames[current_start_file:]) > n_videos_to_join:
+        if len(interest) > n_videos_to_join:
             interest = filenames[
                 current_start_file : (current_start_file + n_videos_to_join)
             ]
 
-        date_fmt = "%y-%m-%d_start_%H-%M-%S.mp4"
+        # Check for time differences bigger than 15 seconds
+        time_between_videos = check_time_gaps(interest, date_fmt)
+        for index, gap in enumerate(time_between_videos):
+            if gap > 60:
+                print("Happened: ", interest[index], " and ", interest[index+1])
+                interest = interest[:index+1]
+                time_between_videos = check_time_gaps(interest, date_fmt)
+                print(time_between_videos, interest)
+                break
+
         datetime_start = dt.datetime.strptime(os.path.split(interest[0])[-1], date_fmt)
         datetime_end = dt.datetime.strptime(
             os.path.split(interest[-1])[-1], date_fmt
@@ -93,7 +113,7 @@ if __name__ == "__main__":
             "ffmpeg -y"
             + input_files
             + filter_complex
-            + " -map '[v]' -c:v libx264 -preset medium -crf 40 "
+            + " -map '[v]' -c:v libx264 -preset medium -crf 40 -threads:v 5 "
             + new_filename
         )
 
@@ -128,4 +148,3 @@ if __name__ == "__main__":
             quit()
 
         current_start_file += len(interest)
-        quit()
