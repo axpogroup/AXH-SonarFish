@@ -10,15 +10,15 @@ recording_files_mac = (
     "/Users/leivandresen/Documents/PROJECTS/SONAR_FISH/Field_test_Stroppel_20to24_10_22/"
     "weekend_backup/"
 )
-recording_files_rpi = "/media/fish-pi/sonar-disk1/Stroppel_ongoing/"
+recording_files_rpi = "/media/fish-pi/sonar-disk1/Stroppel_ongoing_machine_settings/"
 folder_for_snippets = "./recording_snippets"
 os.makedirs(name=folder_for_snippets, exist_ok=True)
 
-recordings = glob.glob(recording_files_mac + "*.mp4")
+recordings = glob.glob(recording_files_rpi + "*.mp4")
 recordings.sort()
 snippet_name = os.path.splitext(os.path.split(recordings[-2])[-1])[0] + "_snippet.mp4"
 snippet_path = os.path.join(folder_for_snippets, snippet_name)
-snippet_cmd = f"ffmpeg -y -i {recordings[-2]} -c:v libx264 -t 00:00:10 {snippet_path}"
+snippet_cmd = f"ffmpeg -i {recordings[-2]} -c:v libx264 -preset medium -crf 46 -t 00:00:10 {snippet_path}"
 success = False
 try:
     output = subprocess.run(
@@ -39,7 +39,7 @@ except subprocess.CalledProcessError as e:
     print("Output of subprocess: \n")
     print(e.output)
 
-time.sleep(2)
+time.sleep(5)
 
 # Upload the snippet
 if success:
