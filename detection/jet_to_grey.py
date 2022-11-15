@@ -1,13 +1,11 @@
-import numpy as np
 import cv2 as cv
-
-from matplotlib import colormaps # colormaps['jet'], colormaps['turbo']
-from matplotlib.colors import LinearSegmentedColormap
+import numpy as np
 from matplotlib._cm import _jet_data
+from matplotlib.colors import LinearSegmentedColormap
 
 
 def initialize_model():
-    cm = LinearSegmentedColormap("jet", _jet_data, N=2 ** 8)
+    cm = LinearSegmentedColormap("jet", _jet_data, N=2**8)
     # cm = colormaps['turbo'] swap with jet if you use turbo colormap instead
 
     cm._init()  # Must be called first. cm._lut data field created here
@@ -38,7 +36,7 @@ def jet_to_gray(fm, img):
     return result  # , dist uncomment if you wish accuracy image
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     recording_file = "recordings/22-10-20_start_18_29_snippet.mp4"
     many_settings_file = "recordings/12-03_verschied_Einstellungen.m4v"
     cap = cv.VideoCapture(recording_file)
@@ -52,8 +50,8 @@ if __name__ == '__main__':
     print(fps)
 
     # initialize the FourCC and a video writer object
-    fourcc = cv.VideoWriter_fourcc('m', 'p', '4', 'v')
-    output = cv.VideoWriter('output.mp4', fourcc, fps, (frame_width, frame_height))
+    fourcc = cv.VideoWriter_fourcc("m", "p", "4", "v")
+    output = cv.VideoWriter("output.mp4", fourcc, fps, (frame_width, frame_height))
 
     model = initialize_model()
     frame_no = 0

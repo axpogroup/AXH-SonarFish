@@ -1,9 +1,7 @@
-import numpy as np
 import cv2 as cv
-
-from matplotlib import colormaps # colormaps['jet'], colormaps['turbo']
-from matplotlib.colors import LinearSegmentedColormap
+import numpy as np
 from matplotlib._cm import _jet_data
+from matplotlib.colors import LinearSegmentedColormap
 
 
 # TODO continue here with this little refactoring
@@ -23,7 +21,7 @@ def blur_filter(src, kernel_size=10):
 def convert_jet_to_grey(img):
     (height, width) = img.shape[:2]
 
-    cm = LinearSegmentedColormap("jet", _jet_data, N=2 ** 8)
+    cm = LinearSegmentedColormap("jet", _jet_data, N=2**8)
     # cm = colormaps['turbo'] swap with jet if you use turbo colormap instead
 
     cm._init()  # Must be called first. cm._lut data field created here
@@ -49,7 +47,7 @@ def convert_jet_to_grey(img):
     return result  # , dist uncomment if you wish accuracy image
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     recording_file = "recordings/Jet_to_gray.mp4"
     cap = cv.VideoCapture(recording_file)
     frame_by_frame = False
@@ -71,10 +69,10 @@ if __name__ == '__main__':
             previous_img = gray
         current_image = gray
         #
-        diff = abs(current_image-previous_img) + 125
+        diff = abs(current_image - previous_img) + 125
 
         # Filter duplicate frames
-        if abs(np.mean(diff)-125) < 0.1:
+        if abs(np.mean(diff) - 125) < 0.1:
             continue
 
         # Threshold diffs
@@ -84,20 +82,20 @@ if __name__ == '__main__':
         # output.write(gray)
 
         # out = np.concatenate((diff, frame), axis=1)
-        cv.imshow('frame', diff)
+        cv.imshow("frame", diff)
 
         previous_img = gray
 
         # Play the video file
         if not frame_by_frame:
             usr_input = cv.waitKey(1)
-        if usr_input == ord(' '):
-            if cv.waitKey(0) == ord(' '):
+        if usr_input == ord(" "):
+            if cv.waitKey(0) == ord(" "):
                 frame_by_frame = True
             else:
                 frame_by_frame = False
             print("Press any key to continue ... ")
-        if usr_input == ord('q'):
+        if usr_input == ord("q"):
             break
 
     cap.release()
