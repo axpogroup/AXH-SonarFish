@@ -4,9 +4,9 @@ import time
 from datetime import datetime as dt
 
 if __name__ == "__main__":
-    # directory = "recordings_10min_Stroppel/"
+    # directory = "recordings_findingnewsettings_141122/"
     # directory = "/media/fish-pi/SONAR_STICK/recordings_stroppel_weekend/"
-    directory = "/media/fish-pi/sonar-disk/test_overnight_01_11/"
+    directory = "/media/fish-pi/sonar-disk1/Stroppel_ongoing_machine_settings/"
     date_fmt = "%y-%m-%d_start_%H-%M-%S"
     record_cmd_prefix = "ffmpeg -framerate 25 -pixel_format uyvy422 -i /dev/video0 -vcodec h264_v4l2m2m -b:v 6M -r 20 "
     duration_suffix = "-t 00:10:00"

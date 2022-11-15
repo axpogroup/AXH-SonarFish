@@ -14,10 +14,10 @@ sudo cat home/fish-pi/.ssh/id_rsa.pub
 # Host github.com
 #  User git
 #  Hostname github.com
-#  IdentityFile ~/.ssh/id_rsa.pub
+#  IdentityFile ~/.ssh/id_rsa
 
 # and ran this command
-git config core.sshCommand "ssh -i ~/.ssh/id_rsa
+git config core.sshCommand "ssh -i ~/.ssh/id_rsa"
 
 
 # setup venv
@@ -26,6 +26,9 @@ sudo apt install python3-venv python3-pip
 python3 -m venv venv
 # activate: 
 source venv/bin/activate 
+
+# img viewer
+pip install timg
 
 
 # ---- OTHER ----
