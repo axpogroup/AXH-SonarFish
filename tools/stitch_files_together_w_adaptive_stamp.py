@@ -35,9 +35,7 @@ if __name__ == "__main__":
     input_files_test = (
         "/Users/leivandresen/Documents/Hydro_code/AXH-SonarFish/file_stitch_test/*.mp4"
     )
-    save_dir = (
-        "/Volumes/SONAR_STICK/recordings_stroppel_ongoing_4h_compressed/"
-    )
+    save_dir = "/Volumes/SONAR_STICK/recordings_stroppel_ongoing_4h_compressed/"
     os.makedirs(name=save_dir, exist_ok=True)
     date_fmt = "%y-%m-%d_start_%H-%M-%S.mp4"
     n_videos_to_join = 24
@@ -69,8 +67,8 @@ if __name__ == "__main__":
         time_between_videos = check_time_gaps(interest, date_fmt)
         for index, gap in enumerate(time_between_videos):
             if gap > 60:
-                print("Happened: ", interest[index], " and ", interest[index+1])
-                interest = interest[:index+1]
+                print("Happened: ", interest[index], " and ", interest[index + 1])
+                interest = interest[: index + 1]
                 time_between_videos = check_time_gaps(interest, date_fmt)
                 print(time_between_videos, interest)
                 break
