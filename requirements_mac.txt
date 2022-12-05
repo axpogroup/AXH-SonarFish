@@ -5,5 +5,7 @@ python-dotenv==0.21.0
 
 # Algorithms
 opencv-python==4.6.0.66
+# only for tracking prototyping
+opencv-contrib-python==4.6.0.66
 matplotlib==3.6.2
 

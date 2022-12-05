@@ -39,7 +39,8 @@ def jet_to_gray(fm, img):
 if __name__ == "__main__":
     recording_file = "recordings/22-10-20_start_18_29_snippet.mp4"
     many_settings_file = "recordings/12-03_verschied_Einstellungen.m4v"
-    cap = cv.VideoCapture(recording_file)
+    swarm_file = "recordings/Schwarm_einzel_schwer.mp4"
+    cap = cv.VideoCapture(swarm_file)
     frame_by_frame = False
     previous_img = False
 
@@ -51,10 +52,11 @@ if __name__ == "__main__":
 
     # initialize the FourCC and a video writer object
     fourcc = cv.VideoWriter_fourcc("m", "p", "4", "v")
-    output = cv.VideoWriter("output.mp4", fourcc, fps, (frame_width, frame_height))
+    output = cv.VideoWriter("Schwarm_einzel_jet_to_gray_real_2.mp4", fourcc, fps, (frame_width, frame_height))
 
     model = initialize_model()
     frame_no = 0
+    last_frame = None
     while cap.isOpened():
         ret, frame = cap.read()
         # if frame is read correctly ret is True
@@ -63,13 +65,22 @@ if __name__ == "__main__":
             print(frame_no)
             break
 
+        # Filter duplicate frames --> distorts the time dimension
+        # if last_frame is None:
+        #     last_frame = frame
+        #     continue
+        # elif abs(np.mean(frame - last_frame)) < 0.1:
+        #     last_frame = frame
+        #     print("Skipped")
+        #     continue
+
         # WORK ON THE FRAME
         gray = jet_to_gray(model, frame)
         gray = cv.cvtColor(gray, cv.COLOR_GRAY2BGR)
         output.write(gray)
         # cv.imshow('frame', gray)
         frame_no += 1
-        print(f"Processed {frame_no/2125*100} % of video.")
+        print(f"Processed {frame_no/(180*20)} % of video.")
 
     cap.release()
     output.release()
