@@ -52,7 +52,12 @@ if __name__ == "__main__":
 
     # initialize the FourCC and a video writer object
     fourcc = cv.VideoWriter_fourcc("m", "p", "4", "v")
-    output = cv.VideoWriter("Schwarm_einzel_jet_to_gray_real_2.mp4", fourcc, fps, (frame_width, frame_height))
+    output = cv.VideoWriter(
+        "Schwarm_einzel_jet_to_gray_real_2.mp4",
+        fourcc,
+        fps,
+        (frame_width, frame_height),
+    )
 
     model = initialize_model()
     frame_no = 0
