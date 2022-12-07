@@ -2,7 +2,6 @@ import os
 
 import cv2 as cv
 import numpy as np
-
 from Object import Object
 
 fish_area_mask = cv.imread("masks/fish.png", cv.IMREAD_GRAYSCALE)
@@ -46,7 +45,9 @@ class FishDetector:
         self.current_enhanced = self.enhance_frame(self.current_gray)
 
         if self.framebuffer.shape[2] == self.buffer_size:
-            self.current_output, self.current_classified = self.detect_and_track(self.current_enhanced)
+            self.current_output, self.current_classified = self.detect_and_track(
+                self.current_enhanced
+            )
 
         # self.current_output = self.mask_regions(self.current_output, area='fish')
         self.frame_number += 1
@@ -65,7 +66,9 @@ class FishDetector:
         # # Transform into visual image
         enhanced_temp = (abs(enhanced_temp) + 125).astype("uint8")
         # ret, self.current_enhanced = cv.threshold(self.current_enhanced, 160, 255, 0)
-        enhanced_temp = self.spatial_filter(enhanced_temp, kernel_size=11, method="median")
+        enhanced_temp = self.spatial_filter(
+            enhanced_temp, kernel_size=11, method="median"
+        )
         return enhanced_temp
 
     def detect_and_track(self, enhanced_frame):
@@ -81,8 +84,12 @@ class FishDetector:
         #     self.current_output = current_object.draw_bounding_box(self.current_output, (0, 255, 0))
 
         # self.current_output = self.draw_associations(self.current_output, color=(200, 230, 0))
-        self.current_classified = cv.cvtColor(self.mask_regions(self.current_gray, area="fish"), cv.COLOR_GRAY2BGR)
-        self.current_classified = self.draw_objects(self.current_classified, classifications=True)
+        self.current_classified = cv.cvtColor(
+            self.mask_regions(self.current_gray, area="fish"), cv.COLOR_GRAY2BGR
+        )
+        self.current_classified = self.draw_objects(
+            self.current_classified, classifications=True
+        )
         self.current_output = self.draw_objects(self.current_output, debug=True)
         # self.current_tracked = self.draw_objects(cv.cvtColor(frame, cv.COLOR_GRAY2BGR), debug=True)
 
@@ -205,10 +212,14 @@ class FishDetector:
     def find_points_of_interest(self, enhanced_frame, mode="contour"):
         if mode == "contour":
             # Make positive and negative differences the same
-            enhanced_frame = (abs(enhanced_frame.astype("int16") - 125) + 125).astype("uint8")
+            enhanced_frame = (abs(enhanced_frame.astype("int16") - 125) + 125).astype(
+                "uint8"
+            )
 
             # Consolidate the points
-            enhanced_frame = cv.GaussianBlur(enhanced_frame.astype("uint8"), (101, 101), 0)
+            enhanced_frame = cv.GaussianBlur(
+                enhanced_frame.astype("uint8"), (101, 101), 0
+            )
 
             # Threshold
             ret, thres = cv.threshold(enhanced_frame, 127, 255, 0)
@@ -262,7 +273,9 @@ class FishDetector:
         diff[abs(diff) < threshold * self.long_std_dev] = 0
         return diff
 
-    def create_mean_std_dev(self):  # Unused for now since the ground pattern changes we can't use a hardcoded image
+    def create_mean_std_dev(
+        self,
+    ):  # Unused for now since the ground pattern changes we can't use a hardcoded image
         # Put in process_frame()
         # Do this to save time before implementing it in a rolling manner
         # self.create_mean_std_dev()
