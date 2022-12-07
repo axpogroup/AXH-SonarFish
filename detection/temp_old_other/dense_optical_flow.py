@@ -24,7 +24,7 @@ mask = np.zeros_like(first_frame)
 # Sets image saturation to maximum
 mask[..., 1] = 255
 
-while (cap.isOpened()):
+while cap.isOpened():
 
     # ret = a boolean return value from getting
     # the frame, frame = the current frame being
@@ -40,9 +40,7 @@ while (cap.isOpened()):
     gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
 
     # Calculates dense optical flow by Farneback method
-    flow = cv.calcOpticalFlowFarneback(prev_gray, gray,
-                                       None,
-                                       0.5, 3, 15, 3, 5, 1.2, 0)
+    flow = cv.calcOpticalFlowFarneback(prev_gray, gray, None, 0.5, 3, 15, 3, 5, 1.2, 0)
 
     # Computes the magnitude and angle of the 2D vectors
     magnitude, angle = cv.cartToPolar(flow[..., 0], flow[..., 1])
@@ -67,7 +65,7 @@ while (cap.isOpened()):
     # Frames are read by intervals of 1 millisecond. The
     # programs breaks out of the while loop when the
     # user presses the 'q' key
-    if cv.waitKey(1) & 0xFF == ord('q'):
+    if cv.waitKey(1) & 0xFF == ord("q"):
         break
 
 # The following frees up resources and

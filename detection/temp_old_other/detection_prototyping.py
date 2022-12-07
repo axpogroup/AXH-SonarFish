@@ -3,8 +3,9 @@ import numpy as np
 from matplotlib._cm import _jet_data
 from matplotlib.colors import LinearSegmentedColormap
 
-fish_area_mask = cv.imread('masks/fish_1.png', cv.IMREAD_GRAYSCALE)
-full_area_mask = cv.imread('masks/full_1.png', cv.IMREAD_GRAYSCALE)
+fish_area_mask = cv.imread("masks/fish_1.png", cv.IMREAD_GRAYSCALE)
+full_area_mask = cv.imread("masks/full_1.png", cv.IMREAD_GRAYSCALE)
+
 
 def map_RGB_to_GRAY(src, colormap=False):
     if colormap:
@@ -19,13 +20,14 @@ def blur_filter(src, kernel_size=10):
     return out
 
 
-def mask_regions(img, area='fish'):
+def mask_regions(img, area="fish"):
     masked = img
-    if area == 'fish':
+    if area == "fish":
         np.place(masked, fish_area_mask < 100, 0)
-    elif area == 'full':
+    elif area == "full":
         np.place(masked, full_area_mask < 100, 0)
     return masked
+
 
 def convert_jet_to_grey(img):
     (height, width) = img.shape[:2]
@@ -66,13 +68,15 @@ if __name__ == "__main__":
 
     # grab the width, height, and fps of the frames in the video stream.
     frame_width = int(cap.get(cv.CAP_PROP_FRAME_WIDTH))
-    frame_height = int(cap.get(cv.CAP_PROP_FRAME_HEIGHT))*2
+    frame_height = int(cap.get(cv.CAP_PROP_FRAME_HEIGHT)) * 2
     fps = int(cap.get(cv.CAP_PROP_FPS))
     print(fps)
 
     # initialize the FourCC and a video writer object
     fourcc = cv.VideoWriter_fourcc("m", "p", "4", "v")
-    output = cv.VideoWriter("std_dev_filter_temp2.mp4", fourcc, fps, (frame_width, frame_height))
+    output = cv.VideoWriter(
+        "std_dev_filter_temp2.mp4", fourcc, fps, (frame_width, frame_height)
+    )
 
     buffer = None
 
@@ -85,7 +89,7 @@ if __name__ == "__main__":
 
         # WORK ON THE INDIVIDUAL FRAME
         gray = map_RGB_to_GRAY(frame)
-        gray = mask_regions(gray, area='fish')
+        gray = mask_regions(gray, area="fish")
         gray = blur_filter(gray, kernel_size=5)
         # median = cv.medianBlur(gray, 11)
 
@@ -100,7 +104,7 @@ if __name__ == "__main__":
         # current_avg = np.mean(buffer[:, :, :15], axis=2).astype('uint8')
         # noise_avg = np.mean(buffer[:, :, 15:], axis=2).astype('uint8')
 
-        std_dev = np.std(buffer, axis=2).astype('uint8')
+        std_dev = np.std(buffer, axis=2).astype("uint8")
         # Filter
         std_dev[std_dev < 20] = 0
         std_dev_med = cv.medianBlur(std_dev, 11)
@@ -121,7 +125,7 @@ if __name__ == "__main__":
         # diff[diff < 135] = 125
 
         # OUTPUT
-        out = std_dev_med*3
+        out = std_dev_med * 3
         disp = np.concatenate((out, gray))
 
         cv.imshow("frame", disp)

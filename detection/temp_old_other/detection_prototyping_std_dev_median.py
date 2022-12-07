@@ -3,8 +3,9 @@ import numpy as np
 from matplotlib._cm import _jet_data
 from matplotlib.colors import LinearSegmentedColormap
 
-fish_area_mask = cv.imread('masks/fish.png', cv.IMREAD_GRAYSCALE)
-full_area_mask = cv.imread('masks/full.png', cv.IMREAD_GRAYSCALE)
+fish_area_mask = cv.imread("masks/fish.png", cv.IMREAD_GRAYSCALE)
+full_area_mask = cv.imread("masks/full.png", cv.IMREAD_GRAYSCALE)
+
 
 def map_RGB_to_GRAY(src, colormap=False):
     if colormap:
@@ -19,13 +20,14 @@ def blur_filter(src, kernel_size=10):
     return out
 
 
-def mask_regions(img, area='fish'):
+def mask_regions(img, area="fish"):
     masked = img
-    if area == 'fish':
+    if area == "fish":
         np.place(masked, fish_area_mask < 100, 0)
-    elif area == 'full':
+    elif area == "full":
         np.place(masked, full_area_mask < 100, 0)
     return masked
+
 
 def convert_jet_to_grey(img):
     (height, width) = img.shape[:2]
@@ -59,7 +61,9 @@ def convert_jet_to_grey(img):
 if __name__ == "__main__":
     recording_file = "../recordings/Schwarm_einzel_jet_to_gray_real.mp4"
     # recording_file = "recordings/new_settings/22-11-14_start_15-21-23_crop.mp4"
-    output_file = "../output/normed_120_10_std_dev_threshold_2_median_11_schwarm_temp.mp4"
+    output_file = (
+        "../output/normed_120_10_std_dev_threshold_2_median_11_schwarm_temp.mp4"
+    )
     # output_file = "output/normed_120.mp4"
     # output_file = "output/normed_120_minus_10.mp4"
     # output_file = "output/normed_120_10_std_dev_threshold_2.mp4"
@@ -70,7 +74,7 @@ if __name__ == "__main__":
 
     # grab the width, height, and fps of the frames in the video stream.
     frame_width = int(cap.get(cv.CAP_PROP_FRAME_WIDTH))
-    frame_height = int(cap.get(cv.CAP_PROP_FRAME_HEIGHT))*2
+    frame_height = int(cap.get(cv.CAP_PROP_FRAME_HEIGHT)) * 2
     fps = int(cap.get(cv.CAP_PROP_FPS))
     print(fps)
 
@@ -81,7 +85,7 @@ if __name__ == "__main__":
     buffer = None
     last_frame = None
     frame_no = 0
-    frames_total = 20*3*60 + 10*20
+    frames_total = 20 * 3 * 60 + 10 * 20
     while cap.isOpened():
         ret, frame = cap.read()
         # if frame is read correctly ret is True
@@ -91,7 +95,7 @@ if __name__ == "__main__":
 
         # WORK ON THE INDIVIDUAL FRAME
         gray = map_RGB_to_GRAY(frame)
-        gray = mask_regions(gray, area='full')
+        gray = mask_regions(gray, area="full")
         # gray = blur_filter(gray, kernel_size=5)
         # median = cv.medianBlur(gray, 11)
 
@@ -122,13 +126,13 @@ if __name__ == "__main__":
 
         # current_avg = np.mean(buffer[:, :, :15], axis=2).astype('uint8')
         # noise_avg = np.mean(buffer[:, :, 15:], axis=2).astype('uint8')
-        mean_img = np.mean(buffer[:, :, :], axis=2).astype('uint8')
-        current_img = np.mean(buffer[:, :, :10], axis=2).astype('uint8')
-        std_dev = np.std(buffer, axis=2).astype('uint8')
+        mean_img = np.mean(buffer[:, :, :], axis=2).astype("uint8")
+        current_img = np.mean(buffer[:, :, :10], axis=2).astype("uint8")
+        std_dev = np.std(buffer, axis=2).astype("uint8")
 
         normed = abs(current_img - mean_img) + 125
         # Threshold normed image - change has to be above a certain value / relative to std-dev of that pixel?
-        normed[abs(normed.astype('int8')-125) < 2*std_dev] = 125
+        normed[abs(normed.astype("int8") - 125) < 2 * std_dev] = 125
 
         # Filter
         # std_dev[std_dev < 20] = 0
