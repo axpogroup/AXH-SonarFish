@@ -1,0 +1,99 @@
+import cv2 as cv
+import numpy as np
+
+from FishDetector import FishDetector
+
+if __name__ == "__main__":
+    enhanced = False
+    recording_file = "recordings/Schwarm_einzel_jet_to_gray_snippet.mp4"
+    # recording_file = "output/normed_120_10_std_dev_threshold_2_median_11_drop_duplicates_crop.mp4"  # enhanced
+    # recording_file = "output/components/final_old_moving_average_5s.mp4"  # enhanced
+    recording_file = "recordings/new_settings/22-11-14_start_17-06-59_crop_swarms_single.mp4"
+
+    write_file = False
+    # output_file = "output/components/normed_120_10_std_dev_threshold_2_median_11_schwarm_temp.mp4"
+    output_file = "output/productialization/new_settings_delete.mp4"
+    # output_file = "output/normed_120_minus_10.mp4"
+    # output_file = "output/normed_120_10_std_dev_threshold_2.mp4"
+
+    # Initialize Input
+    video_cap = cv.VideoCapture(recording_file)
+    frame_by_frame = False
+    previous_img = False
+
+    # grab the width, height, fps and length of the video stream.
+    frame_width = int(video_cap.get(cv.CAP_PROP_FRAME_WIDTH))
+    frame_height = int(video_cap.get(cv.CAP_PROP_FRAME_HEIGHT))
+    fps = int(video_cap.get(cv.CAP_PROP_FPS))
+    frames_total = int(video_cap.get(cv.CAP_PROP_FRAME_COUNT))
+
+    # initialize the FourCC and a video writer object
+    fourcc = cv.VideoWriter_fourcc("m", "p", "4", "v")
+    video_writer = cv.VideoWriter(output_file, fourcc, fps, (frame_width, frame_height*2))
+
+    # Initialize FishDetector Instance
+    detector = FishDetector(recording_file)
+
+    frame_no = 0
+    while video_cap.isOpened():
+        ret, raw_frame = video_cap.read()
+        # if frame is read correctly ret is True
+        if not ret:
+            print("Can't receive frame (stream end?). Exiting ...")
+            break
+
+        # Start timer
+        frame_no += 1
+        timer = cv.getTickCount()
+
+        # Detection
+        if enhanced:
+            enhanced_frame = raw_frame[:1080, :, :]
+            detector.process_frame(
+                raw_frame[1080:, :, :], secondary=enhanced_frame
+            )
+        else:
+            detector.process_frame(raw_frame, raw_frame)
+
+        # Calculate Frames per second (FPS)
+        fps = cv.getTickFrequency() / (cv.getTickCount() - timer)
+
+        # Output
+        if enhanced:
+            disp = np.concatenate((detector.retrieve_frame(detector.current_output),
+                                   detector.retrieve_frame(detector.current_raw)))
+        else:
+            disp = np.concatenate((detector.retrieve_frame(detector.current_output),
+                                   detector.retrieve_frame(detector.current_classified)))
+        cv.putText(
+            disp,
+            "FPS : " + str(int(fps)),
+            (150, 50),
+            cv.FONT_HERSHEY_SIMPLEX,
+            0.75,
+            (255, 255, 255),
+            2,
+        )
+        cv.imshow("frame", disp)
+
+        if write_file:
+            video_writer.write(disp)
+        if frame_no % 20 == 0:
+            print(f"Processed {frame_no/frames_total*100} % of video.")
+            if frame_no / frames_total * 100 > 35:
+                pass
+
+        if not frame_by_frame:
+            usr_input = cv.waitKey(1)
+        if usr_input == ord(" "):
+            if cv.waitKey(0) == ord(" "):
+                frame_by_frame = True
+            else:
+                frame_by_frame = False
+            print("Press any key to continue ... ")
+        if usr_input == 27:
+            break
+
+    video_cap.release()
+    video_writer.release()
+    cv.destroyAllWindows()
