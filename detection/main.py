@@ -1,6 +1,5 @@
 import cv2 as cv
 import numpy as np
-
 from FishDetector import FishDetector
 
 if __name__ == "__main__":
@@ -8,7 +7,9 @@ if __name__ == "__main__":
     recording_file = "recordings/Schwarm_einzel_jet_to_gray_snippet.mp4"
     # recording_file = "output/normed_120_10_std_dev_threshold_2_median_11_drop_duplicates_crop.mp4"  # enhanced
     # recording_file = "output/components/final_old_moving_average_5s.mp4"  # enhanced
-    recording_file = "recordings/new_settings/22-11-14_start_17-06-59_crop_swarms_single.mp4"
+    recording_file = (
+        "recordings/new_settings/22-11-14_start_17-06-59_crop_swarms_single.mp4"
+    )
 
     write_file = False
     # output_file = "output/components/normed_120_10_std_dev_threshold_2_median_11_schwarm_temp.mp4"
@@ -29,7 +30,9 @@ if __name__ == "__main__":
 
     # initialize the FourCC and a video writer object
     fourcc = cv.VideoWriter_fourcc("m", "p", "4", "v")
-    video_writer = cv.VideoWriter(output_file, fourcc, fps, (frame_width, frame_height*2))
+    video_writer = cv.VideoWriter(
+        output_file, fourcc, fps, (frame_width, frame_height * 2)
+    )
 
     # Initialize FishDetector Instance
     detector = FishDetector(recording_file)
@@ -49,9 +52,7 @@ if __name__ == "__main__":
         # Detection
         if enhanced:
             enhanced_frame = raw_frame[:1080, :, :]
-            detector.process_frame(
-                raw_frame[1080:, :, :], secondary=enhanced_frame
-            )
+            detector.process_frame(raw_frame[1080:, :, :], secondary=enhanced_frame)
         else:
             detector.process_frame(raw_frame, raw_frame)
 
@@ -60,11 +61,19 @@ if __name__ == "__main__":
 
         # Output
         if enhanced:
-            disp = np.concatenate((detector.retrieve_frame(detector.current_output),
-                                   detector.retrieve_frame(detector.current_raw)))
+            disp = np.concatenate(
+                (
+                    detector.retrieve_frame(detector.current_output),
+                    detector.retrieve_frame(detector.current_raw),
+                )
+            )
         else:
-            disp = np.concatenate((detector.retrieve_frame(detector.current_output),
-                                   detector.retrieve_frame(detector.current_classified)))
+            disp = np.concatenate(
+                (
+                    detector.retrieve_frame(detector.current_output),
+                    detector.retrieve_frame(detector.current_classified),
+                )
+            )
         cv.putText(
             disp,
             "FPS : " + str(int(fps)),
