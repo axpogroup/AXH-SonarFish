@@ -20,15 +20,21 @@ class FishDetector:
 
         # Enhancement
         self.framebuffer = None
+        self.mean_buffer = None
+        self.mean_buffer_counter = None
         self.buffer_size = 120
+        self.long_mean_frames = 120
         self.long_mean = None
         self.long_std_dev = None
+        self.current_mean_frames = 10
         self.current_mean = None
         self.enhance_time_ms = None
+        self.current_long_mean_uint8 = None
 
         # Detection and Tracking
         self.detections = {}
         self.current_objects = {}
+        self.current_threshold = None
         self.associations = []
         self.max_obj_index = 0
         self.max_association_dist = 60
@@ -49,7 +55,8 @@ class FishDetector:
             (cv.getTickCount() - start) / cv.getTickFrequency() * 1000
         )
 
-        if self.framebuffer.shape[2] == self.buffer_size:
+        # if self.mean_buffer.shape[2] == int(self.long_mean_frames / self.current_mean_frames):
+        if self.frame_number > self.buffer_size:
             self.detect_and_track(self.current_enhanced)
             self.detection_tracking_time_ms = (
                 int((cv.getTickCount() - start) / cv.getTickFrequency() * 1000)
@@ -63,21 +70,33 @@ class FishDetector:
         return
 
     def enhance_frame(self, gray_frame):
+        light = True
         enhanced_temp = self.mask_regions(gray_frame, area="fish")
-        self.update_buffer(enhanced_temp)
 
-        if self.framebuffer.shape[2] < self.buffer_size:
-            return enhanced_temp * 0
+        if light:
+            self.update_buffer_light(enhanced_temp)
+            if self.frame_number < self.buffer_size:
+                return enhanced_temp * 0
+        else:
+            self.update_buffer(enhanced_temp)
+            if self.frame_number < self.buffer_size:
+                return enhanced_temp * 0
 
-        enhanced_temp = self.calc_difference_from_buffer()
-        enhanced_temp = self.threshold_diff(enhanced_temp, threshold=2)
+        if light:
+            enhanced_temp = self.calc_difference_from_buffer_light()
+            enhanced_temp[abs(enhanced_temp) < 20] = 0
+        else:
+            enhanced_temp = self.calc_difference_from_buffer()
+            enhanced_temp = self.threshold_diff(enhanced_temp, threshold=2)
+
+        self.current_long_mean_uint8 = self.long_mean.astype("uint8")
 
         # # Transform into visual/uint8 image
         enhanced_temp = (abs(enhanced_temp) + 125).astype("uint8")
         # ret, self.current_enhanced = cv.threshold(self.current_enhanced, 160, 255, 0)
-        enhanced_temp = self.spatial_filter(
-            enhanced_temp, kernel_size=11, method="median"
-        )
+        # enhanced_temp = self.spatial_filter(
+        #     enhanced_temp, kernel_size=11, method="median"
+        # )
         return enhanced_temp
 
     def detect_and_track(self, enhanced_frame):
@@ -90,12 +109,21 @@ class FishDetector:
         output = self.retrieve_frame(img)
         output = self.draw_objects(output, classifications=classifications, debug=debug)
         if runtiming:
-            cv.rectangle(output, (1390, 25), (1850, 125), (0, 0, 0), -1)
+            cv.rectangle(output, (1390, 25), (1850, 155), (0, 0, 0), -1)
             color = (255, 255, 255)
             cv.putText(
                 output,
+                f"Frame no. {self.frame_number}",
+                (1500, 50),
+                cv.FONT_HERSHEY_SIMPLEX,
+                0.75,
+                color,
+                2,
+            )
+            cv.putText(
+                output,
                 f"{self.enhance_time_ms} ms - Enhancement",
-                (1400, 50),
+                (1400, 80),
                 cv.FONT_HERSHEY_SIMPLEX,
                 0.75,
                 color,
@@ -104,7 +132,7 @@ class FishDetector:
             cv.putText(
                 output,
                 f"{self.detection_tracking_time_ms} ms - Detection & Tracking",
-                (1400, 80),
+                (1400, 110),
                 cv.FONT_HERSHEY_SIMPLEX,
                 0.75,
                 color,
@@ -115,7 +143,7 @@ class FishDetector:
             cv.putText(
                 output,
                 f"{self.total_runtime_ms} ms - Total - FPS: {int(1000/self.total_runtime_ms)}",
-                (1400, 110),
+                (1400, 140),
                 cv.FONT_HERSHEY_SIMPLEX,
                 0.75,
                 color,
@@ -253,7 +281,7 @@ class FishDetector:
 
             # Threshold
             ret, thres = cv.threshold(enhanced_frame, 127, 255, 0)
-
+            self.current_threshold = thres
             # Alternative consolidation - dilate
             # kernel = np.ones((51, 51), 'uint8')
             # thres = cv.dilate(thres, kernel, iterations=1)
@@ -282,6 +310,17 @@ class FishDetector:
             )
             return im_with_keypoints
 
+    def update_buffer_light(self, img):
+        if self.framebuffer is None:
+            self.framebuffer = img[:, :, np.newaxis]
+        else:
+            self.framebuffer = np.concatenate(
+                (img[..., np.newaxis], self.framebuffer), axis=2
+            )
+
+        if self.framebuffer.shape[2] > self.current_mean_frames:
+            self.framebuffer = self.framebuffer[:, :, : self.current_mean_frames]
+
     def update_buffer(self, img):
         if self.framebuffer is None:
             self.framebuffer = img[:, :, np.newaxis]
@@ -293,12 +332,36 @@ class FishDetector:
         if self.framebuffer.shape[2] > self.buffer_size:
             self.framebuffer = self.framebuffer[:, :, : self.buffer_size]
 
+    def calc_difference_from_buffer_light(self):
+        self.current_mean = np.mean(self.framebuffer[:, :, :10], axis=2).astype("uint8")
+
+        if self.mean_buffer is None:
+            self.mean_buffer = self.current_mean[:, :, np.newaxis]
+            self.mean_buffer_counter = 1
+            self.long_mean = np.mean(self.mean_buffer, axis=2).astype("int16")
+        elif self.mean_buffer_counter % self.current_mean_frames == 0:
+            self.mean_buffer = np.concatenate(
+                (self.current_mean[..., np.newaxis], self.mean_buffer), axis=2
+            )
+            if self.mean_buffer.shape[2] > int(self.long_mean_frames / self.current_mean_frames):
+                self.mean_buffer = self.mean_buffer[:, :, : int(self.long_mean_frames / self.current_mean_frames)]
+
+            # if self.mean_buffer_counter % self.long_mean_frames == 0:
+            self.long_mean = np.mean(self.mean_buffer, axis=2).astype("int16")
+            self.mean_buffer_counter = 1
+            # else:
+            #     self.mean_buffer_counter += 1
+        else:
+            self.mean_buffer_counter += 1
+
+        return self.current_mean.astype("int16") - self.long_mean
+
     def calc_difference_from_buffer(self):
         self.long_mean = np.mean(self.framebuffer, axis=2).astype("int16")
         self.current_mean = np.mean(self.framebuffer[:, :, :10], axis=2).astype("uint8")
         return self.current_mean.astype("int16") - self.long_mean
 
-    def threshold_diff(self, diff, threshold=2):
+    def threshold_diff(self, diff, threshold=2, ):
         self.long_std_dev = np.std(self.framebuffer, axis=2).astype("uint8")
         diff[abs(diff) < threshold * self.long_std_dev] = 0
         return diff

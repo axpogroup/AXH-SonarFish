@@ -57,6 +57,7 @@ if __name__ == "__main__":
             detector.process_frame(raw_frame)
 
         # Output
+        four_images = True
         if enhanced:
             disp = np.concatenate(
                 (
@@ -64,6 +65,19 @@ if __name__ == "__main__":
                     detector.draw_output(detector.current_raw, classifications=True),
                 )
             )
+        elif four_images:
+            up = np.concatenate((detector.retrieve_frame(detector.current_long_mean_uint8),
+                                   detector.retrieve_frame(detector.current_enhanced)), axis=1)
+            down = np.concatenate(
+                (
+                    detector.draw_output(
+                        detector.current_threshold, debug=True, runtiming=True
+                    ),
+                    detector.draw_output(
+                        detector.current_raw, classifications=False, runtiming=True
+                    ),
+                ), axis=1)
+            disp = np.concatenate((up, down))
         else:
             disp = np.concatenate(
                 (
