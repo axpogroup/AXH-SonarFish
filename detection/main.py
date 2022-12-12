@@ -67,8 +67,12 @@ if __name__ == "__main__":
         else:
             disp = np.concatenate(
                 (
-                    detector.draw_output(detector.current_enhanced, debug=True, runtiming=True),
-                    detector.draw_output(detector.current_raw, classifications=True, runtiming=True),
+                    detector.draw_output(
+                        detector.current_enhanced, debug=True, runtiming=True
+                    ),
+                    detector.draw_output(
+                        detector.current_raw, classifications=True, runtiming=True
+                    ),
                 )
             )
         cv.imshow("frame", disp)

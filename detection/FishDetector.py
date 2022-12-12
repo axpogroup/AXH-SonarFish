@@ -45,15 +45,21 @@ class FishDetector:
         self.current_raw = raw_frame
         self.current_gray = self.rgb_to_gray(self.current_raw)
         self.current_enhanced = self.enhance_frame(self.current_gray)
-        self.enhance_time_ms = int((cv.getTickCount() - start) / cv.getTickFrequency() * 1000)
+        self.enhance_time_ms = int(
+            (cv.getTickCount() - start) / cv.getTickFrequency() * 1000
+        )
 
         if self.framebuffer.shape[2] == self.buffer_size:
             self.detect_and_track(self.current_enhanced)
-            self.detection_tracking_time_ms = int((cv.getTickCount() - start) / cv.getTickFrequency() * 1000)\
-                                              - self.enhance_time_ms
+            self.detection_tracking_time_ms = (
+                int((cv.getTickCount() - start) / cv.getTickFrequency() * 1000)
+                - self.enhance_time_ms
+            )
 
         self.frame_number += 1
-        self.total_runtime_ms = int((cv.getTickCount() - start) / cv.getTickFrequency() * 1000)
+        self.total_runtime_ms = int(
+            (cv.getTickCount() - start) / cv.getTickFrequency() * 1000
+        )
         return
 
     def enhance_frame(self, gray_frame):
@@ -86,19 +92,35 @@ class FishDetector:
         if runtiming:
             cv.rectangle(output, (1390, 25), (1850, 125), (0, 0, 0), -1)
             color = (255, 255, 255)
-            text = f"Enhance {self.enhance_time_ms} ms \n Detect & Track {self.detection_tracking_time_ms} ms" \
-                   f"\n Total {self.total_runtime_ms} / 50 ms (20 fps)"
-            cv.putText(output, f"{self.enhance_time_ms} ms - Enhancement", (1400, 50),
-                    cv.FONT_HERSHEY_SIMPLEX,
-                    0.75, color, 2)
-            cv.putText(output, f"{self.detection_tracking_time_ms} ms - Detection & Tracking", (1400, 80),
-                       cv.FONT_HERSHEY_SIMPLEX,
-                       0.75, color, 2)
+            cv.putText(
+                output,
+                f"{self.enhance_time_ms} ms - Enhancement",
+                (1400, 50),
+                cv.FONT_HERSHEY_SIMPLEX,
+                0.75,
+                color,
+                2,
+            )
+            cv.putText(
+                output,
+                f"{self.detection_tracking_time_ms} ms - Detection & Tracking",
+                (1400, 80),
+                cv.FONT_HERSHEY_SIMPLEX,
+                0.75,
+                color,
+                2,
+            )
             if self.total_runtime_ms > 40:
                 color = (100, 100, 255)
-            cv.putText(output, f"{self.total_runtime_ms} ms - Total - FPS: {int(1000/self.total_runtime_ms)}", (1400, 110),
-                       cv.FONT_HERSHEY_SIMPLEX,
-                       0.75, color, 2)
+            cv.putText(
+                output,
+                f"{self.total_runtime_ms} ms - Total - FPS: {int(1000/self.total_runtime_ms)}",
+                (1400, 110),
+                cv.FONT_HERSHEY_SIMPLEX,
+                0.75,
+                color,
+                2,
+            )
         return output
 
     def draw_associations(self, img, color):
