@@ -54,7 +54,7 @@ if __name__ == "__main__":
             enhanced_frame = raw_frame[:1080, :, :]
             detector.process_frame(raw_frame[1080:, :, :], secondary=enhanced_frame)
         else:
-            detector.process_frame(raw_frame, raw_frame)
+            detector.process_frame(raw_frame)
 
         # Calculate Frames per second (FPS)
         fps = cv.getTickFrequency() / (cv.getTickCount() - timer)
@@ -63,15 +63,15 @@ if __name__ == "__main__":
         if enhanced:
             disp = np.concatenate(
                 (
-                    detector.retrieve_frame(detector.current_output),
-                    detector.retrieve_frame(detector.current_raw),
+                    detector.draw_output(detector.current_output, debug=True),
+                    detector.draw_output(detector.current_raw, classifications=True),
                 )
             )
         else:
             disp = np.concatenate(
                 (
-                    detector.retrieve_frame(detector.current_output),
-                    detector.retrieve_frame(detector.current_classified),
+                    detector.draw_output(detector.current_enhanced, debug=True),
+                    detector.draw_output(detector.current_raw, classifications=True),
                 )
             )
         cv.putText(

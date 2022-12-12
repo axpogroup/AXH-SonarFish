@@ -43,11 +43,8 @@ class FishDetector:
         self.current_enhanced = self.enhance_frame(self.current_gray)
 
         if self.framebuffer.shape[2] == self.buffer_size:
-            self.current_output, self.current_classified = self.detect_and_track(
-                self.current_enhanced
-            )
+            self.detect_and_track(self.current_enhanced)
 
-        # self.current_output = self.mask_regions(self.current_output, area='fish')
         self.frame_number += 1
         return
 
@@ -61,7 +58,7 @@ class FishDetector:
         enhanced_temp = self.calc_difference_from_buffer()
         enhanced_temp = self.threshold_diff(enhanced_temp, threshold=2)
 
-        # # Transform into visual image
+        # # Transform into visual/uint8 image
         enhanced_temp = (abs(enhanced_temp) + 125).astype("uint8")
         # ret, self.current_enhanced = cv.threshold(self.current_enhanced, 160, 255, 0)
         enhanced_temp = self.spatial_filter(
@@ -71,27 +68,13 @@ class FishDetector:
 
     def detect_and_track(self, enhanced_frame):
         self.detections = self.find_points_of_interest(enhanced_frame, mode="contour")
-        self.associate_detections()
-        self.current_output = cv.cvtColor(enhanced_frame, cv.COLOR_GRAY2BGR)
+        self.current_objects = self.associate_detections(self.detections)
+        self.current_objects = self.filter_objects(self.current_objects)
+        return
 
-        self.filter_objects()
-
-        # for detection_id, detection in self.detections.items():
-        #     self.current_output = detection.draw_bounding_box(self.current_output, (255, 0, 0))
-        # for current_object_id, current_object in self.current_objects.items():
-        #     self.current_output = current_object.draw_bounding_box(self.current_output, (0, 255, 0))
-
-        # self.current_output = self.draw_associations(self.current_output, color=(200, 230, 0))
-        self.current_classified = cv.cvtColor(
-            self.mask_regions(self.current_gray, area="fish"), cv.COLOR_GRAY2BGR
-        )
-        self.current_classified = self.draw_objects(
-            self.current_classified, classifications=True
-        )
-        self.current_output = self.draw_objects(self.current_output, debug=True)
-        # self.current_tracked = self.draw_objects(cv.cvtColor(frame, cv.COLOR_GRAY2BGR), debug=True)
-
-        return self.current_output, self.current_classified
+    def draw_output(self, img, classifications=False, debug=False):
+        output = self.retrieve_frame(img)
+        return self.draw_objects(output, classifications=classifications, debug=debug)
 
     def draw_associations(self, img, color):
         for association in self.associations:
@@ -138,10 +121,10 @@ class FishDetector:
 
         return img
 
-    def filter_objects(self):
+    def filter_objects(self, current_objects):
         to_delete = []
-        for ID, obj in self.current_objects.items():
-            # Delete if it hasn't been observed in the last 5 frames
+        for ID, obj in current_objects.items():
+            # Delete if it hasn't been observed in the last x frames
             if (
                 self.frame_number - obj.frames_observed[-1]
                 > self.phase_out_after_x_frames
@@ -149,7 +132,7 @@ class FishDetector:
                 to_delete.append(ID)
                 continue
 
-            # Show if 8 occurences in the last 10 frames
+            # Show if x occurences in the last y frames
             if (
                 obj.occurences_in_last_x(
                     self.frame_number, self.min_occurences_in_last_x_frames[1]
@@ -161,12 +144,14 @@ class FishDetector:
                 obj.show[-1] = False
 
         for key in to_delete:
-            self.current_objects.pop(key)
+            current_objects.pop(key)
 
-    def associate_detections(self):
+        return current_objects
+
+    def associate_detections(self, detections):
         if len(self.current_objects) == 0:
-            self.current_objects = self.detections
-            return
+            self.current_objects = detections
+            return self.current_objects
 
         object_midpoints = [
             existing_object.midpoints[-1]
@@ -175,7 +160,7 @@ class FishDetector:
         object_ids = list(self.current_objects.keys())
         new_objects = []
         self.associations = []
-        for detection_id, detection in self.detections.items():
+        for detection_id, detection in detections.items():
             min_id, min_dist = self.closest_point(
                 detection.midpoints[-1], object_midpoints
             )
@@ -195,10 +180,10 @@ class FishDetector:
 
         for association in self.associations:
             self.current_objects[association["existing_object_id"]].update_object(
-                self.detections[association["detection_id"]]
+                detections[association["detection_id"]]
             )
 
-        return
+        return self.current_objects
 
     @staticmethod
     def closest_point(point, points):
