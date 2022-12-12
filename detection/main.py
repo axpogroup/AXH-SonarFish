@@ -56,9 +56,6 @@ if __name__ == "__main__":
         else:
             detector.process_frame(raw_frame)
 
-        # Calculate Frames per second (FPS)
-        fps = cv.getTickFrequency() / (cv.getTickCount() - timer)
-
         # Output
         if enhanced:
             disp = np.concatenate(
@@ -70,19 +67,10 @@ if __name__ == "__main__":
         else:
             disp = np.concatenate(
                 (
-                    detector.draw_output(detector.current_enhanced, debug=True),
-                    detector.draw_output(detector.current_raw, classifications=True),
+                    detector.draw_output(detector.current_enhanced, debug=True, runtiming=True),
+                    detector.draw_output(detector.current_raw, classifications=True, runtiming=True),
                 )
             )
-        cv.putText(
-            disp,
-            "FPS : " + str(int(fps)),
-            (150, 50),
-            cv.FONT_HERSHEY_SIMPLEX,
-            0.75,
-            (255, 255, 255),
-            2,
-        )
         cv.imshow("frame", disp)
 
         if write_file:

@@ -10,6 +10,7 @@ class FishDetector:
     def __init__(self, filename):
         self.filename = filename
         self.frame_number = 0  # TOD Must not overflow - recycle
+        self.total_runtime_ms = None
 
         self.current_raw = None
         self.current_gray = None
@@ -23,6 +24,7 @@ class FishDetector:
         self.long_mean = None
         self.long_std_dev = None
         self.current_mean = None
+        self.enhance_time_ms = None
 
         # Detection and Tracking
         self.detections = {}
@@ -32,20 +34,26 @@ class FishDetector:
         self.max_association_dist = 60
         self.phase_out_after_x_frames = 5
         self.min_occurences_in_last_x_frames = (13, 15)
+        self.detection_tracking_time_ms = None
 
         # Classification
         self.river_pixel_velocity = (-1.91, -0.85)
         self.rotation_rad = -2.7229
 
     def process_frame(self, raw_frame, secondary=None):
+        start = cv.getTickCount()
         self.current_raw = raw_frame
         self.current_gray = self.rgb_to_gray(self.current_raw)
         self.current_enhanced = self.enhance_frame(self.current_gray)
+        self.enhance_time_ms = int((cv.getTickCount() - start) / cv.getTickFrequency() * 1000)
 
         if self.framebuffer.shape[2] == self.buffer_size:
             self.detect_and_track(self.current_enhanced)
+            self.detection_tracking_time_ms = int((cv.getTickCount() - start) / cv.getTickFrequency() * 1000)\
+                                              - self.enhance_time_ms
 
         self.frame_number += 1
+        self.total_runtime_ms = int((cv.getTickCount() - start) / cv.getTickFrequency() * 1000)
         return
 
     def enhance_frame(self, gray_frame):
@@ -72,9 +80,26 @@ class FishDetector:
         self.current_objects = self.filter_objects(self.current_objects)
         return
 
-    def draw_output(self, img, classifications=False, debug=False):
+    def draw_output(self, img, classifications=False, debug=False, runtiming=False):
         output = self.retrieve_frame(img)
-        return self.draw_objects(output, classifications=classifications, debug=debug)
+        output = self.draw_objects(output, classifications=classifications, debug=debug)
+        if runtiming:
+            cv.rectangle(output, (1390, 25), (1850, 125), (0, 0, 0), -1)
+            color = (255, 255, 255)
+            text = f"Enhance {self.enhance_time_ms} ms \n Detect & Track {self.detection_tracking_time_ms} ms" \
+                   f"\n Total {self.total_runtime_ms} / 50 ms (20 fps)"
+            cv.putText(output, f"{self.enhance_time_ms} ms - Enhancement", (1400, 50),
+                    cv.FONT_HERSHEY_SIMPLEX,
+                    0.75, color, 2)
+            cv.putText(output, f"{self.detection_tracking_time_ms} ms - Detection & Tracking", (1400, 80),
+                       cv.FONT_HERSHEY_SIMPLEX,
+                       0.75, color, 2)
+            if self.total_runtime_ms > 40:
+                color = (100, 100, 255)
+            cv.putText(output, f"{self.total_runtime_ms} ms - Total - FPS: {int(1000/self.total_runtime_ms)}", (1400, 110),
+                       cv.FONT_HERSHEY_SIMPLEX,
+                       0.75, color, 2)
+        return output
 
     def draw_associations(self, img, color):
         for association in self.associations:
