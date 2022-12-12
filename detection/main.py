@@ -66,8 +66,13 @@ if __name__ == "__main__":
                 )
             )
         elif four_images:
-            up = np.concatenate((detector.retrieve_frame(detector.current_long_mean_uint8),
-                                   detector.retrieve_frame(detector.current_enhanced)), axis=1)
+            up = np.concatenate(
+                (
+                    detector.retrieve_frame(detector.current_long_mean_uint8),
+                    detector.retrieve_frame(detector.current_enhanced),
+                ),
+                axis=1,
+            )
             down = np.concatenate(
                 (
                     detector.draw_output(
@@ -76,7 +81,9 @@ if __name__ == "__main__":
                     detector.draw_output(
                         detector.current_raw, classifications=False, runtiming=True
                     ),
-                ), axis=1)
+                ),
+                axis=1,
+            )
             disp = np.concatenate((up, down))
         else:
             disp = np.concatenate(

@@ -343,8 +343,12 @@ class FishDetector:
             self.mean_buffer = np.concatenate(
                 (self.current_mean[..., np.newaxis], self.mean_buffer), axis=2
             )
-            if self.mean_buffer.shape[2] > int(self.long_mean_frames / self.current_mean_frames):
-                self.mean_buffer = self.mean_buffer[:, :, : int(self.long_mean_frames / self.current_mean_frames)]
+            if self.mean_buffer.shape[2] > int(
+                self.long_mean_frames / self.current_mean_frames
+            ):
+                self.mean_buffer = self.mean_buffer[
+                    :, :, : int(self.long_mean_frames / self.current_mean_frames)
+                ]
 
             # if self.mean_buffer_counter % self.long_mean_frames == 0:
             self.long_mean = np.mean(self.mean_buffer, axis=2).astype("int16")
@@ -361,7 +365,11 @@ class FishDetector:
         self.current_mean = np.mean(self.framebuffer[:, :, :10], axis=2).astype("uint8")
         return self.current_mean.astype("int16") - self.long_mean
 
-    def threshold_diff(self, diff, threshold=2, ):
+    def threshold_diff(
+        self,
+        diff,
+        threshold=2,
+    ):
         self.long_std_dev = np.std(self.framebuffer, axis=2).astype("uint8")
         diff[abs(diff) < threshold * self.long_std_dev] = 0
         return diff
