@@ -49,8 +49,13 @@ class Object:
 
     def draw_classifications_box(self, img, downsampled=100):
         x, y, w, h = cv.boundingRect(self.contours[-1])
-        upsample_factor =  int(100/downsampled)
-        x, y, w, h = x*upsample_factor, y*upsample_factor, w*upsample_factor, h*upsample_factor
+        upsample_factor = int(100 / downsampled)
+        x, y, w, h = (
+            x * upsample_factor,
+            y * upsample_factor,
+            w * upsample_factor,
+            h * upsample_factor,
+        )
         if self.classification[-1] == "Fisch":
             color = (0, 255, 0)
         else:

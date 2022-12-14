@@ -4,7 +4,9 @@ from FishDetector_ARIS import FishDetector
 
 if __name__ == "__main__":
     enhanced = False
-    recording_file = "ARIS_test/2022-06-18_050000_3870_4073 Abtasten 3 Forellen besprechen.mp4"
+    recording_file = (
+        "ARIS_test/2022-06-18_050000_3870_4073 Abtasten 3 Forellen besprechen.mp4"
+    )
     # recording_file = "output/normed_120_10_std_dev_threshold_2_median_11_drop_duplicates_crop.mp4"  # enhanced
     # recording_file = "output/components/final_old_moving_average_5s.mp4"  # enhanced
     # recording_file = (
@@ -87,11 +89,11 @@ if __name__ == "__main__":
             )
             disp = np.concatenate((up, down))
             disp = detector.draw_output(
-                        detector.resize_img(disp, 200), classifications=False, runtiming=True
-                    )
+                detector.resize_img(disp, 200), classifications=False, runtiming=True
+            )
             disp = detector.draw_output(
-                        raw_frame, classifications=True, runtiming=True, fullres=True
-                    )
+                raw_frame, classifications=True, runtiming=True, fullres=True
+            )
         else:
             disp = np.concatenate(
                 (
