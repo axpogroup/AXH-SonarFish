@@ -56,7 +56,7 @@ class Object:
             w * upsample_factor,
             h * upsample_factor,
         )
-        x, y, w, h = x - 2*w, y - 2*h, w*4, h*4
+        x, y, w, h = x - 2 * w, y - 2 * h, w * 4, h * 4
         if self.classification[-1] == "Fisch":
             color = (0, 255, 0)
         else:

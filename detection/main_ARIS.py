@@ -17,7 +17,11 @@ if __name__ == "__main__":
 
     write_file = True
     # output_file = "output/components/normed_120_10_std_dev_threshold_2_median_11_schwarm_temp.mp4"
-    output_file = "output/productialization/ARIS/" + (recording_file.split("/")[-1]).split(".mp4")[0] + "_detection_100_assoc_80.mp4"
+    output_file = (
+        "output/productialization/ARIS/"
+        + (recording_file.split("/")[-1]).split(".mp4")[0]
+        + "_detection_100_assoc_80.mp4"
+    )
     # output_file = "output/normed_120_minus_10.mp4"
     # output_file = "output/normed_120_10_std_dev_threshold_2.mp4"
 
@@ -34,9 +38,7 @@ if __name__ == "__main__":
 
     # initialize the FourCC and a video writer object
     fourcc = cv.VideoWriter_fourcc("m", "p", "4", "v")
-    video_writer = cv.VideoWriter(
-        output_file, fourcc, fps, (frame_width, frame_height)
-    )
+    video_writer = cv.VideoWriter(output_file, fourcc, fps, (frame_width, frame_height))
 
     # Initialize FishDetector Instance
     detector = FishDetector(recording_file)
@@ -82,8 +84,10 @@ if __name__ == "__main__":
                 )
                 down = np.concatenate(
                     (
-                        detector.draw_output(detector.retrieve_frame(detector.current_raw), debug=False),
-                        detector.retrieve_frame(detector.current_threshold)
+                        detector.draw_output(
+                            detector.retrieve_frame(detector.current_raw), debug=False
+                        ),
+                        detector.retrieve_frame(detector.current_threshold),
                     ),
                     axis=1,
                 )
@@ -91,7 +95,7 @@ if __name__ == "__main__":
                 disp = detector.draw_output(
                     detector.resize_img(disp, 300), only_runtime=True, runtiming=True
                 )
-            except:
+            except ValueError:
                 disp = raw_frame
 
         elif fullres:

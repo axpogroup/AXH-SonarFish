@@ -29,13 +29,13 @@ class FishDetector:
         self.current_long_mean_uint8 = None
         self.current_blurred_enhanced = None
 
-        self.downsample = 100
+        self.downsample = 25
         self.buffer_size = 60
         self.current_mean_frames = 2
         self.std_dev_threshold = 0.1
-        self.median_filter_kernel = 11 # 3
-        self.blur_filter_kernel = 41 # 11
-        self.threshold_contours = 139 # 139
+        self.median_filter_kernel = 3  # 3
+        self.blur_filter_kernel = 11  # 11
+        self.threshold_contours = 139  # 139
 
         # self.downsample = 25
         # self.buffer_size = 60
@@ -51,7 +51,7 @@ class FishDetector:
         self.current_threshold = None
         self.associations = []
         self.max_obj_index = 0
-        self.max_association_dist = 80
+        self.max_association_dist = 20
         self.phase_out_after_x_frames = 5
         self.min_occurences_in_last_x_frames = (8, 15)
         self.detection_tracking_time_ms = None
@@ -103,7 +103,9 @@ class FishDetector:
             enhanced_temp[abs(enhanced_temp) < 20] = 0
         else:
             enhanced_temp = self.calc_difference_from_buffer()
-            enhanced_temp = self.threshold_diff(enhanced_temp, threshold=self.std_dev_threshold)
+            enhanced_temp = self.threshold_diff(
+                enhanced_temp, threshold=self.std_dev_threshold
+            )
 
         self.current_long_mean_uint8 = self.long_mean.astype("uint8")
 
@@ -122,7 +124,13 @@ class FishDetector:
         return
 
     def draw_output(
-        self, img, classifications=False, debug=False, runtiming=False, fullres=False, only_runtime=False
+        self,
+        img,
+        classifications=False,
+        debug=False,
+        runtiming=False,
+        fullres=False,
+        only_runtime=False,
     ):
         output = self.retrieve_frame(img)
         if not only_runtime:
@@ -302,7 +310,9 @@ class FishDetector:
 
             # Consolidate the points
             enhanced_frame = cv.GaussianBlur(
-                enhanced_frame.astype("uint8"), (self.blur_filter_kernel, self.blur_filter_kernel), 0
+                enhanced_frame.astype("uint8"),
+                (self.blur_filter_kernel, self.blur_filter_kernel),
+                0,
             )
 
             self.current_blurred_enhanced = enhanced_frame
@@ -389,7 +399,9 @@ class FishDetector:
 
     def calc_difference_from_buffer(self):
         self.long_mean = np.mean(self.framebuffer, axis=2).astype("int16")
-        self.current_mean = np.mean(self.framebuffer[:, :, :self.current_mean_frames], axis=2).astype("uint8")
+        self.current_mean = np.mean(
+            self.framebuffer[:, :, : self.current_mean_frames], axis=2
+        ).astype("uint8")
         return self.current_mean.astype("int16") - self.long_mean
 
     def threshold_diff(
