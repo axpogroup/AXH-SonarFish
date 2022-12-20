@@ -75,7 +75,7 @@ if __name__ == "__main__":
         interest = filenames[current_start_file:]
         if len(interest) > n_videos_to_join:
             interest = filenames[
-                current_start_file: (current_start_file + n_videos_to_join)
+                current_start_file : (current_start_file + n_videos_to_join)
             ]
 
         # Check for time differences bigger than 15 seconds
