@@ -7,7 +7,8 @@ if __name__ == "__main__":
     # recording_file = (
     #         "ARIS_test/2022-06-21_050000_1406_2480 zu besprechen abstieg oder fressen.mp4"
     # ) # interessant 2
-    recording_file = "ARIS_test/recordings/2022-06-23_134500_1571_1942 2 Forellen 20-25cm Rechenkontakte zu besprechen.mp4"
+    recording_file = "ARIS_test/recordings/2022-06-23_134500_1571_1942 2 Forellen 20-25cm Rechenkontakte " \
+                     "zu besprechen.mp4"
 
     # recording_file = "output/normed_120_10_std_dev_threshold_2_median_11_drop_duplicates_crop.mp4"  # enhanced
     # recording_file = "output/components/final_old_moving_average_5s.mp4"  # enhanced

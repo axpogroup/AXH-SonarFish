@@ -91,7 +91,7 @@ class FishDetector:
         return
 
     def enhance_frame(self, gray_frame):
-        light = False # TOD unsure if this still works
+        light = False  # TOD unsure if this still works
         enhanced_temp = self.mask_regions(gray_frame, area="fish")
         if light:
             self.update_buffer_light(enhanced_temp)
