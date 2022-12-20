@@ -32,38 +32,40 @@ class Object:
 
     def draw_bounding_box(self, img, color):
         x, y, w, h = cv.boundingRect(self.contours[-1])
-        cv.rectangle(img, (x, y), (x + w, y + h), color, 2)
-        cv.putText(
-            img,
-            (self.classification[-1] + " " + str(self.ID)),
-            (x, y - 10),
-            cv.FONT_HERSHEY_SIMPLEX,
-            0.75,
-            color,
-            2,
-        )
+        cv.rectangle(img, (x, y), (x + w, y + h), color, 1)
+        # cv.putText(
+        #     img,
+        #     (self.classification[-1] + " " + str(self.ID)),
+        #     (x, y - 10),
+        #     cv.FONT_HERSHEY_SIMPLEX,
+        #     0.75,
+        #     color,
+        #     2,
+        # )
         # if self.mean_v is not None:
         #     cv.putText(img, (str(self.mean_v[0])),
         #                      (x, y + 10), cv.FONT_HERSHEY_SIMPLEX, 0.75, color, 2)
         return img
 
-    def draw_classifications_box(self, img):
+    def draw_classifications_box(self, img, downsampled=100):
         x, y, w, h = cv.boundingRect(self.contours[-1])
+        upsample_factor =  int(100/downsampled)
+        x, y, w, h = x*upsample_factor, y*upsample_factor, w*upsample_factor, h*upsample_factor
         if self.classification[-1] == "Fisch":
             color = (0, 255, 0)
         else:
             color = (250, 150, 150)
 
         cv.rectangle(img, (x, y), (x + w, y + h), color, 2)
-        cv.putText(
-            img,
-            (self.classification[-1]),
-            (x, y - 10),
-            cv.FONT_HERSHEY_SIMPLEX,
-            0.75,
-            color,
-            2,
-        )
+        # cv.putText(
+        #     img,
+        #     (self.classification[-1]),
+        #     (x, y - 10),
+        #     cv.FONT_HERSHEY_SIMPLEX,
+        #     0.75,
+        #     color,
+        #     2,
+        # )
 
         return img
 

@@ -7,9 +7,9 @@ if __name__ == "__main__":
     recording_file = "recordings/Schwarm_einzel_jet_to_gray_snippet.mp4"
     # recording_file = "output/normed_120_10_std_dev_threshold_2_median_11_drop_duplicates_crop.mp4"  # enhanced
     # recording_file = "output/components/final_old_moving_average_5s.mp4"  # enhanced
-    recording_file = (
-        "recordings/new_settings/22-11-14_start_17-06-59_crop_swarms_single.mp4"
-    )
+    # recording_file = (
+    #     "recordings/new_settings/22-11-14_start_17-06-59_crop_swarms_single.mp4"
+    # )
 
     write_file = False
     # output_file = "output/components/normed_120_10_std_dev_threshold_2_median_11_schwarm_temp.mp4"
@@ -50,11 +50,12 @@ if __name__ == "__main__":
         timer = cv.getTickCount()
 
         # Detection
+        downsample = True
         if enhanced:
             enhanced_frame = raw_frame[:1080, :, :]
             detector.process_frame(raw_frame[1080:, :, :], secondary=enhanced_frame)
         else:
-            detector.process_frame(raw_frame)
+            detector.process_frame(raw_frame, downsample=downsample)
 
         # Output
         four_images = True
@@ -76,15 +77,21 @@ if __name__ == "__main__":
             down = np.concatenate(
                 (
                     detector.draw_output(
-                        detector.current_threshold, debug=True, runtiming=True
+                        detector.current_threshold, debug=True, runtiming=False
                     ),
                     detector.draw_output(
-                        detector.current_raw, classifications=False, runtiming=True
+                        detector.current_raw, classifications=True, runtiming=False
                     ),
                 ),
                 axis=1,
             )
             disp = np.concatenate((up, down))
+            disp = detector.draw_output(
+                        detector.resize_img(disp, 200), classifications=False, runtiming=True
+                    )
+            disp = detector.draw_output(
+                        raw_frame, classifications=True, runtiming=True, fullres=True
+                    )
         else:
             disp = np.concatenate(
                 (

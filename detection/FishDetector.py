@@ -19,6 +19,7 @@ class FishDetector:
         self.current_classified = None
 
         # Enhancement
+        self.downsample = None
         self.framebuffer = None
         self.mean_buffer = None
         self.mean_buffer_counter = None
@@ -46,8 +47,11 @@ class FishDetector:
         self.river_pixel_velocity = (-1.91, -0.85)
         self.rotation_rad = -2.7229
 
-    def process_frame(self, raw_frame, secondary=None):
+    def process_frame(self, raw_frame, secondary=None, downsample=False):
         start = cv.getTickCount()
+        if downsample:
+            self.downsample = 25
+            raw_frame = self.resize_img(raw_frame, 25)
         self.current_raw = raw_frame
         self.current_gray = self.rgb_to_gray(self.current_raw)
         self.current_enhanced = self.enhance_frame(self.current_gray)
@@ -70,7 +74,7 @@ class FishDetector:
         return
 
     def enhance_frame(self, gray_frame):
-        light = True
+        light = False
         enhanced_temp = self.mask_regions(gray_frame, area="fish")
 
         if light:
@@ -94,9 +98,9 @@ class FishDetector:
         # # Transform into visual/uint8 image
         enhanced_temp = (abs(enhanced_temp) + 125).astype("uint8")
         # ret, self.current_enhanced = cv.threshold(self.current_enhanced, 160, 255, 0)
-        # enhanced_temp = self.spatial_filter(
-        #     enhanced_temp, kernel_size=11, method="median"
-        # )
+        enhanced_temp = self.spatial_filter(
+            enhanced_temp, kernel_size=3, method="median"
+        )
         return enhanced_temp
 
     def detect_and_track(self, enhanced_frame):
@@ -105,9 +109,9 @@ class FishDetector:
         self.current_objects = self.filter_objects(self.current_objects)
         return
 
-    def draw_output(self, img, classifications=False, debug=False, runtiming=False):
+    def draw_output(self, img, classifications=False, debug=False, runtiming=False, fullres=False):
         output = self.retrieve_frame(img)
-        output = self.draw_objects(output, classifications=classifications, debug=debug)
+        output = self.draw_objects(output, classifications=classifications, debug=debug, fullres=fullres)
         if runtiming:
             cv.rectangle(output, (1390, 25), (1850, 155), (0, 0, 0), -1)
             color = (255, 255, 255)
@@ -140,6 +144,8 @@ class FishDetector:
             )
             if self.total_runtime_ms > 40:
                 color = (100, 100, 255)
+            if self.total_runtime_ms == 0:
+                self.total_runtime_ms = 1
             cv.putText(
                 output,
                 f"{self.total_runtime_ms} ms - Total - FPS: {int(1000/self.total_runtime_ms)}",
@@ -171,11 +177,14 @@ class FishDetector:
             )
         return img
 
-    def draw_objects(self, img, debug=False, classifications=False):
+    def draw_objects(self, img, debug=False, classifications=False, fullres=False):
         for ID, obj in self.current_objects.items():
             if obj.show[-1]:
                 if classifications:
-                    obj.draw_classifications_box(img)
+                    if fullres:
+                        obj.draw_classifications_box(img, self.downsample)
+                    else:
+                        obj.draw_classifications_box(img)
                 else:
                     if obj.classification[-1] == "Fisch":
                         obj.draw_bounding_box(img, color=(0, 255, 0))
@@ -276,7 +285,7 @@ class FishDetector:
 
             # Consolidate the points
             enhanced_frame = cv.GaussianBlur(
-                enhanced_frame.astype("uint8"), (101, 101), 0
+                enhanced_frame.astype("uint8"), (25, 25), 0
             )
 
             # Threshold
@@ -404,9 +413,19 @@ class FishDetector:
     @staticmethod
     def mask_regions(img, area="fish"):
         if area == "fish":
-            np.place(img, fish_area_mask < 100, 0)
+            if img.shape[:1] != fish_area_mask.shape[:1]:
+                percent_difference = img.shape[0] / fish_area_mask.shape[0] * 100
+
+                np.place(img, FishDetector.resize_img(fish_area_mask, percent_difference) < 100, 0)
+            else:
+                np.place(img, fish_area_mask < 100, 0)
         elif area == "full":
-            np.place(img, full_area_mask < 100, 0)
+            if img.shape[:1] != full_area_mask.shape[:1]:
+                percent_difference = img.shape[0] / full_area_mask.shape[0] * 100
+
+                np.place(img, FishDetector.resize_img(full_area_mask, percent_difference) < 100, 0)
+            else:
+                np.place(img, full_area_mask < 100, 0)
         return img
 
     @staticmethod
@@ -423,7 +442,7 @@ class FishDetector:
     @staticmethod
     def retrieve_frame(img):
         if img is None:
-            return np.zeros((1080, 1920, 3), dtype=np.uint8)
+            return np.zeros((270, 480, 3), dtype=np.uint8)
         elif len(img.shape) == 3:
             if img.shape[2] == 3:
                 return img
@@ -445,3 +464,12 @@ class FishDetector:
         ):
             print("Duplicate frame.")
             return True
+
+    @staticmethod
+    def resize_img(img, scale_percent):
+        width = int(img.shape[1] * scale_percent / 100)
+        height = int(img.shape[0] * scale_percent / 100)
+        dim = (width, height)
+
+        # resize image
+        return cv.resize(img, dim, interpolation=cv.INTER_AREA)
