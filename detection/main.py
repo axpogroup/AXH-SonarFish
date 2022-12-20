@@ -87,11 +87,11 @@ if __name__ == "__main__":
             )
             disp = np.concatenate((up, down))
             disp = detector.draw_output(
-                        detector.resize_img(disp, 200), classifications=False, runtiming=True
-                    )
+                detector.resize_img(disp, 200), classifications=False, runtiming=True
+            )
             disp = detector.draw_output(
-                        raw_frame, classifications=True, runtiming=True, fullres=True
-                    )
+                raw_frame, classifications=True, runtiming=True, fullres=True
+            )
         else:
             disp = np.concatenate(
                 (

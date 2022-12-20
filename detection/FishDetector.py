@@ -109,9 +109,13 @@ class FishDetector:
         self.current_objects = self.filter_objects(self.current_objects)
         return
 
-    def draw_output(self, img, classifications=False, debug=False, runtiming=False, fullres=False):
+    def draw_output(
+        self, img, classifications=False, debug=False, runtiming=False, fullres=False
+    ):
         output = self.retrieve_frame(img)
-        output = self.draw_objects(output, classifications=classifications, debug=debug, fullres=fullres)
+        output = self.draw_objects(
+            output, classifications=classifications, debug=debug, fullres=fullres
+        )
         if runtiming:
             cv.rectangle(output, (1390, 25), (1850, 155), (0, 0, 0), -1)
             color = (255, 255, 255)
@@ -416,14 +420,22 @@ class FishDetector:
             if img.shape[:1] != fish_area_mask.shape[:1]:
                 percent_difference = img.shape[0] / fish_area_mask.shape[0] * 100
 
-                np.place(img, FishDetector.resize_img(fish_area_mask, percent_difference) < 100, 0)
+                np.place(
+                    img,
+                    FishDetector.resize_img(fish_area_mask, percent_difference) < 100,
+                    0,
+                )
             else:
                 np.place(img, fish_area_mask < 100, 0)
         elif area == "full":
             if img.shape[:1] != full_area_mask.shape[:1]:
                 percent_difference = img.shape[0] / full_area_mask.shape[0] * 100
 
-                np.place(img, FishDetector.resize_img(full_area_mask, percent_difference) < 100, 0)
+                np.place(
+                    img,
+                    FishDetector.resize_img(full_area_mask, percent_difference) < 100,
+                    0,
+                )
             else:
                 np.place(img, full_area_mask < 100, 0)
         return img
