@@ -14,7 +14,7 @@ class Object:
         x, y, w, h = cv.boundingRect(contour)
         self.midpoints = [(int(x + w / 2), int(y + h / 2))]
 
-        self.classification = ["Objekt"]
+        self.classifications = ["Objekt"]
 
         self.velocity = []
         self.mean_v = None
@@ -56,7 +56,7 @@ class Object:
             w * upsample_factor,
             h * upsample_factor,
         )
-        if self.classification[-1] == "Fisch":
+        if self.classifications[-1] == "Fisch":
             color = (0, 255, 0)
         else:
             color = (250, 150, 150)
@@ -65,7 +65,7 @@ class Object:
         if downsampled != 100:
             cv.putText(
                 img,
-                (self.classification[-1]),
+                (self.classifications[-1]),
                 (x, y - 10),
                 cv.FONT_HERSHEY_SIMPLEX,
                 0.75,
@@ -102,7 +102,7 @@ class Object:
             fish = False
             return
 
-        if self.classification[-1] == "Fisch":
+        if self.classifications[-1] == "Fisch":
             if abs(self.mean_v[1]) > 0.5:
                 fish = True
             elif abs(self.mean_v[0] - 2.185) > 1:
@@ -114,9 +114,9 @@ class Object:
             fish = True
 
         if fish:
-            self.classification.append("Fisch")
+            self.classifications.append("Fisch")
         else:
-            self.classification.append("Objekt")
+            self.classifications.append("Objekt")
         return
 
     def rotate_vector(self, vec, theta):

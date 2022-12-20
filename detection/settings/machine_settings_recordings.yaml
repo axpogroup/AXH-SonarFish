@@ -1,6 +1,7 @@
 # Input / Output
 input_file:  "recordings/new_settings/22-11-14_start_17-06-59_crop_swarms_single.mp4"
 #record_output_video: "output/productialization/new_settings_delete.mp4"
+#record_output_csv: "output/csv/test_machine_settings.csv"
 
 # Enhancement
 downsample: 25

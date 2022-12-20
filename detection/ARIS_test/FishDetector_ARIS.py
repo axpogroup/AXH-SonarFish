@@ -211,7 +211,7 @@ class FishDetector:
                     else:
                         obj.draw_classifications_box(img)
                 else:
-                    if obj.classification[-1] == "Fisch":
+                    if obj.classifications[-1] == "Fisch":
                         obj.draw_bounding_box(img, color=(0, 255, 0))
                         obj.draw_past_midpoints(img, color=(0, 255, 0))
                     else:
