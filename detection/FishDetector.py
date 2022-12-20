@@ -44,7 +44,9 @@ class FishDetector:
         self.detection_tracking_time_ms = None
         self.max_association_dist = settings_dict["max_association_dist"]
         self.phase_out_after_x_frames = settings_dict["phase_out_after_x_frames"]
-        self.min_occurences_in_last_x_frames = settings_dict["min_occurences_in_last_x_frames"]
+        self.min_occurences_in_last_x_frames = settings_dict[
+            "min_occurences_in_last_x_frames"
+        ]
 
         # Classification
         self.river_pixel_velocity = settings_dict["river_pixel_velocity"]

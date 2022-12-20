@@ -1,7 +1,6 @@
 import cv2 as cv
 import numpy as np
 import yaml
-
 from FishDetector import FishDetector
 
 
@@ -17,7 +16,7 @@ def initialize_output_recording(input_video, output_video_file):
 
 
 if __name__ == "__main__":
-    with open('settings/jet_to_gray.yaml') as f:
+    with open("settings/jet_to_gray.yaml") as f:
         settings_dict = yaml.load(f, Loader=yaml.SafeLoader)
         print(settings_dict)
 
@@ -25,7 +24,9 @@ if __name__ == "__main__":
     detector = FishDetector(settings_dict)
 
     if "record_output_video" in settings_dict.keys():
-        video_writer = initialize_output_recording(video_cap, settings_dict["record_output_video"])
+        video_writer = initialize_output_recording(
+            video_cap, settings_dict["record_output_video"]
+        )
 
     frame_by_frame = False
     frame_no = 0
