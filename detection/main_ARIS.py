@@ -4,18 +4,20 @@ from FishDetector_ARIS import FishDetector
 
 if __name__ == "__main__":
     enhanced = False
-    recording_file = (
-        "ARIS_test/2022-06-18_050000_3870_4073 Abtasten 3 Forellen besprechen.mp4"
-    )
+    # recording_file = (
+    #         "ARIS_test/2022-06-21_050000_1406_2480 zu besprechen abstieg oder fressen.mp4"
+    # ) # interessant 2
+    recording_file = "ARIS_test/2022-06-23_134500_1571_1942 2 Forellen 20-25cm Rechenkontakte zu besprechen.mp4"
+
     # recording_file = "output/normed_120_10_std_dev_threshold_2_median_11_drop_duplicates_crop.mp4"  # enhanced
     # recording_file = "output/components/final_old_moving_average_5s.mp4"  # enhanced
     # recording_file = (
     #     "recordings/new_settings/22-11-14_start_17-06-59_crop_swarms_single.mp4"
     # )
 
-    write_file = False
+    write_file = True
     # output_file = "output/components/normed_120_10_std_dev_threshold_2_median_11_schwarm_temp.mp4"
-    output_file = "output/productialization/new_settings_delete.mp4"
+    output_file = "output/productialization/ARIS/" + (recording_file.split("/")[-1]).split(".mp4")[0] + "_detection_100_assoc_80.mp4"
     # output_file = "output/normed_120_minus_10.mp4"
     # output_file = "output/normed_120_10_std_dev_threshold_2.mp4"
 
@@ -33,7 +35,7 @@ if __name__ == "__main__":
     # initialize the FourCC and a video writer object
     fourcc = cv.VideoWriter_fourcc("m", "p", "4", "v")
     video_writer = cv.VideoWriter(
-        output_file, fourcc, fps, (frame_width, frame_height * 2)
+        output_file, fourcc, fps, (frame_width, frame_height)
     )
 
     # Initialize FishDetector Instance
@@ -61,6 +63,7 @@ if __name__ == "__main__":
 
         # Output
         four_images = True
+        fullres = False
         if enhanced:
             disp = np.concatenate(
                 (
@@ -69,31 +72,33 @@ if __name__ == "__main__":
                 )
             )
         elif four_images:
-            up = np.concatenate(
-                (
-                    detector.retrieve_frame(detector.current_long_mean_uint8),
-                    detector.retrieve_frame(detector.current_enhanced),
-                ),
-                axis=1,
-            )
-            down = np.concatenate(
-                (
-                    detector.draw_output(
-                        detector.current_threshold, debug=True, runtiming=False
+            try:
+                up = np.concatenate(
+                    (
+                        detector.retrieve_frame(detector.current_enhanced),
+                        detector.retrieve_frame(detector.current_blurred_enhanced),
                     ),
-                    detector.draw_output(
-                        detector.current_raw, classifications=True, runtiming=False
+                    axis=1,
+                )
+                down = np.concatenate(
+                    (
+                        detector.draw_output(detector.retrieve_frame(detector.current_raw), debug=False),
+                        detector.retrieve_frame(detector.current_threshold)
                     ),
-                ),
-                axis=1,
-            )
-            disp = np.concatenate((up, down))
-            disp = detector.draw_output(
-                detector.resize_img(disp, 200), classifications=False, runtiming=True
-            )
+                    axis=1,
+                )
+                disp = np.concatenate((up, down))
+                disp = detector.draw_output(
+                    detector.resize_img(disp, 300), only_runtime=True, runtiming=True
+                )
+            except:
+                disp = raw_frame
+
+        elif fullres:
             disp = detector.draw_output(
                 raw_frame, classifications=True, runtiming=True, fullres=True
             )
+
         else:
             disp = np.concatenate(
                 (

@@ -19,18 +19,31 @@ class FishDetector:
         self.current_classified = None
 
         # Enhancement
-        self.downsample = None
         self.framebuffer = None
         self.mean_buffer = None
         self.mean_buffer_counter = None
-        self.buffer_size = 120
-        self.long_mean_frames = 120
         self.long_mean = None
         self.long_std_dev = None
-        self.current_mean_frames = 10
         self.current_mean = None
         self.enhance_time_ms = None
         self.current_long_mean_uint8 = None
+        self.current_blurred_enhanced = None
+
+        self.downsample = 100
+        self.buffer_size = 60
+        self.current_mean_frames = 2
+        self.std_dev_threshold = 0.1
+        self.median_filter_kernel = 11 # 3
+        self.blur_filter_kernel = 41 # 11
+        self.threshold_contours = 139 # 139
+
+        # self.downsample = 25
+        # self.buffer_size = 60
+        # self.current_mean_frames = 2
+        # self.std_dev_threshold = 0.1
+        # self.median_filter_kernel = 3 # 3
+        # self.blur_filter_kernel = 11 # 11
+        # self.threshold_contours = 139 # 139
 
         # Detection and Tracking
         self.detections = {}
@@ -38,9 +51,9 @@ class FishDetector:
         self.current_threshold = None
         self.associations = []
         self.max_obj_index = 0
-        self.max_association_dist = 60
+        self.max_association_dist = 80
         self.phase_out_after_x_frames = 5
-        self.min_occurences_in_last_x_frames = (13, 15)
+        self.min_occurences_in_last_x_frames = (8, 15)
         self.detection_tracking_time_ms = None
 
         # Classification
@@ -50,8 +63,7 @@ class FishDetector:
     def process_frame(self, raw_frame, secondary=None, downsample=False):
         start = cv.getTickCount()
         if downsample:
-            self.downsample = 25
-            raw_frame = self.resize_img(raw_frame, 25)
+            raw_frame = self.resize_img(raw_frame, self.downsample)
         self.current_raw = raw_frame
         self.current_gray = self.rgb_to_gray(self.current_raw)
         self.current_enhanced = self.enhance_frame(self.current_gray)
@@ -75,7 +87,7 @@ class FishDetector:
 
     def enhance_frame(self, gray_frame):
         light = False
-        enhanced_temp = self.mask_regions(gray_frame, area="fish")
+        enhanced_temp = self.mask_regions(gray_frame, area="None")
 
         if light:
             self.update_buffer_light(enhanced_temp)
@@ -91,7 +103,7 @@ class FishDetector:
             enhanced_temp[abs(enhanced_temp) < 20] = 0
         else:
             enhanced_temp = self.calc_difference_from_buffer()
-            enhanced_temp = self.threshold_diff(enhanced_temp, threshold=2)
+            enhanced_temp = self.threshold_diff(enhanced_temp, threshold=self.std_dev_threshold)
 
         self.current_long_mean_uint8 = self.long_mean.astype("uint8")
 
@@ -99,7 +111,7 @@ class FishDetector:
         enhanced_temp = (abs(enhanced_temp) + 125).astype("uint8")
         # ret, self.current_enhanced = cv.threshold(self.current_enhanced, 160, 255, 0)
         enhanced_temp = self.spatial_filter(
-            enhanced_temp, kernel_size=3, method="median"
+            enhanced_temp, kernel_size=self.median_filter_kernel, method="median"
         )
         return enhanced_temp
 
@@ -110,12 +122,13 @@ class FishDetector:
         return
 
     def draw_output(
-        self, img, classifications=False, debug=False, runtiming=False, fullres=False
+        self, img, classifications=False, debug=False, runtiming=False, fullres=False, only_runtime=False
     ):
         output = self.retrieve_frame(img)
-        output = self.draw_objects(
-            output, classifications=classifications, debug=debug, fullres=fullres
-        )
+        if not only_runtime:
+            output = self.draw_objects(
+                output, classifications=classifications, debug=debug, fullres=fullres
+            )
         if runtiming:
             cv.rectangle(output, (1390, 25), (1850, 155), (0, 0, 0), -1)
             color = (255, 255, 255)
@@ -194,8 +207,8 @@ class FishDetector:
                         obj.draw_bounding_box(img, color=(0, 255, 0))
                         obj.draw_past_midpoints(img, color=(0, 255, 0))
                     else:
-                        obj.draw_bounding_box(img, color=(255, 0, 0))
-                        obj.draw_past_midpoints(img, color=(255, 0, 0))
+                        obj.draw_bounding_box(img, color=(0, 0, 255))
+                        obj.draw_past_midpoints(img, color=(0, 0, 255))
             elif (obj.frames_observed[-1] == self.frame_number) & debug:
                 obj.draw_bounding_box(img, color=(20, 20, 20))
                 obj.draw_past_midpoints(img, color=(20, 20, 20))
@@ -289,11 +302,12 @@ class FishDetector:
 
             # Consolidate the points
             enhanced_frame = cv.GaussianBlur(
-                enhanced_frame.astype("uint8"), (25, 25), 0
+                enhanced_frame.astype("uint8"), (self.blur_filter_kernel, self.blur_filter_kernel), 0
             )
 
+            self.current_blurred_enhanced = enhanced_frame
             # Threshold
-            ret, thres = cv.threshold(enhanced_frame, 127, 255, 0)
+            ret, thres = cv.threshold(enhanced_frame, self.threshold_contours, 255, 0)
             self.current_threshold = thres
             # Alternative consolidation - dilate
             # kernel = np.ones((51, 51), 'uint8')
@@ -375,7 +389,7 @@ class FishDetector:
 
     def calc_difference_from_buffer(self):
         self.long_mean = np.mean(self.framebuffer, axis=2).astype("int16")
-        self.current_mean = np.mean(self.framebuffer[:, :, :10], axis=2).astype("uint8")
+        self.current_mean = np.mean(self.framebuffer[:, :, :self.current_mean_frames], axis=2).astype("uint8")
         return self.current_mean.astype("int16") - self.long_mean
 
     def threshold_diff(

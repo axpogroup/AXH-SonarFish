@@ -28,20 +28,20 @@ class Object:
         self.midpoints.append(detection.midpoints[-1])
 
         self.calculate_speed()
-        self.classify_object()
+        # self.classify_object()
 
     def draw_bounding_box(self, img, color):
         x, y, w, h = cv.boundingRect(self.contours[-1])
         cv.rectangle(img, (x, y), (x + w, y + h), color, 2)
-        cv.putText(
-            img,
-            (self.classification[-1] + " " + str(self.ID)),
-            (x, y - 10),
-            cv.FONT_HERSHEY_SIMPLEX,
-            0.75,
-            color,
-            2,
-        )
+        # cv.putText(
+        #     img,
+        #     (self.classification[-1] + " " + str(self.ID)),
+        #     (x, y - 10),
+        #     cv.FONT_HERSHEY_SIMPLEX,
+        #     0.75,
+        #     color,
+        #     2,
+        # )
         # if self.mean_v is not None:
         #     cv.putText(img, (str(self.mean_v[0])),
         #                      (x, y + 10), cv.FONT_HERSHEY_SIMPLEX, 0.75, color, 2)
@@ -56,12 +56,13 @@ class Object:
             w * upsample_factor,
             h * upsample_factor,
         )
+        x, y, w, h = x - 2*w, y - 2*h, w*4, h*4
         if self.classification[-1] == "Fisch":
             color = (0, 255, 0)
         else:
-            color = (250, 150, 150)
+            color = (0, 0, 250)
 
-        cv.rectangle(img, (x, y), (x + w, y + h), color, 2)
+        cv.rectangle(img, (x, y), (x + w, y + h), color, 4)
         cv.putText(
             img,
             (self.classification[-1]),
