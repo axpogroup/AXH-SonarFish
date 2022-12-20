@@ -30,9 +30,7 @@ if __name__ == "__main__":
 
     # initialize the FourCC and a video writer object
     fourcc = cv.VideoWriter_fourcc("m", "p", "4", "v")
-    video_writer = cv.VideoWriter(
-        output_file, fourcc, fps, (frame_width, frame_height * 2)
-    )
+    video_writer = cv.VideoWriter(output_file, fourcc, fps, (frame_width, frame_height))
 
     # Initialize FishDetector Instance
     detector = FishDetector(recording_file)
@@ -58,7 +56,8 @@ if __name__ == "__main__":
             detector.process_frame(raw_frame, downsample=downsample)
 
         # Output
-        four_images = True
+        four_images = False
+        fullres = True
         if enhanced:
             disp = np.concatenate(
                 (
@@ -67,31 +66,35 @@ if __name__ == "__main__":
                 )
             )
         elif four_images:
-            up = np.concatenate(
-                (
-                    detector.retrieve_frame(detector.current_long_mean_uint8),
-                    detector.retrieve_frame(detector.current_enhanced),
-                ),
-                axis=1,
-            )
-            down = np.concatenate(
-                (
-                    detector.draw_output(
-                        detector.current_threshold, debug=True, runtiming=False
+            try:
+                up = np.concatenate(
+                    (
+                        detector.retrieve_frame(detector.current_enhanced),
+                        detector.retrieve_frame(detector.current_blurred_enhanced),
                     ),
-                    detector.draw_output(
-                        detector.current_raw, classifications=True, runtiming=False
+                    axis=1,
+                )
+                down = np.concatenate(
+                    (
+                        detector.draw_output(
+                            detector.retrieve_frame(detector.current_raw), debug=False
+                        ),
+                        detector.retrieve_frame(detector.current_threshold),
                     ),
-                ),
-                axis=1,
-            )
-            disp = np.concatenate((up, down))
-            disp = detector.draw_output(
-                detector.resize_img(disp, 200), classifications=False, runtiming=True
-            )
+                    axis=1,
+                )
+                disp = np.concatenate((up, down))
+                disp = detector.draw_output(
+                    detector.resize_img(disp, 300), only_runtime=True, runtiming=True
+                )
+            except ValueError:
+                disp = raw_frame
+
+        elif fullres:
             disp = detector.draw_output(
                 raw_frame, classifications=True, runtiming=True, fullres=True
             )
+
         else:
             disp = np.concatenate(
                 (

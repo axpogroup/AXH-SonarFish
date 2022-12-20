@@ -62,15 +62,16 @@ class Object:
             color = (250, 150, 150)
 
         cv.rectangle(img, (x, y), (x + w, y + h), color, 2)
-        # cv.putText(
-        #     img,
-        #     (self.classification[-1]),
-        #     (x, y - 10),
-        #     cv.FONT_HERSHEY_SIMPLEX,
-        #     0.75,
-        #     color,
-        #     2,
-        # )
+        if downsampled != 100:
+            cv.putText(
+                img,
+                (self.classification[-1]),
+                (x, y - 10),
+                cv.FONT_HERSHEY_SIMPLEX,
+                0.75,
+                color,
+                2,
+            )
 
         return img
 
