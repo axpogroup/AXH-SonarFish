@@ -1,10 +1,10 @@
+import csv
+import datetime as dt
+import os
+
 import cv2 as cv
 import numpy as np
 import yaml
-import csv
-import os
-import datetime as dt
-
 from FishDetector import FishDetector
 
 
@@ -33,17 +33,18 @@ if __name__ == "__main__":
         )
 
     if "record_output_csv" in settings_dict.keys():
-        csv_f = open(settings_dict["record_output_csv"], 'w')
+        csv_f = open(settings_dict["record_output_csv"], "w")
         csv_writer = csv.writer(csv_f)
         header = ["t", "frame number", "x", "y", "w", "h", "Classification"]
         csv_writer.writerow(header)
-
 
     frame_by_frame = False
     frame_no = 0
     frames_total = int(video_cap.get(cv.CAP_PROP_FRAME_COUNT))
     date_fmt = "%y-%m-%d_start_%H-%M-%S_crop_swarms_single.mp4"
-    start_datetime = dt.datetime.strptime(os.path.split(settings_dict["input_file"])[-1], date_fmt)
+    start_datetime = dt.datetime.strptime(
+        os.path.split(settings_dict["input_file"])[-1], date_fmt
+    )
     fps = int(video_cap.get(cv.CAP_PROP_FPS))
     while video_cap.isOpened():
         ret, raw_frame = video_cap.read()
@@ -57,9 +58,14 @@ if __name__ == "__main__":
 
         # Output
         if "record_output_csv" in settings_dict.keys():
-            current_timestamp = start_datetime + dt.timedelta(seconds=float(frame_no)/fps)
-            csv_writer.writerows(detector.prepare_objects_for_csv(
-                timestr=current_timestamp.strftime("%y-%m-%d_%H-%M-%S.%f")[:-3]))
+            current_timestamp = start_datetime + dt.timedelta(
+                seconds=float(frame_no) / fps
+            )
+            csv_writer.writerows(
+                detector.prepare_objects_for_csv(
+                    timestr=current_timestamp.strftime("%y-%m-%d_%H-%M-%S.%f")[:-3]
+                )
+            )
 
         four_images = True
         fullres = False
@@ -75,10 +81,14 @@ if __name__ == "__main__":
                 down = np.concatenate(
                     (
                         detector.draw_output(
-                            detector.retrieve_frame(detector.current_raw), debug=False, classifications=True
+                            detector.retrieve_frame(detector.current_raw),
+                            debug=False,
+                            classifications=True,
                         ),
                         detector.draw_output(
-                            detector.retrieve_frame(detector.current_threshold), debug=True),
+                            detector.retrieve_frame(detector.current_threshold),
+                            debug=True,
+                        ),
                     ),
                     axis=1,
                 )

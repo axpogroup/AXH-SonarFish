@@ -505,8 +505,14 @@ class FishDetector:
             for _, object_ in self.current_objects.items():
                 # area = cv.contourArea(object_.contours[-1])
                 x, y, w, h = cv.boundingRect(object_.contours[-1])
-                row = [timestr, f"{self.frame_number}",
-                       f"{object_.midpoints[-1][0]}", f"{object_.midpoints[-1][1]}", str(w), str(h),
-                       f"{object_.classifications[-1]}"]
+                row = [
+                    timestr,
+                    f"{self.frame_number}",
+                    f"{object_.midpoints[-1][0]}",
+                    f"{object_.midpoints[-1][1]}",
+                    str(w),
+                    str(h),
+                    f"{object_.classifications[-1]}",
+                ]
                 rows.append(row)
         return rows
