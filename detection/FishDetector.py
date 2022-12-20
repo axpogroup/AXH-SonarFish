@@ -7,11 +7,10 @@ full_area_mask = cv.imread("masks/full.png", cv.IMREAD_GRAYSCALE)
 
 
 class FishDetector:
-    def __init__(self, filename):
-        self.filename = filename
+    def __init__(self, settings_dict):
+        self.settings_dict = settings_dict
         self.frame_number = 0  # TOD Must not overflow - recycle
         self.total_runtime_ms = None
-
         self.current_raw = None
         self.current_gray = None
         self.current_enhanced = None
@@ -28,31 +27,13 @@ class FishDetector:
         self.enhance_time_ms = None
         self.current_long_mean_uint8 = None
         self.current_blurred_enhanced = None
-
-        self.downsample = 25
-        self.buffer_size = 120
-        self.current_mean_frames = 10
-        self.std_dev_threshold = 2
-        self.median_filter_kernel = 3  # 3
-        self.blur_filter_kernel = 25  # 11
-        self.threshold_contours = 127  # 139
-
-        self.max_association_dist = 60
-        self.phase_out_after_x_frames = 5
-        self.min_occurences_in_last_x_frames = (13, 15)
-
-        # ARIS values
-        # self.downsample = 25
-        # self.buffer_size = 60
-        # self.current_mean_frames = 2
-        # self.std_dev_threshold = 0.1
-        # self.median_filter_kernel = 3  # 3
-        # self.blur_filter_kernel = 11  # 11
-        # self.threshold_contours = 139  # 139
-        #
-        # self.max_association_dist = 20
-        # self.phase_out_after_x_frames = 5
-        # self.min_occurences_in_last_x_frames = (8, 15)
+        self.downsample = settings_dict["downsample"]
+        self.long_mean_frames = settings_dict["long_mean_frames"]
+        self.current_mean_frames = settings_dict["current_mean_frames"]
+        self.std_dev_threshold = settings_dict["std_dev_threshold"]
+        self.median_filter_kernel = settings_dict["median_filter_kernel"]
+        self.blur_filter_kernel = settings_dict["blur_filter_kernel"]
+        self.threshold_contours = settings_dict["threshold_contours"]
 
         # Detection and Tracking
         self.detections = {}
@@ -61,10 +42,13 @@ class FishDetector:
         self.associations = []
         self.latest_obj_index = 0
         self.detection_tracking_time_ms = None
+        self.max_association_dist = settings_dict["max_association_dist"]
+        self.phase_out_after_x_frames = settings_dict["phase_out_after_x_frames"]
+        self.min_occurences_in_last_x_frames = settings_dict["min_occurences_in_last_x_frames"]
 
         # Classification
-        self.river_pixel_velocity = (-1.91, -0.85)
-        self.rotation_rad = -2.7229
+        self.river_pixel_velocity = settings_dict["river_pixel_velocity"]
+        self.rotation_rad = settings_dict["rotation_rad"]
 
     def process_frame(self, raw_frame, secondary=None, downsample=False):
         start = cv.getTickCount()
@@ -77,7 +61,7 @@ class FishDetector:
             (cv.getTickCount() - start) / cv.getTickFrequency() * 1000
         )
 
-        if self.frame_number > self.buffer_size:
+        if self.frame_number > self.long_mean_frames:
             self.detect_and_track(self.current_enhanced)
             self.detection_tracking_time_ms = (
                 int((cv.getTickCount() - start) / cv.getTickFrequency() * 1000)
@@ -95,11 +79,11 @@ class FishDetector:
         enhanced_temp = self.mask_regions(gray_frame, area="fish")
         if light:
             self.update_buffer_light(enhanced_temp)
-            if self.frame_number < self.buffer_size:
+            if self.frame_number < self.long_mean_frames:
                 return enhanced_temp * 0
         else:
             self.update_buffer(enhanced_temp)
-            if self.frame_number < self.buffer_size:
+            if self.frame_number < self.long_mean_frames:
                 return enhanced_temp * 0
 
         if light:
@@ -367,8 +351,8 @@ class FishDetector:
                 (img[..., np.newaxis], self.framebuffer), axis=2
             )
 
-        if self.framebuffer.shape[2] > self.buffer_size:
-            self.framebuffer = self.framebuffer[:, :, : self.buffer_size]
+        if self.framebuffer.shape[2] > self.long_mean_frames:
+            self.framebuffer = self.framebuffer[:, :, : self.long_mean_frames]
 
     def calc_difference_from_buffer_light(self):
         self.current_mean = np.mean(self.framebuffer[:, :, :10], axis=2).astype("uint8")

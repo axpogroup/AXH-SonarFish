@@ -1,0 +1,26 @@
+# Input / Output
+input_file: "ARIS_test/recordings/2022-06-23_134500_1571_1942 2 Forellen 20-25cm Rechenkontakte zu besprechen.mp4"
+#input_file: "ARIS_test/recordings/2022-06-21_050000_1406_2480 zu besprechen abstieg oder fressen.mp4"
+# input_file:  "output/normed_120_10_std_dev_threshold_2_median_11_drop_duplicates_crop.mp4"  # enhanced
+# input_file:  "output/components/final_old_moving_average_5s.mp4"  # enhanced
+# input_file:  "recordings/new_settings/22-11-14_start_17-06-59_crop_swarms_single.mp4"
+record_output_video: "output/productialization/new_settings_delete.mp4"
+
+# Enhancement
+downsample: 25
+long_mean_frames: 60
+current_mean_frames: 2
+std_dev_threshold: 0.1
+median_filter_kernel: 3  # 3
+
+# Detection and Tracking
+blur_filter_kernel: 11  # 11
+threshold_contours: 139  # 139
+
+max_association_dist: 20
+phase_out_after_x_frames: 5
+min_occurences_in_last_x_frames: [8, 15]
+
+# Classification
+river_pixel_velocity: [-1.91, -0.85]
+rotation_rad: -2.7229

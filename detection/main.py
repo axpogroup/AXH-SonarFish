@@ -1,41 +1,35 @@
 import cv2 as cv
 import numpy as np
+import yaml
+
 from FishDetector import FishDetector
 
-if __name__ == "__main__":
-    enhanced = False
-    recording_file = "recordings/Schwarm_einzel_jet_to_gray_snippet.mp4"
-    # recording_file = "output/normed_120_10_std_dev_threshold_2_median_11_drop_duplicates_crop.mp4"  # enhanced
-    # recording_file = "output/components/final_old_moving_average_5s.mp4"  # enhanced
-    # recording_file = (
-    #     "recordings/new_settings/22-11-14_start_17-06-59_crop_swarms_single.mp4"
-    # )
 
-    write_file = False
-    # output_file = "output/components/normed_120_10_std_dev_threshold_2_median_11_schwarm_temp.mp4"
-    output_file = "output/productialization/new_settings_delete.mp4"
-    # output_file = "output/normed_120_minus_10.mp4"
-    # output_file = "output/normed_120_10_std_dev_threshold_2.mp4"
-
-    # Initialize Input
-    video_cap = cv.VideoCapture(recording_file)
-    frame_by_frame = False
-    previous_img = False
-
+def initialize_output_recording(input_video, output_video_file):
     # grab the width, height, fps and length of the video stream.
-    frame_width = int(video_cap.get(cv.CAP_PROP_FRAME_WIDTH))
-    frame_height = int(video_cap.get(cv.CAP_PROP_FRAME_HEIGHT))
-    fps = int(video_cap.get(cv.CAP_PROP_FPS))
-    frames_total = int(video_cap.get(cv.CAP_PROP_FRAME_COUNT))
+    frame_width = int(input_video.get(cv.CAP_PROP_FRAME_WIDTH))
+    frame_height = int(input_video.get(cv.CAP_PROP_FRAME_HEIGHT))
+    fps = int(input_video.get(cv.CAP_PROP_FPS))
 
     # initialize the FourCC and a video writer object
     fourcc = cv.VideoWriter_fourcc("m", "p", "4", "v")
-    video_writer = cv.VideoWriter(output_file, fourcc, fps, (frame_width, frame_height))
+    return cv.VideoWriter(output_video_file, fourcc, fps, (frame_width, frame_height))
 
-    # Initialize FishDetector Instance
-    detector = FishDetector(recording_file)
 
+if __name__ == "__main__":
+    with open('settings/jet_to_gray.yaml') as f:
+        settings_dict = yaml.load(f, Loader=yaml.SafeLoader)
+        print(settings_dict)
+
+    video_cap = cv.VideoCapture(settings_dict["input_file"])
+    detector = FishDetector(settings_dict)
+
+    if "record_output_video" in settings_dict.keys():
+        video_writer = initialize_output_recording(video_cap, settings_dict["record_output_video"])
+
+    frame_by_frame = False
     frame_no = 0
+    frames_total = int(video_cap.get(cv.CAP_PROP_FRAME_COUNT))
     while video_cap.isOpened():
         ret, raw_frame = video_cap.read()
         # if frame is read correctly ret is True
@@ -43,29 +37,13 @@ if __name__ == "__main__":
             print("Can't receive frame (stream end?). Exiting ...")
             break
 
-        # Start timer
-        frame_no += 1
-        timer = cv.getTickCount()
-
         # Detection
-        downsample = True
-        if enhanced:
-            enhanced_frame = raw_frame[:1080, :, :]
-            detector.process_frame(raw_frame[1080:, :, :], secondary=enhanced_frame)
-        else:
-            detector.process_frame(raw_frame, downsample=downsample)
+        detector.process_frame(raw_frame, downsample=True)
 
         # Output
         four_images = False
         fullres = True
-        if enhanced:
-            disp = np.concatenate(
-                (
-                    detector.draw_output(detector.current_output, debug=True),
-                    detector.draw_output(detector.current_raw, classifications=True),
-                )
-            )
-        elif four_images:
+        if four_images:
             try:
                 up = np.concatenate(
                     (
@@ -108,12 +86,8 @@ if __name__ == "__main__":
             )
         cv.imshow("frame", disp)
 
-        if write_file:
+        if "record_output_video" in settings_dict.keys():
             video_writer.write(disp)
-        if frame_no % 20 == 0:
-            print(f"Processed {frame_no/frames_total*100} % of video.")
-            if frame_no / frames_total * 100 > 35:
-                pass
 
         if not frame_by_frame:
             usr_input = cv.waitKey(1)
@@ -126,6 +100,13 @@ if __name__ == "__main__":
         if usr_input == 27:
             break
 
+        if frame_no % 20 == 0:
+            print(f"Processed {frame_no/frames_total*100} % of video.")
+            if frame_no / frames_total * 100 > 35:
+                pass
+        frame_no += 1
+
     video_cap.release()
-    video_writer.release()
+    if "record_output_video" in settings_dict.keys():
+        video_writer.release()
     cv.destroyAllWindows()
