@@ -438,7 +438,8 @@ class BoxAndDotDetector:
 
                 np.place(
                     img,
-                    BoxAndDotDetector.resize_img(fish_area_mask, percent_difference) < 100,
+                    BoxAndDotDetector.resize_img(fish_area_mask, percent_difference)
+                    < 100,
                     0,
                 )
             else:
@@ -449,7 +450,8 @@ class BoxAndDotDetector:
 
                 np.place(
                     img,
-                    BoxAndDotDetector.resize_img(full_area_mask, percent_difference) < 100,
+                    BoxAndDotDetector.resize_img(full_area_mask, percent_difference)
+                    < 100,
                     0,
                 )
             else:

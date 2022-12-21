@@ -1,5 +1,6 @@
 import csv
 import datetime as dt
+import os
 
 import cv2 as cv
 import numpy as np
@@ -37,13 +38,14 @@ if __name__ == "__main__":
         header = ["t", "frame number", "x", "y", "w", "h", "Classification"]
         csv_writer.writerow(header)
 
+        date_fmt = "%y-%m-%d_start_%H-%M-%S_crop_swarms_single.mp4"
+        start_datetime = dt.datetime.strptime(
+            os.path.split(settings_dict["input_file"])[-1], date_fmt
+        )
+
     frame_by_frame = False
     frame_no = 0
     frames_total = int(video_cap.get(cv.CAP_PROP_FRAME_COUNT))
-    date_fmt = "%y-%m-%d_start_%H-%M-%S_crop_swarms_single.mp4"
-    # start_datetime = dt.datetime.strptime(
-    #     os.path.split(settings_dict["input_file"])[-1], date_fmt
-    # )
     fps = int(video_cap.get(cv.CAP_PROP_FPS))
     while video_cap.isOpened():
         ret, raw_frame = video_cap.read()
