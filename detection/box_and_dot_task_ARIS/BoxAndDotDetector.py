@@ -1,9 +1,12 @@
 import cv2 as cv
 import numpy as np
+
 from detection.Object import Object
 
 # fish_area_mask = cv.imread("masks/fish.png", cv.IMREAD_GRAYSCALE)
 # full_area_mask = cv.imread("masks/full.png", cv.IMREAD_GRAYSCALE)
+fish_area_mask = None
+full_area_mask = None
 
 
 class BoxAndDotDetector:
@@ -435,7 +438,7 @@ class BoxAndDotDetector:
 
                 np.place(
                     img,
-                    FishDetector.resize_img(fish_area_mask, percent_difference) < 100,
+                    BoxAndDotDetector.resize_img(fish_area_mask, percent_difference) < 100,
                     0,
                 )
             else:
@@ -446,7 +449,7 @@ class BoxAndDotDetector:
 
                 np.place(
                     img,
-                    FishDetector.resize_img(full_area_mask, percent_difference) < 100,
+                    BoxAndDotDetector.resize_img(full_area_mask, percent_difference) < 100,
                     0,
                 )
             else:
