@@ -1,7 +1,9 @@
+import copy
+
 import cv2 as cv
 import numpy as np
 
-from detection.Object import Object
+from Object_box_and_dot import Object
 
 # fish_area_mask = cv.imread("masks/fish.png", cv.IMREAD_GRAYSCALE)
 # full_area_mask = cv.imread("masks/full.png", cv.IMREAD_GRAYSCALE)
@@ -19,6 +21,10 @@ class BoxAndDotDetector:
         self.current_enhanced = None
         self.current_output = None
         self.current_classified = None
+
+        # colorchannels
+        self.current_red = None
+        self.current_green = None
 
         # Enhancement
         self.framebuffer = None
@@ -55,23 +61,65 @@ class BoxAndDotDetector:
         self.river_pixel_velocity = settings_dict["river_pixel_velocity"]
         self.rotation_rad = settings_dict["rotation_rad"]
 
+    def extract_green_red(self, current_raw):
+        green = copy.deepcopy(current_raw[:, :, 1])
+        np.place( # blue higher 150, more red than green
+            green, ((current_raw[:, :, 1] < 200) | (current_raw[:, :, 0] > 150) | (current_raw[:, :, 2] > 150)),
+            0,
+        )
+
+        red = copy.deepcopy(current_raw[:, :, 2])
+        # np.place(
+        #     red, current_raw[:, :, 0] > 150,
+        #     0,
+        # )
+        np.place( # blue higher 150, more red than green
+            red, ((current_raw[:, :, 0] > 150) | (current_raw[:, :, 1] > 150)),
+            0,
+        )
+        return green, red
+
+    def extract_green_red_no_background(self, current_raw):
+        current_raw = cv.GaussianBlur(
+                current_raw,
+                (self.blur_filter_kernel, self.blur_filter_kernel),
+                0,
+            )
+        green = copy.deepcopy(current_raw[:, :, 1])
+        # np.place( # blue higher 150, more red than green
+        #     green, ((current_raw[:, :, 1] < 200) | (current_raw[:, :, 0] > 150) | (current_raw[:, :, 2] > 150)),
+        #     0,
+        # )
+
+        red = copy.deepcopy(current_raw[:, :, 2])
+        # np.place(
+        #     red, current_raw[:, :, 0] > 150,
+        #     0,
+        # # )
+        # np.place( # blue higher 150, more red than green
+        #     red, ((current_raw[:, :, 0] > 150) | (current_raw[:, :, 1] > 150)),
+        #     0,
+        # )
+        return green, red
+
+
     def process_frame(self, raw_frame, secondary=None, downsample=False):
         start = cv.getTickCount()
-        if downsample:
-            raw_frame = self.resize_img(raw_frame, self.downsample)
+        # if downsample:
+        #     raw_frame = self.resize_img(raw_frame, self.downsample)
+
         self.current_raw = raw_frame
-        self.current_gray = self.rgb_to_gray(self.current_raw)
-        self.current_enhanced = self.enhance_frame(self.current_gray)
+        self.current_green, self.current_red = self.extract_green_red_no_background(self.current_raw)
         self.enhance_time_ms = int(
             (cv.getTickCount() - start) / cv.getTickFrequency() * 1000
         )
 
-        if self.frame_number > self.long_mean_frames:
-            self.detect_and_track(self.current_enhanced)
-            self.detection_tracking_time_ms = (
-                int((cv.getTickCount() - start) / cv.getTickFrequency() * 1000)
-                - self.enhance_time_ms
-            )
+        self.detect_and_track(self.current_green, color="green")
+        self.detect_and_track(self.current_red, color="red")
+        self.detection_tracking_time_ms = (
+            int((cv.getTickCount() - start) / cv.getTickFrequency() * 1000)
+            - self.enhance_time_ms
+        )
 
         self.frame_number += 1
         self.total_runtime_ms = int(
@@ -81,7 +129,8 @@ class BoxAndDotDetector:
 
     def enhance_frame(self, gray_frame):
         light = False  # TOD unsure if this still works
-        enhanced_temp = self.mask_regions(gray_frame, area="fish")
+        # enhanced_temp = self.mask_regions(gray_frame, area="fish")
+        enhanced_temp = gray_frame
         if light:
             self.update_buffer_light(enhanced_temp)
             if self.frame_number < self.long_mean_frames:
@@ -107,8 +156,10 @@ class BoxAndDotDetector:
         enhanced_temp = cv.medianBlur(enhanced_temp, self.median_filter_kernel)
         return enhanced_temp
 
-    def detect_and_track(self, enhanced_frame):
+    def detect_and_track(self, enhanced_frame, color=None):
         self.detections = self.find_points_of_interest(enhanced_frame, mode="contour")
+        for _, detection in self.detections.items():
+            detection.classifications = [color]
         self.current_objects = self.associate_detections(self.detections)
         self.current_objects = self.filter_objects(self.current_objects)
         return
@@ -194,26 +245,26 @@ class BoxAndDotDetector:
 
     def draw_objects(self, img, debug=False, classifications=False, fullres=False):
         for ID, obj in self.current_objects.items():
-            if obj.show[-1]:
-                if classifications:
-                    if fullres:
-                        obj.draw_classifications_box(img, self.downsample)
-                    else:
-                        obj.draw_classifications_box(img)
-                else:
-                    if obj.classifications[-1] == "Fisch":
-                        obj.draw_bounding_box(img, color=(0, 255, 0))
-                        obj.draw_past_midpoints(img, color=(0, 255, 0))
-                    else:
-                        obj.draw_bounding_box(img, color=(255, 0, 0))
-                        obj.draw_past_midpoints(img, color=(255, 0, 0))
-            elif (obj.frames_observed[-1] == self.frame_number) & debug:
-                obj.draw_bounding_box(img, color=(20, 20, 20))
-                obj.draw_past_midpoints(img, color=(20, 20, 20))
+            # if obj.show[-1]:
+            #     if classifications:
+            #         if fullres:
+            #             obj.draw_classifications_box(img, self.downsample)
+            #         else:
+            #             obj.draw_classifications_box(img)
+            #     else:
+            #         if obj.classifications[-1] == "Fisch":
+            #             obj.draw_bounding_box(img, color=(0, 255, 0))
+            #             obj.draw_past_midpoints(img, color=(0, 255, 0))
+            #         else:
+            #             obj.draw_bounding_box(img, color=(255, 0, 0))
+            #             obj.draw_past_midpoints(img, color=(255, 0, 0))
+            # if (obj.frames_observed[-1] == self.frame_number) & debug:
+            #     obj.draw_bounding_box(img, color=(20, 20, 20))
+            #     obj.draw_past_midpoints(img, color=(20, 20, 20))
 
-            elif debug:
-                obj.draw_bounding_box(img, color=(50, 50, 50))
-
+            if debug:
+                obj.draw_bounding_box(img, color=(200, 200, 200))
+                obj.draw_past_midpoints(img, color=(200, 200, 200))
             # if debug:
             # cv.circle(img, (obj.midpoints[-1][0], obj.midpoints[-1][1]),
             #           int(self.max_association_dist/2), (0, 0, 255), 1)
@@ -278,9 +329,10 @@ class BoxAndDotDetector:
             self.current_objects[new_object.ID] = new_object
 
         for association in self.associations:
-            self.current_objects[association["existing_object_id"]].update_object(
-                detections[association["detection_id"]]
-            )
+            if self.current_objects[association["existing_object_id"]].classifications[-1] == detections[association["detection_id"]].classifications[-1]:
+                self.current_objects[association["existing_object_id"]].update_object(
+                    detections[association["detection_id"]]
+                )
 
         return self.current_objects
 
@@ -293,25 +345,26 @@ class BoxAndDotDetector:
 
     def find_points_of_interest(self, enhanced_frame, mode="contour"):
         if mode == "contour":
-            # Make positive and negative differences the same
-            enhanced_frame = (abs(enhanced_frame.astype("int16") - 125) + 125).astype(
-                "uint8"
-            )
+            # # Make positive and negative differences the same
+            # enhanced_frame = (abs(enhanced_frame.astype("int16") - 125) + 125).astype(
+            #     "uint8"
+            # )
 
             # Consolidate the points
-            enhanced_frame = cv.GaussianBlur(
-                enhanced_frame,
-                (self.blur_filter_kernel, self.blur_filter_kernel),
-                0,
-            )
+            # enhanced_frame = cv.GaussianBlur(
+            #     enhanced_frame,
+            #     (self.blur_filter_kernel, self.blur_filter_kernel),
+            #     0,
+            # )
 
-            self.current_blurred_enhanced = enhanced_frame
+            # self.current_blurred_enhanced = enhanced_frame
             # Threshold
             ret, thres = cv.threshold(enhanced_frame, self.threshold_contours, 255, 0)
-            self.current_threshold = thres
+
             # Alternative consolidation - dilate
-            # kernel = np.ones((51, 51), 'uint8')
+            kernel = np.ones((11, 11), 'uint8')
             # thres = cv.dilate(thres, kernel, iterations=1)
+            self.current_threshold = thres
             # img = self.spatial_filter(img, kernel_size=15, method='median')
 
             contours, hier = cv.findContours(

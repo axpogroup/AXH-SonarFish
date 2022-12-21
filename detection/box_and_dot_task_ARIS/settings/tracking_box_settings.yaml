@@ -1,10 +1,10 @@
 # Input / Output
-input_file:  "recordings/ARIS 2022-06-18_050000_3870_4073.mp4"
+input_file:  "recordings/ARIS 2022-06-18_050000_3870_4073 ohne Hintergrund crop.mp4"
 #record_output_video: "output/productialization/new_settings_delete.mp4"
-record_output_csv: "output/test_tracking_boxli.csv"
+#record_output_csv: "output/test_tracking_boxli.csv"
 
 # Enhancement
-downsample: 25
+downsample: 100
 long_mean_frames: 120
 current_mean_frames: 10
 std_dev_threshold: 2
@@ -12,12 +12,16 @@ median_filter_kernel: 5  # 3
 
 # Detection and Tracking
 blur_filter_kernel: 11
-threshold_contours: 127  # 139
+threshold_contours: 50  # 139
 
 max_association_dist: 60
-phase_out_after_x_frames: 5
+phase_out_after_x_frames: 1
 min_occurences_in_last_x_frames: [13, 15]
 
 # Classification
 river_pixel_velocity: [-1.91, -0.85]
 rotation_rad: -2.7229
+
+# In the moment just detects on both channels,
+#  needs to do it based on individuals though and then also
+# handle the case of the dot in the middle.

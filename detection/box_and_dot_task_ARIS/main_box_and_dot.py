@@ -74,30 +74,27 @@ if __name__ == "__main__":
             try:
                 up = np.concatenate(
                     (
-                        detector.retrieve_frame(detector.current_enhanced),
-                        detector.retrieve_frame(detector.current_blurred_enhanced),
+                        detector.draw_output(
+                            detector.retrieve_frame(detector.current_raw),
+                            debug=True,
+                            classifications=True,
+                        ),
+                        detector.retrieve_frame(detector.current_threshold),
                     ),
                     axis=1,
                 )
                 down = np.concatenate(
                     (
-                        detector.draw_output(
-                            detector.retrieve_frame(detector.current_raw),
-                            debug=False,
-                            classifications=True,
-                        ),
-                        detector.draw_output(
-                            detector.retrieve_frame(detector.current_threshold),
-                            debug=True,
-                        ),
+                        detector.retrieve_frame(detector.current_red),
+                        detector.retrieve_frame(detector.current_green),
                     ),
                     axis=1,
                 )
                 disp = np.concatenate((up, down))
                 disp = detector.draw_output(
-                    detector.resize_img(disp, 400), only_runtime=True, runtiming=True
+                    disp, only_runtime=True, runtiming=True
                 )
-            except ValueError:
+            except TypeError: # ValueError:
                 disp = raw_frame
 
         elif fullres:
@@ -144,3 +141,5 @@ if __name__ == "__main__":
     if "record_output_csv" in settings_dict.keys():
         csv_f.close()
     cv.destroyAllWindows()
+
+    print(len(detector.current_objects))
