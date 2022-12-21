@@ -2,7 +2,6 @@ import copy
 
 import cv2 as cv
 import numpy as np
-
 from Object_box_and_dot import Object
 
 # fish_area_mask = cv.imread("masks/fish.png", cv.IMREAD_GRAYSCALE)
@@ -63,8 +62,13 @@ class BoxAndDotDetector:
 
     def extract_green_red(self, current_raw):
         green = copy.deepcopy(current_raw[:, :, 1])
-        np.place( # blue higher 150, more red than green
-            green, ((current_raw[:, :, 1] < 200) | (current_raw[:, :, 0] > 150) | (current_raw[:, :, 2] > 150)),
+        np.place(  # blue higher 150, more red than green
+            green,
+            (
+                (current_raw[:, :, 1] < 200)
+                | (current_raw[:, :, 0] > 150)
+                | (current_raw[:, :, 2] > 150)
+            ),
             0,
         )
 
@@ -73,18 +77,19 @@ class BoxAndDotDetector:
         #     red, current_raw[:, :, 0] > 150,
         #     0,
         # )
-        np.place( # blue higher 150, more red than green
-            red, ((current_raw[:, :, 0] > 150) | (current_raw[:, :, 1] > 150)),
+        np.place(  # blue higher 150, more red than green
+            red,
+            ((current_raw[:, :, 0] > 150) | (current_raw[:, :, 1] > 150)),
             0,
         )
         return green, red
 
     def extract_green_red_no_background(self, current_raw):
         current_raw = cv.GaussianBlur(
-                current_raw,
-                (self.blur_filter_kernel, self.blur_filter_kernel),
-                0,
-            )
+            current_raw,
+            (self.blur_filter_kernel, self.blur_filter_kernel),
+            0,
+        )
         green = copy.deepcopy(current_raw[:, :, 1])
         # np.place( # blue higher 150, more red than green
         #     green, ((current_raw[:, :, 1] < 200) | (current_raw[:, :, 0] > 150) | (current_raw[:, :, 2] > 150)),
@@ -102,14 +107,15 @@ class BoxAndDotDetector:
         # )
         return green, red
 
-
     def process_frame(self, raw_frame, secondary=None, downsample=False):
         start = cv.getTickCount()
         # if downsample:
         #     raw_frame = self.resize_img(raw_frame, self.downsample)
 
         self.current_raw = raw_frame
-        self.current_green, self.current_red = self.extract_green_red_no_background(self.current_raw)
+        self.current_green, self.current_red = self.extract_green_red_no_background(
+            self.current_raw
+        )
         self.enhance_time_ms = int(
             (cv.getTickCount() - start) / cv.getTickFrequency() * 1000
         )
@@ -329,7 +335,12 @@ class BoxAndDotDetector:
             self.current_objects[new_object.ID] = new_object
 
         for association in self.associations:
-            if self.current_objects[association["existing_object_id"]].classifications[-1] == detections[association["detection_id"]].classifications[-1]:
+            if (
+                self.current_objects[association["existing_object_id"]].classifications[
+                    -1
+                ]
+                == detections[association["detection_id"]].classifications[-1]
+            ):
                 self.current_objects[association["existing_object_id"]].update_object(
                     detections[association["detection_id"]]
                 )
@@ -362,7 +373,7 @@ class BoxAndDotDetector:
             ret, thres = cv.threshold(enhanced_frame, self.threshold_contours, 255, 0)
 
             # Alternative consolidation - dilate
-            kernel = np.ones((11, 11), 'uint8')
+            # kernel = np.ones((11, 11), "uint8")
             # thres = cv.dilate(thres, kernel, iterations=1)
             self.current_threshold = thres
             # img = self.spatial_filter(img, kernel_size=15, method='median')

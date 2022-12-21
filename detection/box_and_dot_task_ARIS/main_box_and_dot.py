@@ -91,10 +91,8 @@ if __name__ == "__main__":
                     axis=1,
                 )
                 disp = np.concatenate((up, down))
-                disp = detector.draw_output(
-                    disp, only_runtime=True, runtiming=True
-                )
-            except TypeError: # ValueError:
+                disp = detector.draw_output(disp, only_runtime=True, runtiming=True)
+            except TypeError:  # ValueError:
                 disp = raw_frame
 
         elif fullres:
