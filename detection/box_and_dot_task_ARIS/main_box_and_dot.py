@@ -42,9 +42,9 @@ if __name__ == "__main__":
         # start_datetime = dt.datetime.strptime(
         #     os.path.split(settings_dict["input_file"])[-1], date_fmt
         # )
-        start_datetime = dt.datetime.strptime("22-06-18_start_05-00-00_crop_swarms_single.mp4", date_fmt
+        start_datetime = dt.datetime.strptime(
+            "22-06-18_start_05-00-00_crop_swarms_single.mp4", date_fmt
         )
-
 
     frame_by_frame = False
     frame_no = 0
@@ -79,7 +79,9 @@ if __name__ == "__main__":
                 up = np.concatenate(
                     (
                         detector.draw_output(
-                            detector.retrieve_frame(detector.current_raw, puttext="raw"),
+                            detector.retrieve_frame(
+                                detector.current_raw, puttext="raw"
+                            ),
                             debug=True,
                             classifications=True,
                         ),
@@ -90,7 +92,9 @@ if __name__ == "__main__":
                 down = np.concatenate(
                     (
                         detector.retrieve_frame(detector.current_red, puttext="red"),
-                        detector.retrieve_frame(detector.current_green, puttext="green"),
+                        detector.retrieve_frame(
+                            detector.current_green, puttext="green"
+                        ),
                     ),
                     axis=1,
                 )
@@ -101,10 +105,11 @@ if __name__ == "__main__":
 
         elif fullres:
             disp = detector.draw_output(
-                    detector.retrieve_frame(detector.current_raw),
-                    debug=True,
-                    classifications=True, runtiming=True
-                )
+                detector.retrieve_frame(detector.current_raw),
+                debug=True,
+                classifications=True,
+                runtiming=True,
+            )
 
         else:
             disp = np.concatenate(

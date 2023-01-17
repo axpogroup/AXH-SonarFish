@@ -117,9 +117,11 @@ class BoxAndDotDetector:
 
         self.current_raw = raw_frame
         # self.current_enhanced = self.enhance_frame(self.current_raw)
-        self.current_green, self.current_red, self.current_blue = self.extract_green_red_no_background(
-            self.current_raw
-        )
+        (
+            self.current_green,
+            self.current_red,
+            self.current_blue,
+        ) = self.extract_green_red_no_background(self.current_raw)
 
         self.enhance_time_ms = int(
             (cv.getTickCount() - start) / cv.getTickFrequency() * 1000
@@ -326,7 +328,7 @@ class BoxAndDotDetector:
                 self.frame_number - obj.frames_observed[-1]
                 > self.phase_out_after_x_frames
             ):
-                if "dot"not in color:
+                if "dot" not in color:
                     to_delete.append(ID)
                 continue
 
@@ -353,11 +355,13 @@ class BoxAndDotDetector:
 
         object_midpoints = [
             existing_object.midpoints[-1]
-            for _, existing_object in self.current_objects.items() if existing_object.classifications[-1] == color
+            for _, existing_object in self.current_objects.items()
+            if existing_object.classifications[-1] == color
         ]
         object_ids = [
             ID
-            for ID, existing_object in self.current_objects.items() if existing_object.classifications[-1] == color
+            for ID, existing_object in self.current_objects.items()
+            if existing_object.classifications[-1] == color
         ]
 
         new_objects = []
@@ -385,8 +389,8 @@ class BoxAndDotDetector:
 
         for association in self.associations:
             self.current_objects[association["existing_object_id"]].update_object(
-                    detections[association["detection_id"]]
-                )
+                detections[association["detection_id"]]
+            )
 
         for new_object in new_objects:
             self.current_objects[new_object.ID] = new_object
@@ -662,7 +666,7 @@ class BoxAndDotDetector:
                     str(w),
                     str(h),
                     f"{object_.classifications[-1]}",
-                    f"{object_.ID}"
+                    f"{object_.ID}",
                 ]
                 rows.append(row)
         return rows
