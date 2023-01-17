@@ -12,6 +12,7 @@ class Object:
         self.contours = [contour]
 
         x, y, w, h = cv.boundingRect(contour)
+        self.area = [w*h]
         self.midpoints = [(int(x + w / 2), int(y + h / 2))]
 
         self.classifications = ["Objekt"]
@@ -26,6 +27,7 @@ class Object:
         self.show.append(False)
         self.contours.append(detection.contours[-1])
         self.midpoints.append(detection.midpoints[-1])
+        self.area.append(detection.area[-1])
 
         self.calculate_speed()
         # self.classify_object()
@@ -37,7 +39,7 @@ class Object:
 
         cv.putText(
             img,
-            (self.classifications[-1] + " " + str(self.ID)),
+            (self.classifications[-1] + " " + str(self.ID) + " Area: " + str(self.area[-1])),
             (x, y - 10),
             cv.FONT_HERSHEY_SIMPLEX,
             0.75,

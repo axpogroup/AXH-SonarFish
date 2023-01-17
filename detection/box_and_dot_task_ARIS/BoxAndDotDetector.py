@@ -24,6 +24,7 @@ class BoxAndDotDetector:
         # colorchannels
         self.current_red = None
         self.current_green = None
+        self.current_blue = None
 
         # Enhancement
         self.framebuffer = None
@@ -105,7 +106,9 @@ class BoxAndDotDetector:
         #     red, ((current_raw[:, :, 0] > 150) | (current_raw[:, :, 1] > 150)),
         #     0,
         # )
-        return green, red
+
+        blue = copy.deepcopy(current_raw[:, :, 0])
+        return green, red, blue
 
     def process_frame(self, raw_frame, secondary=None, downsample=False):
         start = cv.getTickCount()
@@ -113,15 +116,22 @@ class BoxAndDotDetector:
         #     raw_frame = self.resize_img(raw_frame, self.downsample)
 
         self.current_raw = raw_frame
-        self.current_green, self.current_red = self.extract_green_red_no_background(
+        # self.current_enhanced = self.enhance_frame(self.current_raw)
+        self.current_green, self.current_red, self.current_blue = self.extract_green_red_no_background(
             self.current_raw
         )
+
         self.enhance_time_ms = int(
             (cv.getTickCount() - start) / cv.getTickFrequency() * 1000
         )
 
+        self.detect_and_track(self.current_blue, color="blue")
         self.detect_and_track(self.current_green, color="green")
         self.detect_and_track(self.current_red, color="red")
+
+        self.detect_and_track_dots(self.current_green, color="green dot")
+        self.detect_and_track_dots(self.current_red, color="red dot")
+
         self.detection_tracking_time_ms = (
             int((cv.getTickCount() - start) / cv.getTickFrequency() * 1000)
             - self.enhance_time_ms
@@ -164,10 +174,38 @@ class BoxAndDotDetector:
 
     def detect_and_track(self, enhanced_frame, color=None):
         self.detections = self.find_points_of_interest(enhanced_frame, mode="contour")
-        for _, detection in self.detections.items():
+
+        dot_detection_keys = []
+        for key, detection in self.detections.items():
             detection.classifications = [color]
-        self.current_objects = self.associate_detections(self.detections)
-        self.current_objects = self.filter_objects(self.current_objects)
+
+            if detection.area[-1] < 800:
+                dot_detection_keys.append(key)
+
+        for key in dot_detection_keys:
+            self.detections.pop(key)
+
+        self.current_objects = self.associate_detections(self.detections, color=color)
+
+        self.current_objects = self.filter_objects(self.current_objects, color=color)
+        return
+
+    def detect_and_track_dots(self, enhanced_frame, color=None):
+        self.detections = self.find_points_of_interest(enhanced_frame, mode="contour")
+
+        dot_detection_keys = []
+        for key, detection in self.detections.items():
+            detection.classifications = [color]
+
+            if detection.area[-1] > 800:
+                dot_detection_keys.append(key)
+                # detection.classifications = ['dot ' + color]
+
+        for key in dot_detection_keys:
+            self.detections.pop(key)
+
+        self.current_objects = self.associate_detections(self.detections, color=color)
+        self.current_objects = self.filter_objects(self.current_objects, color=color)
         return
 
     def draw_output(
@@ -277,15 +315,19 @@ class BoxAndDotDetector:
 
         return img
 
-    def filter_objects(self, current_objects):
+    def filter_objects(self, current_objects, color=None):
         to_delete = []
         for ID, obj in current_objects.items():
+            if color is not None and obj.classifications[-1] != color:
+                continue
+
             # Delete if it hasn't been observed in the last x frames
             if (
                 self.frame_number - obj.frames_observed[-1]
                 > self.phase_out_after_x_frames
             ):
-                to_delete.append(ID)
+                if "dot"not in color:
+                    to_delete.append(ID)
                 continue
 
             # Show if x occurences in the last y frames
@@ -304,46 +346,50 @@ class BoxAndDotDetector:
 
         return current_objects
 
-    def associate_detections(self, detections):
+    def associate_detections(self, detections, color=None):
         if len(self.current_objects) == 0:
             self.current_objects = detections
             return self.current_objects
 
         object_midpoints = [
             existing_object.midpoints[-1]
-            for _, existing_object in self.current_objects.items()
+            for _, existing_object in self.current_objects.items() if existing_object.classifications[-1] == color
         ]
-        object_ids = list(self.current_objects.keys())
+        object_ids = [
+            ID
+            for ID, existing_object in self.current_objects.items() if existing_object.classifications[-1] == color
+        ]
+
         new_objects = []
         self.associations = []
-        for detection_id, detection in detections.items():
-            min_id, min_dist = self.closest_point(
-                detection.midpoints[-1], object_midpoints
-            )
-            if min_dist < self.max_association_dist:
-                self.associations.append(
-                    {
-                        "detection_id": detection.ID,
-                        "existing_object_id": object_ids[min_id],
-                        "distance": min_dist,
-                    }
+        if len(object_ids) == 0:
+            for detection_id, detection in detections.items():
+                if detection.classifications[-1] == color:
+                    new_objects.append(detection)
+
+        else:
+            for detection_id, detection in detections.items():
+                min_id, min_dist = self.closest_point(
+                    detection.midpoints[-1], object_midpoints
                 )
-            else:
-                new_objects.append(detection)
+                if min_dist < self.max_association_dist:
+                    self.associations.append(
+                        {
+                            "detection_id": detection.ID,
+                            "existing_object_id": object_ids[min_id],
+                            "distance": min_dist,
+                        }
+                    )
+                else:
+                    new_objects.append(detection)
+
+        for association in self.associations:
+            self.current_objects[association["existing_object_id"]].update_object(
+                    detections[association["detection_id"]]
+                )
 
         for new_object in new_objects:
             self.current_objects[new_object.ID] = new_object
-
-        for association in self.associations:
-            if (
-                self.current_objects[association["existing_object_id"]].classifications[
-                    -1
-                ]
-                == detections[association["detection_id"]].classifications[-1]
-            ):
-                self.current_objects[association["existing_object_id"]].update_object(
-                    detections[association["detection_id"]]
-                )
 
         return self.current_objects
 
@@ -379,7 +425,7 @@ class BoxAndDotDetector:
             # img = self.spatial_filter(img, kernel_size=15, method='median')
 
             contours, hier = cv.findContours(
-                thres, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE
+                thres, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE
             )
             detections = {}
             for contour in contours:
@@ -534,14 +580,48 @@ class BoxAndDotDetector:
             return cv.medianBlur(img, kernel_size)
 
     @staticmethod
-    def retrieve_frame(img):
-        if img is None:
-            return np.zeros((270, 480, 3), dtype=np.uint8)
-        elif len(img.shape) == 3:
-            if img.shape[2] == 3:
-                return img
+    def retrieve_frame(img, puttext=None):
+        out = copy.deepcopy(img)
+        if out is None:
+            out = np.zeros((270, 480, 3), dtype=np.uint8)
+            if puttext is not None:
+                cv.putText(
+                    out,
+                    puttext,
+                    (50, 50),
+                    cv.FONT_HERSHEY_SIMPLEX,
+                    0.75,
+                    (255, 255, 255),
+                    2,
+                )
+            return out
 
-        return cv.cvtColor(img, cv.COLOR_GRAY2BGR)
+        elif len(out.shape) == 3:
+            if out.shape[2] == 3:
+                if puttext is not None:
+                    cv.putText(
+                        out,
+                        puttext,
+                        (50, 50),
+                        cv.FONT_HERSHEY_SIMPLEX,
+                        0.75,
+                        (255, 255, 255),
+                        2,
+                    )
+                return out
+
+        if puttext is not None:
+            cv.putText(
+                out,
+                puttext,
+                (50, 50),
+                cv.FONT_HERSHEY_SIMPLEX,
+                0.75,
+                (255, 255, 255),
+                2,
+            )
+
+        return cv.cvtColor(out, cv.COLOR_GRAY2BGR)
 
     def get_new_id(self):
         if self.latest_obj_index > 300000:
@@ -582,6 +662,7 @@ class BoxAndDotDetector:
                     str(w),
                     str(h),
                     f"{object_.classifications[-1]}",
+                    f"{object_.ID}"
                 ]
                 rows.append(row)
         return rows

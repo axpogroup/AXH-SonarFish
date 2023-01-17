@@ -35,13 +35,16 @@ if __name__ == "__main__":
     if "record_output_csv" in settings_dict.keys():
         csv_f = open(settings_dict["record_output_csv"], "w")
         csv_writer = csv.writer(csv_f)
-        header = ["t", "frame number", "x", "y", "w", "h", "Classification"]
+        header = ["t", "frame number", "x", "y", "w", "h", "Classification", "ID"]
         csv_writer.writerow(header)
 
         date_fmt = "%y-%m-%d_start_%H-%M-%S_crop_swarms_single.mp4"
-        start_datetime = dt.datetime.strptime(
-            os.path.split(settings_dict["input_file"])[-1], date_fmt
+        # start_datetime = dt.datetime.strptime(
+        #     os.path.split(settings_dict["input_file"])[-1], date_fmt
+        # )
+        start_datetime = dt.datetime.strptime("22-06-18_start_05-00-00_crop_swarms_single.mp4", date_fmt
         )
+
 
     frame_by_frame = False
     frame_no = 0
@@ -70,23 +73,24 @@ if __name__ == "__main__":
 
         four_images = True
         fullres = False
+
         if four_images:
             try:
                 up = np.concatenate(
                     (
                         detector.draw_output(
-                            detector.retrieve_frame(detector.current_raw),
+                            detector.retrieve_frame(detector.current_raw, puttext="raw"),
                             debug=True,
                             classifications=True,
                         ),
-                        detector.retrieve_frame(detector.current_threshold),
+                        detector.retrieve_frame(detector.current_blue, puttext="blue"),
                     ),
                     axis=1,
                 )
                 down = np.concatenate(
                     (
-                        detector.retrieve_frame(detector.current_red),
-                        detector.retrieve_frame(detector.current_green),
+                        detector.retrieve_frame(detector.current_red, puttext="red"),
+                        detector.retrieve_frame(detector.current_green, puttext="green"),
                     ),
                     axis=1,
                 )
@@ -97,8 +101,10 @@ if __name__ == "__main__":
 
         elif fullres:
             disp = detector.draw_output(
-                raw_frame, classifications=True, runtiming=True, fullres=True
-            )
+                    detector.retrieve_frame(detector.current_raw),
+                    debug=True,
+                    classifications=True, runtiming=True
+                )
 
         else:
             disp = np.concatenate(

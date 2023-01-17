@@ -1,7 +1,9 @@
 # Input / Output
-input_file:  "recordings/ARIS 2022-06-18_050000_3870_4073 ohne Hintergrund crop.mp4"
-#record_output_video: "output/productialization/new_settings_delete.mp4"
-#record_output_csv: "output/test_tracking_boxli.csv"
+#input_file:  "recordings/V2/v2_dev_test.mp4"
+input_file:  "recordings/V2/Video 5_2022-05-27_051500_771_2141 ZU BESPRECHEN passage am Schluss.mp4"
+
+record_output_video: "output/drei_farben_v2_test.mp4"
+record_output_csv: "output/test_tracking_boxli_V2.csv"
 
 # Enhancement
 downsample: 100
@@ -12,11 +14,11 @@ median_filter_kernel: 5  # 3
 
 # Detection and Tracking
 blur_filter_kernel: 11
-threshold_contours: 50  # 139
+threshold_contours: 200  # 139
 
 max_association_dist: 60
 phase_out_after_x_frames: 1
-min_occurences_in_last_x_frames: [13, 15]
+min_occurences_in_last_x_frames: [5, 10   ]
 
 # Classification
 river_pixel_velocity: [-1.91, -0.85]
