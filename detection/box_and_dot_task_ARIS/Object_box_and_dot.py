@@ -7,6 +7,7 @@ import numpy as np
 class Object:
     def __init__(self, identifier, contour, frame_number):
         self.ID = identifier
+        self.persistent_id = None
         self.frames_observed = [frame_number]
         self.show = [False]
         self.contours = [contour]
@@ -42,7 +43,7 @@ class Object:
             (
                 self.classifications[-1]
                 + " "
-                + str(self.ID)
+                + str(self.persistent_id)
                 + " Area: "
                 + str(self.area[-1])
             ),

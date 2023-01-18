@@ -11,7 +11,7 @@ full_area_mask = None
 
 
 class BoxAndDotDetector:
-    def __init__(self, settings_dict):
+    def __init__(self, settings_dict, latest_persistent_object_id):
         self.settings_dict = settings_dict
         self.frame_number = 0  # TOD Must not overflow - recycle
         self.total_runtime_ms = None
@@ -25,6 +25,9 @@ class BoxAndDotDetector:
         self.current_red = None
         self.current_green = None
         self.current_blue = None
+
+        # Issue occured
+        self.issue = False
 
         # Enhancement
         self.framebuffer = None
@@ -50,6 +53,7 @@ class BoxAndDotDetector:
         self.current_threshold = None
         self.associations = []
         self.latest_obj_index = 0
+        self.latest_persistent_object_id = latest_persistent_object_id
         self.detection_tracking_time_ms = None
         self.max_association_dist = settings_dict["max_association_dist"]
         self.phase_out_after_x_frames = settings_dict["phase_out_after_x_frames"]
@@ -85,7 +89,7 @@ class BoxAndDotDetector:
         )
         return green, red
 
-    def extract_green_red_no_background(self, current_raw):
+    def extract_green_red_blue_no_background(self, current_raw):
         current_raw = cv.GaussianBlur(
             current_raw,
             (self.blur_filter_kernel, self.blur_filter_kernel),
@@ -111,6 +115,7 @@ class BoxAndDotDetector:
         return green, red, blue
 
     def process_frame(self, raw_frame, secondary=None, downsample=False):
+        self.issue = False
         start = cv.getTickCount()
         # if downsample:
         #     raw_frame = self.resize_img(raw_frame, self.downsample)
@@ -121,7 +126,7 @@ class BoxAndDotDetector:
             self.current_green,
             self.current_red,
             self.current_blue,
-        ) = self.extract_green_red_no_background(self.current_raw)
+        ) = self.extract_green_red_blue_no_background(self.current_raw)
 
         self.enhance_time_ms = int(
             (cv.getTickCount() - start) / cv.getTickFrequency() * 1000
@@ -143,6 +148,7 @@ class BoxAndDotDetector:
         self.total_runtime_ms = int(
             (cv.getTickCount() - start) / cv.getTickFrequency() * 1000
         )
+
         return
 
     def enhance_frame(self, gray_frame):
@@ -197,6 +203,11 @@ class BoxAndDotDetector:
 
         dot_detection_keys = []
         for key, detection in self.detections.items():
+            # check if there was an issue with the detection
+            x, y, w, h = cv.boundingRect(detection.contours[-1])
+            if abs(float(w)/h-1) > 0.05:
+                self.issue = True
+
             detection.classifications = [color]
 
             if detection.area[-1] > 800:
@@ -326,7 +337,7 @@ class BoxAndDotDetector:
             # Delete if it hasn't been observed in the last x frames
             if (
                 self.frame_number - obj.frames_observed[-1]
-                > self.phase_out_after_x_frames
+                >= self.phase_out_after_x_frames
             ):
                 if "dot" not in color:
                     to_delete.append(ID)
@@ -350,8 +361,15 @@ class BoxAndDotDetector:
 
     def associate_detections(self, detections, color=None):
         if len(self.current_objects) == 0:
-            self.current_objects = detections
-            return self.current_objects
+            if len(detections) == 0:
+                self.current_objects = detections
+                return self.current_objects
+            else:
+                for detection_id, detection in detections.items():
+                    detection.persistent_id = self.latest_persistent_object_id
+                    self.latest_persistent_object_id += 1
+                    self.current_objects[detection.ID] = detection
+                    return self.current_objects
 
         object_midpoints = [
             existing_object.midpoints[-1]
@@ -393,6 +411,8 @@ class BoxAndDotDetector:
             )
 
         for new_object in new_objects:
+            new_object.persistent_id = self.latest_persistent_object_id
+            self.latest_persistent_object_id += 1
             self.current_objects[new_object.ID] = new_object
 
         return self.current_objects
@@ -652,10 +672,14 @@ class BoxAndDotDetector:
         # resize image
         return cv.resize(img, dim, interpolation=cv.INTER_AREA)
 
-    def prepare_objects_for_csv(self, timestr):
+    def prepare_objects_for_csv(self, timestr, file):
         rows = []
         if self.current_objects is not None:
             for _, object_ in self.current_objects.items():
+                if object_.classifications[-1] in ["green dot", "red dot"]:
+                    if len(object_.frames_observed) > 1:
+                        continue
+
                 # area = cv.contourArea(object_.contours[-1])
                 x, y, w, h = cv.boundingRect(object_.contours[-1])
                 row = [
@@ -666,7 +690,7 @@ class BoxAndDotDetector:
                     str(w),
                     str(h),
                     f"{object_.classifications[-1]}",
-                    f"{object_.ID}",
+                    f"{object_.persistent_id}", f"{file}"
                 ]
                 rows.append(row)
         return rows

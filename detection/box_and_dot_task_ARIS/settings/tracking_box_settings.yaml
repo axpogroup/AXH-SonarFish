@@ -1,9 +1,10 @@
 # Input / Output
-#input_file:  "recordings/V2/v2_dev_test.mp4"
-input_file:  "recordings/V2/Video 5_2022-05-27_051500_771_2141 ZU BESPRECHEN passage am Schluss.mp4"
+#input_file:  "recordings/V2/2022-05-29_053000_193_1241  v2_dev_test.mp4"
+#input_file:  "recordings/V2/Video 5_2022-05-27_051500_771_2141 ZU BESPRECHEN passage am Schluss.mp4"
 
-record_output_video: "output/drei_farben_v2_test.mp4"
-record_output_csv: "output/test_tracking_boxli_V2.csv"
+output_video_dir: "output/videos/"
+csv_output_directory: "output/csv/"
+input_directory: "recordings/V2/"
 
 # Enhancement
 downsample: 100
@@ -23,7 +24,3 @@ min_occurences_in_last_x_frames: [5, 10   ]
 # Classification
 river_pixel_velocity: [-1.91, -0.85]
 rotation_rad: -2.7229
-
-# In the moment just detects on both channels,
-#  needs to do it based on individuals though and then also
-# handle the case of the dot in the middle.
