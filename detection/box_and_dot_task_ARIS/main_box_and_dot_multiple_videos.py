@@ -39,15 +39,15 @@ def parse_filename(filename):
 
 
 """
-- Provide a folder with the video names. Exports of the same video need to have the same prefix 
-(date, starting frame and ending frame number) and a space separating the prefix from the suffix of the filename. 
-- No objects must intersect. This will be detected and the affected frames 
-of the video will be exported to a output video. If the output video is empty, 
-then there was no intersection problems.
-- If dots are visible from the beginning they will be recorded as appearing at the beginning of the frame, 
-therefore they should appear in the course of the video. Once a dot appears it must remain in the image.
-- The script will create csvs for each video and put the detections in it from every separate export, 
-therefore nothing can occur twice in different exports of the same video.
+- Provide a folder with the video names. Exports of the same video need to have the same prefix
+    (date, starting frame and ending frame number) and a space separating the prefix from the suffix of the filename.
+- No objects must intersect. This will be detected and the affected frames
+    of the video will be exported to a output video. If the output video is empty,
+    then there was no intersection problems.
+- If dots are visible from the beginning they will be recorded as appearing at the beginning of the frame,
+    therefore they should appear in the course of the video. Once a dot appears it must remain in the image.
+- The script will create csvs for each video and put the detections in it from every separate export,
+    therefore nothing can occur twice in different exports of the same video.
 - Each continous occurence of a box is denoted with a unique ID.
 """
 
