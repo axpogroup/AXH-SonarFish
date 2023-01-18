@@ -205,7 +205,7 @@ class BoxAndDotDetector:
         for key, detection in self.detections.items():
             # check if there was an issue with the detection
             x, y, w, h = cv.boundingRect(detection.contours[-1])
-            if abs(float(w)/h-1) > 0.05:
+            if abs(float(w) / h - 1) > 0.05:
                 self.issue = True
 
             detection.classifications = [color]
@@ -690,7 +690,8 @@ class BoxAndDotDetector:
                     str(w),
                     str(h),
                     f"{object_.classifications[-1]}",
-                    f"{object_.persistent_id}", f"{file}"
+                    f"{object_.persistent_id}",
+                    f"{file}",
                 ]
                 rows.append(row)
         return rows

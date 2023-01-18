@@ -1,13 +1,14 @@
 import csv
 import datetime as dt
-import os
 import glob
-from dateutil.relativedelta import relativedelta
+import os
 
 import cv2 as cv
 import numpy as np
 import yaml
 from BoxAndDotDetector import BoxAndDotDetector
+from dateutil.relativedelta import relativedelta
+
 # import code
 
 
@@ -28,23 +29,26 @@ def parse_filename(filename):
     start_frame = int(filename.split("_")[2])
     date_fmt = "%Y-%m-%d_%H%M%S"
     fps = 8.0
-    start_dt = dt.datetime.strptime(date_part, date_fmt) + relativedelta(microseconds=(int((1/fps)*1000000*start_frame)))
+    start_dt = dt.datetime.strptime(date_part, date_fmt) + relativedelta(
+        microseconds=(int((1 / fps) * 1000000 * start_frame))
+    )
     suffix = " ".join(filename.split(" ")[1:])
     prefix = filename.split(" ")[0]
 
     return start_dt, prefix, suffix
 
+
 """
-    - Provide a folder with the video names. Exports of the same video need to have the same prefix 
-    (date, starting frame and ending frame number) and a space separating the prefix from the suffix of the filename. 
-    - No objects must intersect. This will be detected and the affected frames 
-    of the video will be exported to a output video. If the output video is empty, 
-    then there was no intersection problems.
-    - If dots are visible from the beginning they will be recorded as appearing at the beginning of the frame, 
-    therefore they should appear in the course of the video. Once a dot appears it must remain in the image.
-    - The script will create csvs for each video and put the detections in it from every separate export, 
-    therefore nothing can occur twice in different exports of the same video.
-    - Each continous occurence of a box is denoted with a unique ID.
+- Provide a folder with the video names. Exports of the same video need to have the same prefix 
+(date, starting frame and ending frame number) and a space separating the prefix from the suffix of the filename. 
+- No objects must intersect. This will be detected and the affected frames 
+of the video will be exported to a output video. If the output video is empty, 
+then there was no intersection problems.
+- If dots are visible from the beginning they will be recorded as appearing at the beginning of the frame, 
+therefore they should appear in the course of the video. Once a dot appears it must remain in the image.
+- The script will create csvs for each video and put the detections in it from every separate export, 
+therefore nothing can occur twice in different exports of the same video.
+- Each continous occurence of a box is denoted with a unique ID.
 """
 
 if __name__ == "__main__":
@@ -55,7 +59,7 @@ if __name__ == "__main__":
     os.makedirs(name=settings_dict["csv_output_directory"], exist_ok=True)
     os.makedirs(name=settings_dict["output_video_dir"], exist_ok=True)
 
-    filenames = glob.glob(settings_dict["input_directory"]+"*.mp4")
+    filenames = glob.glob(settings_dict["input_directory"] + "*.mp4")
     filenames.sort()
     print("Found the following files: \n")
     for file in filenames:
@@ -78,7 +82,17 @@ if __name__ == "__main__":
             video_dt_csv_files[prefix] = current_csv_file
             csv_f = open(current_csv_file, "w")
             csv_writer = csv.writer(csv_f)
-            header = ["t", "frame number", "x", "y", "w", "h", "Classification", "ID", "filename"]
+            header = [
+                "t",
+                "frame number",
+                "x",
+                "y",
+                "w",
+                "h",
+                "Classification",
+                "ID",
+                "filename",
+            ]
             csv_writer.writerow(header)
             print("Creating new csv...")
 
@@ -110,7 +124,8 @@ if __name__ == "__main__":
             )
             csv_writer.writerows(
                 detector.prepare_objects_for_csv(
-                    timestr=current_timestamp.strftime("%y-%m-%d_%H-%M-%S.%f")[:-3], file=file
+                    timestr=current_timestamp.strftime("%y-%m-%d_%H-%M-%S.%f")[:-3],
+                    file=file,
                 )
             )
 
@@ -128,13 +143,17 @@ if __name__ == "__main__":
                                 debug=True,
                                 classifications=True,
                             ),
-                            detector.retrieve_frame(detector.current_blue, puttext="blue"),
+                            detector.retrieve_frame(
+                                detector.current_blue, puttext="blue"
+                            ),
                         ),
                         axis=1,
                     )
                     down = np.concatenate(
                         (
-                            detector.retrieve_frame(detector.current_red, puttext="red"),
+                            detector.retrieve_frame(
+                                detector.current_red, puttext="red"
+                            ),
                             detector.retrieve_frame(
                                 detector.current_green, puttext="green"
                             ),
