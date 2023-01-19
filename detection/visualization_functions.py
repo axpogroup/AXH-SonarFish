@@ -1,6 +1,7 @@
+import copy
+
 import cv2 as cv
 import numpy as np
-import copy
 
 
 def get_rich_output(detector, four_images=False):
@@ -8,9 +9,7 @@ def get_rich_output(detector, four_images=False):
         try:
             up = np.concatenate(
                 (
-                    retrieve_frame(
-                        detector.current_enhanced, puttext="enhanced"
-                    ),
+                    retrieve_frame(detector.current_enhanced, puttext="enhanced"),
                     retrieve_frame(
                         detector.current_blurred_enhanced,
                         puttext="blurred enhanced",
@@ -20,34 +19,41 @@ def get_rich_output(detector, four_images=False):
             )
             down = np.concatenate(
                 (
-                    draw_detector_output(detector,
-                                                                 retrieve_frame(
-                            detector.current_raw_downsampled, puttext="raw"
-                        ),
-                                                                 debug=False,
-                                                                 classifications=True,
-                                                                 ),
-                    draw_detector_output(detector,
-                                                                 retrieve_frame(
+                    draw_detector_output(
+                        detector,
+                        retrieve_frame(detector.current_raw_downsampled, puttext="raw"),
+                        debug=False,
+                        classifications=True,
+                    ),
+                    draw_detector_output(
+                        detector,
+                        retrieve_frame(
                             detector.current_threshold, puttext="thresholded"
                         ),
-                                                                 debug=True,
-                                                                 ),
+                        debug=True,
+                    ),
                 ),
                 axis=1,
             )
             disp = np.concatenate((up, down))
-            disp = draw_detector_output(detector,
-                                                                detector.resize_img(disp, 400), only_runtime=True, runtiming=True
-                                                                )
+            disp = draw_detector_output(
+                detector,
+                detector.resize_img(disp, 400),
+                only_runtime=True,
+                runtiming=True,
+            )
         except KeyError as e:
             print(e)
             disp = detector.current_raw
 
     else:
-        disp = draw_detector_output(detector,
-                                                            detector.current_raw, classifications=True, runtiming=True, fullres=True
-                                                            )
+        disp = draw_detector_output(
+            detector,
+            detector.current_raw,
+            classifications=True,
+            runtiming=True,
+            fullres=True,
+        )
 
     return disp
 
@@ -75,18 +81,22 @@ def retrieve_frame(img, puttext=None):
 
 
 def draw_detector_output(
-        detector,
-        img,
-        classifications=False,
-        debug=False,
-        runtiming=False,
-        fullres=False,
-        only_runtime=False,
+    detector,
+    img,
+    classifications=False,
+    debug=False,
+    runtiming=False,
+    fullres=False,
+    only_runtime=False,
 ):
     output = retrieve_frame(img)
     if not only_runtime:
-        output = draw_objects(detector,
-            output, classifications=classifications, debug=debug, fullres=fullres
+        output = draw_objects(
+            detector,
+            output,
+            classifications=classifications,
+            debug=debug,
+            fullres=fullres,
         )
     if runtiming:
         cv.rectangle(output, (1390, 25), (1850, 155), (0, 0, 0), -1)

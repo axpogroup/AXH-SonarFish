@@ -1,12 +1,10 @@
 import csv
 import datetime as dt
-import os
 
 import cv2 as cv
-import numpy as np
+import visualization_functions
 import yaml
 from FishDetector import FishDetector
-import visualization_functions
 
 
 def initialize_output_recording(input_video, output_video_file):
@@ -21,7 +19,7 @@ def initialize_output_recording(input_video, output_video_file):
 
 
 if __name__ == "__main__":
-    with open("settings/jet_to_gray.yaml") as f:
+    with open("settings/machine_settings_recordings.yaml") as f:
         settings_dict = yaml.load(f, Loader=yaml.SafeLoader)
         print(settings_dict)
 
