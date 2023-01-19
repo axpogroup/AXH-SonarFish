@@ -6,6 +6,7 @@ import cv2 as cv
 import numpy as np
 import yaml
 from FishDetector import FishDetector
+import visualization_functions
 
 
 def initialize_output_recording(input_video, output_video_file):
@@ -20,7 +21,7 @@ def initialize_output_recording(input_video, output_video_file):
 
 
 if __name__ == "__main__":
-    with open("settings/machine_settings_recordings.yaml") as f:
+    with open("settings/jet_to_gray.yaml") as f:
         settings_dict = yaml.load(f, Loader=yaml.SafeLoader)
         print(settings_dict)
 
@@ -42,9 +43,9 @@ if __name__ == "__main__":
     frame_no = 0
     frames_total = int(video_cap.get(cv.CAP_PROP_FRAME_COUNT))
     date_fmt = "%y-%m-%d_start_%H-%M-%S_crop_swarms_single_2.mp4"
-    start_datetime = dt.datetime.strptime(
-        os.path.split(settings_dict["input_file"])[-1], date_fmt
-    )
+    # start_datetime = dt.datetime.strptime(
+    #     os.path.split(settings_dict["input_file"])[-1], date_fmt
+    # )
     fps = int(video_cap.get(cv.CAP_PROP_FPS))
     while video_cap.isOpened():
         ret, raw_frame = video_cap.read()
@@ -54,7 +55,7 @@ if __name__ == "__main__":
             break
 
         # Detection
-        detector.process_frame(raw_frame, downsample=True)
+        detector.process_frame(raw_frame)
 
         # Output
         if "record_output_csv" in settings_dict.keys():
@@ -66,64 +67,7 @@ if __name__ == "__main__":
                     timestr=current_timestamp.strftime("%y-%m-%d_%H-%M-%S.%f")[:-3]
                 )
             )
-
-        four_images = True
-        fullres = False
-        if four_images:
-            try:
-                up = np.concatenate(
-                    (
-                        detector.retrieve_frame(
-                            detector.current_enhanced, puttext="enhanced"
-                        ),
-                        detector.retrieve_frame(
-                            detector.current_blurred_enhanced,
-                            puttext="blurred enhanced",
-                        ),
-                    ),
-                    axis=1,
-                )
-                down = np.concatenate(
-                    (
-                        detector.draw_output(
-                            detector.retrieve_frame(
-                                detector.current_raw, puttext="raw"
-                            ),
-                            debug=False,
-                            classifications=True,
-                        ),
-                        detector.draw_output(
-                            detector.retrieve_frame(
-                                detector.current_threshold, puttext="thresholded"
-                            ),
-                            debug=True,
-                        ),
-                    ),
-                    axis=1,
-                )
-                disp = np.concatenate((up, down))
-                disp = detector.draw_output(
-                    detector.resize_img(disp, 400), only_runtime=True, runtiming=True
-                )
-            except ValueError:
-                disp = raw_frame
-
-        elif fullres:
-            disp = detector.draw_output(
-                raw_frame, classifications=True, runtiming=True, fullres=True
-            )
-
-        else:
-            disp = np.concatenate(
-                (
-                    detector.draw_output(
-                        detector.current_enhanced, debug=True, runtiming=True
-                    ),
-                    detector.draw_output(
-                        detector.current_raw, classifications=True, runtiming=True
-                    ),
-                )
-            )
+        disp = visualization_functions.get_rich_output(detector, four_images=True)
         cv.imshow("frame", disp)
 
         if "record_output_video" in settings_dict.keys():
@@ -152,3 +96,4 @@ if __name__ == "__main__":
     if "record_output_csv" in settings_dict.keys():
         csv_f.close()
     cv.destroyAllWindows()
+    del detector

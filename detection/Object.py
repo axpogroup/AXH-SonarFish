@@ -30,51 +30,6 @@ class Object:
         self.calculate_speed()
         self.classify_object()
 
-    def draw_bounding_box(self, img, color):
-        x, y, w, h = cv.boundingRect(self.contours[-1])
-        cv.rectangle(img, (x, y), (x + w, y + h), color, 1)
-        # cv.putText(
-        #     img,
-        #     (self.classification[-1] + " " + str(self.ID)),
-        #     (x, y - 10),
-        #     cv.FONT_HERSHEY_SIMPLEX,
-        #     0.75,
-        #     color,
-        #     2,
-        # )
-        # if self.mean_v is not None:
-        #     cv.putText(img, (str(self.mean_v[0])),
-        #                      (x, y + 10), cv.FONT_HERSHEY_SIMPLEX, 0.75, color, 2)
-        return img
-
-    def draw_classifications_box(self, img, downsampled=100):
-        x, y, w, h = cv.boundingRect(self.contours[-1])
-        upsample_factor = int(100 / downsampled)
-        x, y, w, h = (
-            x * upsample_factor,
-            y * upsample_factor,
-            w * upsample_factor,
-            h * upsample_factor,
-        )
-        if self.classifications[-1] == "Fisch":
-            color = (0, 255, 0)
-        else:
-            color = (250, 150, 150)
-
-        cv.rectangle(img, (x, y), (x + w, y + h), color, 2)
-        if downsampled != 100:
-            cv.putText(
-                img,
-                (self.classifications[-1]),
-                (x, y - 10),
-                cv.FONT_HERSHEY_SIMPLEX,
-                0.75,
-                color,
-                2,
-            )
-
-        return img
-
     def calculate_speed(self):
         frame_diff = float(self.frames_observed[-1] - self.frames_observed[-2])
         if frame_diff == 0:
@@ -86,11 +41,6 @@ class Object:
         self.mean_v = np.median(np.asarray(self.velocity), axis=0)
         if len(self.velocity) > 11:
             self.mean_v_last_10 = np.median(np.asarray(self.velocity[-10:]), axis=0)
-
-    def draw_past_midpoints(self, img, color):
-        for point in self.midpoints:
-            cv.circle(img, point, 2, color, -1)
-        return img
 
     def occurences_in_last_x(self, frame_number, x):
         a = np.array(self.frames_observed, dtype="int")

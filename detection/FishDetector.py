@@ -14,6 +14,7 @@ class FishDetector:
         self.frame_number = 0  # TOD Must not overflow - recycle
         self.total_runtime_ms = None
         self.current_raw = None
+        self.current_raw_downsampled = None
         self.current_gray = None
         self.current_enhanced = None
         self.current_output = None
@@ -54,12 +55,14 @@ class FishDetector:
         self.river_pixel_velocity = settings_dict["river_pixel_velocity"]
         self.rotation_rad = settings_dict["rotation_rad"]
 
-    def process_frame(self, raw_frame, secondary=None, downsample=False):
+    def process_frame(self, raw_frame, secondary=None):
         start = cv.getTickCount()
-        if downsample:
-            raw_frame = self.resize_img(raw_frame, self.downsample)
         self.current_raw = raw_frame
-        self.current_gray = self.rgb_to_gray(self.current_raw)
+        if self.downsample:
+            self.current_raw_downsampled = self.resize_img(raw_frame, self.downsample)
+            self.current_gray = self.rgb_to_gray(self.current_raw_downsampled)
+        else:
+            self.current_gray = self.rgb_to_gray(self.current_raw)
         self.current_enhanced = self.enhance_frame(self.current_gray)
         self.enhance_time_ms = int(
             (cv.getTickCount() - start) / cv.getTickFrequency() * 1000
@@ -111,113 +114,6 @@ class FishDetector:
         self.current_objects = self.associate_detections(self.detections)
         self.current_objects = self.filter_objects(self.current_objects)
         return
-
-    def draw_output(
-        self,
-        img,
-        classifications=False,
-        debug=False,
-        runtiming=False,
-        fullres=False,
-        only_runtime=False,
-    ):
-        output = self.retrieve_frame(img)
-        if not only_runtime:
-            output = self.draw_objects(
-                output, classifications=classifications, debug=debug, fullres=fullres
-            )
-        if runtiming:
-            cv.rectangle(output, (1390, 25), (1850, 155), (0, 0, 0), -1)
-            color = (255, 255, 255)
-            cv.putText(
-                output,
-                f"Frame no. {self.frame_number}",
-                (1500, 50),
-                cv.FONT_HERSHEY_SIMPLEX,
-                0.75,
-                color,
-                2,
-            )
-            cv.putText(
-                output,
-                f"{self.enhance_time_ms} ms - Enhancement",
-                (1400, 80),
-                cv.FONT_HERSHEY_SIMPLEX,
-                0.75,
-                color,
-                2,
-            )
-            cv.putText(
-                output,
-                f"{self.detection_tracking_time_ms} ms - Detection & Tracking",
-                (1400, 110),
-                cv.FONT_HERSHEY_SIMPLEX,
-                0.75,
-                color,
-                2,
-            )
-            if self.total_runtime_ms > 40:
-                color = (100, 100, 255)
-            if self.total_runtime_ms == 0:
-                self.total_runtime_ms = 1
-            cv.putText(
-                output,
-                f"{self.total_runtime_ms} ms - Total - FPS: {int(1000/self.total_runtime_ms)}",
-                (1400, 140),
-                cv.FONT_HERSHEY_SIMPLEX,
-                0.75,
-                color,
-                2,
-            )
-        return output
-
-    def draw_associations(self, img, color):
-        for association in self.associations:
-            cv.line(
-                img,
-                self.detections[association["detection_id"]].midpoints[-1],
-                self.current_objects[association["existing_object_id"]].midpoints[-1],
-                color,
-                2,
-            )
-            cv.putText(
-                img,
-                str(association["distance"]),
-                self.detections[association["detection_id"]].midpoints[-1],
-                cv.FONT_HERSHEY_SIMPLEX,
-                0.75,
-                color,
-                2,
-            )
-        return img
-
-    def draw_objects(self, img, debug=False, classifications=False, fullres=False):
-        for ID, obj in self.current_objects.items():
-            if obj.show[-1]:
-                if classifications:
-                    if fullres:
-                        obj.draw_classifications_box(img, self.downsample)
-                    else:
-                        obj.draw_classifications_box(img)
-                else:
-                    if obj.classifications[-1] == "Fisch":
-                        obj.draw_bounding_box(img, color=(0, 255, 0))
-                        obj.draw_past_midpoints(img, color=(0, 255, 0))
-                    else:
-                        obj.draw_bounding_box(img, color=(255, 0, 0))
-                        obj.draw_past_midpoints(img, color=(255, 0, 0))
-            elif (obj.frames_observed[-1] == self.frame_number) & debug:
-                obj.draw_bounding_box(img, color=(20, 20, 20))
-                obj.draw_past_midpoints(img, color=(20, 20, 20))
-
-            elif debug:
-                obj.draw_bounding_box(img, color=(50, 50, 50))
-
-            # if debug:
-            # cv.circle(img, (obj.midpoints[-1][0], obj.midpoints[-1][1]),
-            #           int(self.max_association_dist/2), (0, 0, 255), 1)
-
-        return img
 
     def filter_objects(self, current_objects):
         to_delete = []
@@ -402,33 +298,6 @@ class FishDetector:
         diff[abs(diff) < threshold * self.long_std_dev] = 0
         return diff
 
-    def create_mean_std_dev(
-        self,
-    ):  # Unused for now since the ground pattern changes we can't use a hardcoded image
-        # Put in process_frame()
-        # Do this to save time before implementing it in a rolling manner
-        # self.create_mean_std_dev()
-        # quit()
-        # self.current_mean = np.mean(self.framebuffer, axis=2).astype('uint8')
-
-        # Put in initialization
-        # fname_temp = os.path.split(self.filename)
-        # self.mean_stddev_file = (
-        #         fname_temp[0] + "/mean_std_dev/" + fname_temp[1] + "_mean_stddev_.npz"
-        # )
-        # try:
-        #     temp = np.load(self.mean_stddev_file)
-        #     self.long_mean = temp["mean"]
-        #     self.long_std_dev = temp["std_dev"]
-        # except FileNotFoundError:
-        #     print("No existing mean and std-dev file")
-        #     self.long_mean = None
-        #     self.long_std_dev = None
-
-        long_mean = np.mean(self.framebuffer, axis=2)
-        long_std_dev = np.std(self.framebuffer, axis=2)
-        np.savez(self.mean_stddev_file, mean=long_mean, std_dev=long_std_dev)
-
     @staticmethod
     def mask_regions(img, area="fish"):
         if area == "fish":
@@ -465,28 +334,6 @@ class FishDetector:
             return cv.blur(img, (kernel_size, kernel_size))
         if method == "median":
             return cv.medianBlur(img, kernel_size)
-
-    @staticmethod
-    def retrieve_frame(img, puttext=None):
-        out = copy.deepcopy(img)
-        if out is None:
-            out = np.zeros((270, 480, 3), dtype=np.uint8)
-
-        if len(out.shape) != 3:
-            out = cv.cvtColor(out, cv.COLOR_GRAY2BGR)
-
-        if puttext is not None:
-            cv.putText(
-                out,
-                puttext,
-                (50, 50),
-                cv.FONT_HERSHEY_SIMPLEX,
-                0.75,
-                (255, 255, 255),
-                2,
-            )
-
-        return out
 
     def get_new_id(self):
         if self.latest_obj_index > 300000:
