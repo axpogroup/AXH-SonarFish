@@ -1,6 +1,7 @@
 import cv2 as cv
 import numpy as np
 from Object import Object
+import copy
 
 fish_area_mask = cv.imread("masks/fish.png", cv.IMREAD_GRAYSCALE)
 full_area_mask = cv.imread("masks/full.png", cv.IMREAD_GRAYSCALE)
@@ -465,14 +466,26 @@ class FishDetector:
             return cv.medianBlur(img, kernel_size)
 
     @staticmethod
-    def retrieve_frame(img):
-        if img is None:
-            return np.zeros((270, 480, 3), dtype=np.uint8)
-        elif len(img.shape) == 3:
-            if img.shape[2] == 3:
-                return img
+    def retrieve_frame(img, puttext=None):
+        out = copy.deepcopy(img)
+        if out is None:
+            out = np.zeros((270, 480, 3), dtype=np.uint8)
 
-        return cv.cvtColor(img, cv.COLOR_GRAY2BGR)
+        if len(out.shape) != 3:
+            out = cv.cvtColor(out, cv.COLOR_GRAY2BGR)
+
+        if puttext is not None:
+            cv.putText(
+                out,
+                puttext,
+                (50, 50),
+                cv.FONT_HERSHEY_SIMPLEX,
+                0.75,
+                (255, 255, 255),
+                2,
+            )
+
+        return out
 
     def get_new_id(self):
         if self.latest_obj_index > 300000:

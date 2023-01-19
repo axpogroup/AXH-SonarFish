@@ -41,7 +41,7 @@ if __name__ == "__main__":
     frame_by_frame = False
     frame_no = 0
     frames_total = int(video_cap.get(cv.CAP_PROP_FRAME_COUNT))
-    date_fmt = "%y-%m-%d_start_%H-%M-%S_crop_swarms_single.mp4"
+    date_fmt = "%y-%m-%d_start_%H-%M-%S_crop_swarms_single_2.mp4"
     start_datetime = dt.datetime.strptime(
         os.path.split(settings_dict["input_file"])[-1], date_fmt
     )
@@ -73,20 +73,20 @@ if __name__ == "__main__":
             try:
                 up = np.concatenate(
                     (
-                        detector.retrieve_frame(detector.current_enhanced),
-                        detector.retrieve_frame(detector.current_blurred_enhanced),
+                        detector.retrieve_frame(detector.current_enhanced, puttext="enhanced"),
+                        detector.retrieve_frame(detector.current_blurred_enhanced, puttext="blurred enhanced"),
                     ),
                     axis=1,
                 )
                 down = np.concatenate(
                     (
                         detector.draw_output(
-                            detector.retrieve_frame(detector.current_raw),
+                            detector.retrieve_frame(detector.current_raw, puttext="raw"),
                             debug=False,
                             classifications=True,
                         ),
                         detector.draw_output(
-                            detector.retrieve_frame(detector.current_threshold),
+                            detector.retrieve_frame(detector.current_threshold, puttext="thresholded"),
                             debug=True,
                         ),
                     ),
