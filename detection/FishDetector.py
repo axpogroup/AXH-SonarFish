@@ -1,7 +1,8 @@
+import copy
+
 import cv2 as cv
 import numpy as np
 from Object import Object
-import copy
 
 fish_area_mask = cv.imread("masks/fish.png", cv.IMREAD_GRAYSCALE)
 full_area_mask = cv.imread("masks/full.png", cv.IMREAD_GRAYSCALE)

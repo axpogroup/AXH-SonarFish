@@ -73,20 +73,29 @@ if __name__ == "__main__":
             try:
                 up = np.concatenate(
                     (
-                        detector.retrieve_frame(detector.current_enhanced, puttext="enhanced"),
-                        detector.retrieve_frame(detector.current_blurred_enhanced, puttext="blurred enhanced"),
+                        detector.retrieve_frame(
+                            detector.current_enhanced, puttext="enhanced"
+                        ),
+                        detector.retrieve_frame(
+                            detector.current_blurred_enhanced,
+                            puttext="blurred enhanced",
+                        ),
                     ),
                     axis=1,
                 )
                 down = np.concatenate(
                     (
                         detector.draw_output(
-                            detector.retrieve_frame(detector.current_raw, puttext="raw"),
+                            detector.retrieve_frame(
+                                detector.current_raw, puttext="raw"
+                            ),
                             debug=False,
                             classifications=True,
                         ),
                         detector.draw_output(
-                            detector.retrieve_frame(detector.current_threshold, puttext="thresholded"),
+                            detector.retrieve_frame(
+                                detector.current_threshold, puttext="thresholded"
+                            ),
                             debug=True,
                         ),
                     ),
