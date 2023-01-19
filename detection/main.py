@@ -1,10 +1,10 @@
 import csv
 import datetime as dt
 import os
-import yaml
-import cv2 as cv
 
+import cv2 as cv
 import visualization_functions
+import yaml
 from FishDetector import FishDetector
 
 
