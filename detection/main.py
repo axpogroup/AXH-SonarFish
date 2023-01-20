@@ -2,12 +2,10 @@ import csv
 import datetime as dt
 import os
 
-import cv2 as cv
 import visualization_functions
 import yaml
 from FishDetector import FishDetector
 from VideoHandler import VideoHandler
-
 
 if __name__ == "__main__":
     with open("settings/machine_settings_recordings.yaml") as f:

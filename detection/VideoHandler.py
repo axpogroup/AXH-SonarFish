@@ -25,7 +25,12 @@ class VideoHandler:
 
         # initialize the FourCC and a video writer object
         fourcc = cv.VideoWriter_fourcc("m", "p", "4", "v")
-        self.video_writer = cv.VideoWriter(self.settings_dict["record_output_video"], fourcc, fps, (frame_width, frame_height))
+        self.video_writer = cv.VideoWriter(
+            self.settings_dict["record_output_video"],
+            fourcc,
+            fps,
+            (frame_width, frame_height),
+        )
         return
 
     def get_new_frame(self):
@@ -77,4 +82,3 @@ class VideoHandler:
     def write_image(self, img):
         if "record_output_video" in self.settings_dict.keys():
             self.video_writer.write(img)
-
