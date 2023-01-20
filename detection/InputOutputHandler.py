@@ -1,7 +1,8 @@
-import cv2 as cv
-import os
 import csv
 import datetime as dt
+import os
+
+import cv2 as cv
 import visualization_functions
 
 
@@ -23,7 +24,7 @@ class InputOutputHandler:
             date_fmt = "%y-%m-%d_start_%H-%M-%S.mp4"
             self.start_datetime = dt.datetime.strptime(
                 os.path.split(settings_dict["input_file"])[-1], date_fmt
-                )
+            )
         except ValueError:
             self.start_datetime = dt.datetime(year=2000, month=1, day=1)
 
@@ -79,17 +80,25 @@ class InputOutputHandler:
         if "record_output_csv" in self.settings_dict.keys():
             self.write_csv(detector)
 
-        if ("display_output_video" in self.settings_dict.keys()) or \
-                ("record_output_video" in self.settings_dict.keys()):
-            rich_display = False if "display_mode_rich" not in self.settings_dict.keys() else \
-                self.settings_dict["display_mode_rich"]
-            disp = visualization_functions.get_visual_output(detector,
-                                                             rich_display=rich_display)
+        if ("display_output_video" in self.settings_dict.keys()) or (
+            "record_output_video" in self.settings_dict.keys()
+        ):
+            rich_display = (
+                False
+                if "display_mode_rich" not in self.settings_dict.keys()
+                else self.settings_dict["display_mode_rich"]
+            )
+            disp = visualization_functions.get_visual_output(
+                detector, rich_display=rich_display
+            )
 
             if "record_output_video" in self.settings_dict.keys():
                 self.video_writer.write(disp)
 
-            if "display_output_video" in self.settings_dict.keys() and self.settings_dict["display_output_video"]:
+            if (
+                "display_output_video" in self.settings_dict.keys()
+                and self.settings_dict["display_output_video"]
+            ):
                 self.show_image(disp)
 
     def initialize_output_recording(self):
@@ -132,7 +141,7 @@ class InputOutputHandler:
                     str(w),
                     str(h),
                     f"{object_.classifications[-1]}",
-                    f"{object_.ID}"
+                    f"{object_.ID}",
                 ]
                 rows.append(row)
 

@@ -357,4 +357,3 @@ class FishDetector:
 
         # resize image
         return cv.resize(img, dim, interpolation=cv.INTER_AREA)
-
