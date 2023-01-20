@@ -4,6 +4,10 @@ input_file: "recordings/Schwarm_einzel_jet_to_gray_snippet.mp4"
 # input_file:  "output/components/final_old_moving_average_5s.mp4"  # enhanced
 # input_file:  "recordings/new_settings/22-11-14_start_17-06-59_crop_swarms_single.mp4"
 record_output_video: "output/productialization/new_settings_delete.mp4"
+record_output_csv: "output/csv/test_delete.csv"
+
+display_output_video: True
+display_mode_rich: True
 
 # Enhancement
 downsample: 25

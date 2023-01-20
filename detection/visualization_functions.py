@@ -4,8 +4,8 @@ import cv2 as cv
 import numpy as np
 
 
-def get_rich_output(detector, four_images=False):
-    if four_images:
+def get_visual_output(detector, rich_display=False):
+    if rich_display:
         try:
             up = np.concatenate(
                 (
