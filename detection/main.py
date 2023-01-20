@@ -6,17 +6,7 @@ import cv2 as cv
 import visualization_functions
 import yaml
 from FishDetector import FishDetector
-
-
-def initialize_output_recording(input_video, output_video_file):
-    # grab the width, height, fps and length of the video stream.
-    frame_width = int(input_video.get(cv.CAP_PROP_FRAME_WIDTH))
-    frame_height = int(input_video.get(cv.CAP_PROP_FRAME_HEIGHT))
-    fps = int(input_video.get(cv.CAP_PROP_FPS))
-
-    # initialize the FourCC and a video writer object
-    fourcc = cv.VideoWriter_fourcc("m", "p", "4", "v")
-    return cv.VideoWriter(output_video_file, fourcc, fps, (frame_width, frame_height))
+from VideoHandler import VideoHandler
 
 
 if __name__ == "__main__":
@@ -24,13 +14,8 @@ if __name__ == "__main__":
         settings_dict = yaml.load(f, Loader=yaml.SafeLoader)
         print(settings_dict)
 
-    video_cap = cv.VideoCapture(settings_dict["input_file"])
+    video_handler = VideoHandler(settings_dict)
     detector = FishDetector(settings_dict)
-
-    if "record_output_video" in settings_dict.keys():
-        video_writer = initialize_output_recording(
-            video_cap, settings_dict["record_output_video"]
-        )
 
     if "record_output_csv" in settings_dict.keys():
         csv_f = open(settings_dict["record_output_csv"], "w")
@@ -38,61 +23,30 @@ if __name__ == "__main__":
         header = ["t", "frame number", "x", "y", "w", "h", "Classification"]
         csv_writer.writerow(header)
 
-    frame_by_frame = False
-    frame_no = 0
-    frames_total = int(video_cap.get(cv.CAP_PROP_FRAME_COUNT))
     date_fmt = "%y-%m-%d_start_%H-%M-%S_crop_swarms_single_2.mp4"
     start_datetime = dt.datetime.strptime(
         os.path.split(settings_dict["input_file"])[-1], date_fmt
     )
-    fps = int(video_cap.get(cv.CAP_PROP_FPS))
-    while video_cap.isOpened():
-        ret, raw_frame = video_cap.read()
-        # if frame is read correctly ret is True
-        if not ret:
-            print("Can't receive frame (stream end?). Exiting ...")
-            break
 
+    while video_handler.get_new_frame():
         # Detection
-        detector.process_frame(raw_frame)
+        detector.process_frame(video_handler.current_raw_frame)
 
         # Output
         if "record_output_csv" in settings_dict.keys():
             current_timestamp = start_datetime + dt.timedelta(
-                seconds=float(frame_no) / fps
+                seconds=float(video_handler.frame_no) / video_handler.fps
             )
             csv_writer.writerows(
                 detector.prepare_objects_for_csv(
                     timestr=current_timestamp.strftime("%y-%m-%d_%H-%M-%S.%f")[:-3]
                 )
             )
-        disp = visualization_functions.get_rich_output(detector, four_images=True)
-        cv.imshow("frame", disp)
 
-        if "record_output_video" in settings_dict.keys():
-            video_writer.write(disp)
+        disp = visualization_functions.get_rich_output(detector, four_images=False)
+        video_handler.show_image(disp, playback_controls=True)
+        video_handler.write_image(disp)
 
-        if not frame_by_frame:
-            usr_input = cv.waitKey(1)
-        if usr_input == ord(" "):
-            if cv.waitKey(0) == ord(" "):
-                frame_by_frame = True
-            else:
-                frame_by_frame = False
-            print("Press any key to continue ... ")
-        if usr_input == 27:
-            break
-
-        if frame_no % 20 == 0:
-            print(f"Processed {frame_no/frames_total*100} % of video.")
-            if frame_no / frames_total * 100 > 35:
-                pass
-        frame_no += 1
-
-    video_cap.release()
-    if "record_output_video" in settings_dict.keys():
-        video_writer.release()
     if "record_output_csv" in settings_dict.keys():
         csv_f.close()
-    cv.destroyAllWindows()
     del detector

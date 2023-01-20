@@ -38,7 +38,7 @@ def get_rich_output(detector, four_images=False):
             disp = np.concatenate((up, down))
             disp = draw_detector_output(
                 detector,
-                detector.resize_img(disp, 400),
+                detector.resize_img(disp, 5000/detector.downsample),
                 only_runtime=True,
                 runtiming=True,
             )
