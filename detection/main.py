@@ -1,11 +1,16 @@
 import yaml
 from FishDetector import FishDetector
 from InputOutputHandler import InputOutputHandler
+import argparse
 
 if __name__ == "__main__":
-    with open("settings/jet_to_gray.yaml") as f:
+    argParser = argparse.ArgumentParser()
+    argParser.add_argument("-yf", "--yaml_file", help="YAML settings file")
+
+    args = argParser.parse_args()
+
+    with open(args.yaml_file) as f:
         settings_dict = yaml.load(f, Loader=yaml.SafeLoader)
-        print(settings_dict)
 
     input_output_handler = InputOutputHandler(settings_dict)
     detector = FishDetector(settings_dict)
