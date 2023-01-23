@@ -1,7 +1,8 @@
+import argparse
+
 import yaml
 from FishDetector import FishDetector
 from InputOutputHandler import InputOutputHandler
-import argparse
 
 if __name__ == "__main__":
     argParser = argparse.ArgumentParser()
