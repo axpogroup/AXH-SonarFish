@@ -2,8 +2,8 @@
 input_file:  "recordings/new_settings/22-11-14_start_17-06-59_crop_swarms_single_2.mp4"
 output_directory: "output/productionalization/runs/"
 tag: "testing_output_file_generation"
-#record_output_video: True
-#record_output_csv: True
+record_output_video: True
+record_output_csv: True
 
 display_output_video: True
 display_mode_rich: True
