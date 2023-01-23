@@ -16,10 +16,16 @@ class InputOutputHandler:
         self.input_filename = os.path.split(self.settings_dict["input_file"])[-1]
         self.output_dir_name = None
 
-        if "record_output_video" in settings_dict.keys() and self.settings_dict["record_output_video"]:
+        if (
+            "record_output_video" in settings_dict.keys()
+            and self.settings_dict["record_output_video"]
+        ):
             self.initialize_output_recording()
 
-        if "record_output_csv" in settings_dict.keys() and self.settings_dict["record_output_csv"]:
+        if (
+            "record_output_csv" in settings_dict.keys()
+            and self.settings_dict["record_output_csv"]
+        ):
             self.initialize_output_csv()
 
         try:
@@ -109,9 +115,11 @@ class InputOutputHandler:
         frame_height = int(self.video_cap.get(cv.CAP_PROP_FRAME_HEIGHT))
         fps = int(self.video_cap.get(cv.CAP_PROP_FPS))
 
-        self.output_dir_name = os.path.join(self.settings_dict["output_directory"],
-                                            dt.datetime.now().strftime("%y_%m_%d_%H-%M-%S_") +
-                                            self.settings_dict["tag"])
+        self.output_dir_name = os.path.join(
+            self.settings_dict["output_directory"],
+            dt.datetime.now().strftime("%y_%m_%d_%H-%M-%S_")
+            + self.settings_dict["tag"],
+        )
         os.makedirs(name=self.output_dir_name, exist_ok=True)
         output_video_name = self.input_filename[:-4] + "_output.mp4"
 
@@ -127,9 +135,11 @@ class InputOutputHandler:
 
     def initialize_output_csv(self):
         if self.output_dir_name is None:
-            self.output_dir_name = os.path.join(self.settings_dict["output_directory"],
-                                            dt.datetime.now().strftime("%y_%m_%d_%H-%M-%S_") +
-                                            self.settings_dict["tag"])
+            self.output_dir_name = os.path.join(
+                self.settings_dict["output_directory"],
+                dt.datetime.now().strftime("%y_%m_%d_%H-%M-%S_")
+                + self.settings_dict["tag"],
+            )
             os.makedirs(name=self.output_dir_name, exist_ok=True)
 
         output_csv_name = self.input_filename[:-4] + "_output.csv"
@@ -173,14 +183,21 @@ class InputOutputHandler:
             self.csv_file.close()
 
         if self.output_dir_name is not None:
-            with open(os.path.join(self.output_dir_name, 'settings.txt'), 'w') as f:
+            with open(os.path.join(self.output_dir_name, "settings.txt"), "w") as f:
                 for key, setting in self.settings_dict.items():
                     f.write(f"{key}: {setting}")
-                    f.write('\n')
+                    f.write("\n")
             import zipfile
-            filenames = ["main.py", "FishDetector.py", "InputOutputHandler.py", "Object.py",
-                         "visualization_functions.py"]
-            with zipfile.ZipFile(os.path.join(self.output_dir_name, 'code.zip'), mode="w") as archive:
+
+            filenames = [
+                "main.py",
+                "FishDetector.py",
+                "InputOutputHandler.py",
+                "Object.py",
+                "visualization_functions.py",
+            ]
+            with zipfile.ZipFile(
+                os.path.join(self.output_dir_name, "code.zip"), mode="w"
+            ) as archive:
                 for filename in filenames:
                     archive.write(filename)
-
