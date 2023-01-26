@@ -206,9 +206,9 @@ def draw_object_bounding_box(object, img, color):
     #     color,
     #     2,
     # )
-    # if object.mean_v is not None:
-    #     cv.putText(img, (str(object.mean_v[0])),
-    #                      (x, y + 10), cv.FONT_HERSHEY_SIMPLEX, 0.75, color, 2)
+    # if object.median_v is not None:
+    #     cv.putText(img, f"v_x, v_y: {object.median_v[0]}, {object.median_v[1]}",
+    #                (x, y + 10), cv.FONT_HERSHEY_SIMPLEX, 0.75, color, 2)
     return img
 
 
@@ -237,6 +237,10 @@ def draw_object_classifications_box(object, img, downsampled=100):
             color,
             2,
         )
+        if object.median_v is not None:
+            str_1 = "{:.2f}".format(object.velocity[-1][0]*4) + ", " + "{:.2f}".format(object.velocity[-1][1]*4)
+            cv.putText(img, f"v_x, v_y: {str_1}",
+                       (x, y - 10), cv.FONT_HERSHEY_SIMPLEX, 0.75, color, 2)
 
     return img
 

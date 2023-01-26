@@ -1,28 +1,28 @@
 # Input / Output
 input_file:  "recordings/new_settings/22-11-14_start_17-06-59_crop_swarms_single_2.mp4"
-output_directory: "output/productionalization/runs/"
-tag: "testing_output_file_generation"
-record_output_video: True
-record_output_csv: True
+output_directory: "validation_HTU_v1/output/"
+tag: "first_run"
+#record_output_video: True
+#record_output_csv: True
 
 display_output_video: True
 display_mode_rich: True
 
 # Enhancement
 downsample: 25
-long_mean_frames: 120
-current_mean_frames: 10
-std_dev_threshold: 2
-median_filter_kernel: 5  # 3
+long_mean_frames: 60
+current_mean_frames: 2
+std_dev_threshold: 1.5
+median_filter_kernel: 3  # 3
 
 # Detection and Tracking
 blur_filter_kernel: 11
 threshold_contours: 127  # 139
 
-max_association_dist: 60
-phase_out_after_x_frames: 5
+max_association_dist: 5
+phase_out_after_x_frames: 10
 min_occurences_in_last_x_frames: [13, 15]
 
 # Classification
-river_pixel_velocity: [-1.91, -0.85]
+river_pixel_velocity: [-2.35, -0.9] # At full resolution
 min_occurences_for_fish: 20

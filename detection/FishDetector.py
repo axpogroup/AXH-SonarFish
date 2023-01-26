@@ -49,10 +49,6 @@ class FishDetector:
             "min_occurences_in_last_x_frames"
         ]
 
-        # Classification
-        self.river_pixel_velocity = settings_dict["river_pixel_velocity"]
-        self.rotation_rad = settings_dict["rotation_rad"]
-
     def process_frame(self, raw_frame, secondary=None):
         start = cv.getTickCount()
         self.current_raw = raw_frame
@@ -93,7 +89,7 @@ class FishDetector:
 
         if light:
             enhanced_temp = self.calc_difference_from_buffer_light()
-            enhanced_temp[abs(enhanced_temp) < 20] = 0
+            enhanced_temp[abs(enhanced_temp) < 10] = 0
         else:
             enhanced_temp = self.calc_difference_from_buffer()
             enhanced_temp = self.threshold_diff(
@@ -212,7 +208,7 @@ class FishDetector:
             )
             detections = {}
             for contour in contours:
-                new_object = Object(self.get_new_id(), contour, self.frame_number)
+                new_object = Object(self.get_new_id(), contour, self.frame_number, self.settings_dict)
                 detections[new_object.ID] = new_object
 
             return detections

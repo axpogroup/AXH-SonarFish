@@ -9,7 +9,7 @@ record_output_video: True
 record_output_csv: True
 
 display_output_video: True
-display_mode_rich: True
+#display_mode_rich: True
 
 # Enhancement
 downsample: 25
@@ -27,5 +27,5 @@ phase_out_after_x_frames: 5
 min_occurences_in_last_x_frames: [13, 15]
 
 # Classification
-river_pixel_velocity: [-1.91, -0.85]
-rotation_rad: -2.7229
+river_pixel_velocity: [-1.91, -0.85]  # At full resolution
+min_occurences_for_fish: 20

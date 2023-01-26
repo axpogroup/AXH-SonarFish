@@ -1,11 +1,11 @@
-from math import cos, sin
+from math import cos, sin, atan
 
 import cv2 as cv
 import numpy as np
 
 
 class Object:
-    def __init__(self, identifier, contour, frame_number):
+    def __init__(self, identifier, contour, frame_number, settings_dict):
         self.ID = identifier
         self.frames_observed = [frame_number]
         self.show = [False]
@@ -15,11 +15,17 @@ class Object:
         self.midpoints = [(int(x + w / 2), int(y + h / 2))]
 
         self.classifications = ["Objekt"]
-
         self.velocity = []
-        self.mean_v = None
-        self.mean_v_last_10 = None
-        self.river_rot = -2.7229  # TOD Autodetect
+        self.median_v = None
+        self.median_v_last_10 = None
+
+        # TOD: eventually auto detect
+        self.river_pixel_velocity = np.array(settings_dict["river_pixel_velocity"]) / (100/settings_dict["downsample"])
+        self.river_abs_velocity = np.linalg.norm(self.river_pixel_velocity)
+        # Rotate coordinate system to align x with the direction of the river - 180 deg + (90 deg - atan(x/y))
+        self.flow_direction_rot = np.pi * 1.5 - atan(self.river_pixel_velocity[0] / self.river_pixel_velocity[1])
+
+        self.min_occurences_for_fish = settings_dict["min_occurences_for_fish"]
 
     def update_object(self, detection):
         self.frames_observed.append(detection.frames_observed[-1])
@@ -30,17 +36,39 @@ class Object:
         self.calculate_speed()
         self.classify_object()
 
-    def calculate_speed(self):
+    def calculate_speed_old(self):
         frame_diff = float(self.frames_observed[-1] - self.frames_observed[-2])
         if frame_diff == 0:
             return
+
         v_x = float(self.midpoints[-1][0] - self.midpoints[-2][0]) / frame_diff
         v_y = float(self.midpoints[-1][1] - self.midpoints[-2][1]) / frame_diff
-        v_rot = self.rotate_vector(np.array([v_x, v_y]), theta=-self.river_rot)
+
+        v_rot = self.rotate_vector(np.array([v_x, v_y]), theta=-self.flow_direction_rot)
+        # self.velocity.append(np.array([v_x, v_y]))
         self.velocity.append(v_rot)
-        self.mean_v = np.median(np.asarray(self.velocity), axis=0)
+        self.median_v = np.mean(np.asarray(self.velocity), axis=0)
         if len(self.velocity) > 11:
-            self.mean_v_last_10 = np.median(np.asarray(self.velocity[-10:]), axis=0)
+            self.median_v_last_10 = np.mean(np.asarray(self.velocity[-10:]), axis=0)
+
+    def calculate_speed(self):
+        # For the speed to be sensible it must me taken over a longer period of time
+        past_observation_id = -2
+        while float(self.frames_observed[-1] - self.frames_observed[past_observation_id]) < 20:
+            if -past_observation_id + 1 > len(self.frames_observed):
+                return
+            past_observation_id -= 1
+
+        frame_diff = float(self.frames_observed[-1] - self.frames_observed[past_observation_id])
+        v_x = float(self.midpoints[-1][0] - self.midpoints[past_observation_id][0]) / frame_diff
+        v_y = float(self.midpoints[-1][1] - self.midpoints[past_observation_id][1]) / frame_diff
+
+        v_rot = self.rotate_vector(np.array([v_x, v_y]), theta=-self.flow_direction_rot)
+        # self.velocity.append(np.array([v_x, v_y]))
+        self.velocity.append(v_rot)
+        self.median_v = np.mean(np.asarray(self.velocity), axis=0)
+        # if len(self.velocity) > 11:
+        #     self.median_v_last_10 = np.mean(np.asarray(self.velocity[-10:]), axis=0)
 
     def occurences_in_last_x(self, frame_number, x):
         a = np.array(self.frames_observed, dtype="int")
@@ -48,20 +76,23 @@ class Object:
 
     def classify_object(self):
         fish = False
-        if len(self.velocity) < 20:
-            fish = False
+        if (len(self.frames_observed) < self.min_occurences_for_fish) or (len(self.velocity) < 1):
+            self.classifications.append("Objekt")
             return
 
-        if self.classifications[-1] == "Fisch":
-            if abs(self.mean_v[1]) > 0.5:
-                fish = True
-            elif abs(self.mean_v[0] - 2.185) > 1:
-                fish = True
+        # Short term - if the path changes a lot it is a fish
+        if abs(self.velocity[-1][1]) > 0.4*self.river_abs_velocity:
+            fish = True
+        elif abs(self.velocity[-1][0] - self.river_abs_velocity) > 0.4*self.river_abs_velocity:
+            fish = True
 
-        if abs(self.mean_v_last_10[1]) > 1:
-            fish = True
-        elif abs(self.mean_v_last_10[0] - 2.185) > 2:
-            fish = True
+        # # Long term - if the short term path is linear then the entire path must be above a certain irregularity
+        # # to be classified as a fish
+        # if self.classifications[-1] == "Fisch":
+        #     if abs(self.median_v[1]) > 0.2*self.river_abs_velocity:
+        #         fish = True
+        #     elif abs(self.median_v[0] - self.river_abs_velocity) > 0.4*self.river_abs_velocity:
+        #         fish = True
 
         if fish:
             self.classifications.append("Fisch")

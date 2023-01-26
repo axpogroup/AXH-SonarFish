@@ -45,16 +45,20 @@ class InputOutputHandler:
         self.current_raw_frame = None
 
     def get_new_frame(self):
+        tries = 0
         if self.video_cap.isOpened():
-            ret, self.current_raw_frame = self.video_cap.read()
-            # if frame is read correctly ret is True
-            if not ret:
-                print("Can't receive frame (stream end?). Exiting ...")
-                self.shutdown()
-                return False
+            while tries < 5:
+                ret, self.current_raw_frame = self.video_cap.read()
+                # if frame is read correctly ret is True
+                if not ret:
+                    tries += 1
+                else:
+                    self.frame_no += 1
+                    return True
 
-            self.frame_no += 1
-            return True
+            print("Can't receive frame (stream end?). Exiting ...")
+            self.shutdown()
+            return False
 
         else:
             print("ERROR: Video Capturer is not open.")
@@ -137,7 +141,7 @@ class InputOutputHandler:
         if self.output_dir_name is None:
             self.output_dir_name = os.path.join(
                 self.settings_dict["output_directory"],
-                dt.datetime.now().strftime("%y_%m_%d_%H-%M-%S_")
+                dt.datetime.now().strftime("%d_%m_%y_%H-%M-%S_")
                 + self.settings_dict["tag"],
             )
             os.makedirs(name=self.output_dir_name, exist_ok=True)
@@ -153,7 +157,7 @@ class InputOutputHandler:
         current_timestamp = self.start_datetime + dt.timedelta(
             seconds=float(self.frame_no) / self.fps
         )
-        time_str = current_timestamp.strftime("%y-%m-%d_%H-%M-%S.%f")[:-3]
+        time_str = current_timestamp.strftime("%d-%m-%y_%H-%M-%S.%f")[:-3]
 
         rows = []
         if detector.current_objects is not None:
