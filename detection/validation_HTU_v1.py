@@ -1,8 +1,8 @@
+import datetime as dt
 import glob
 import subprocess
-import datetime as dt
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     video_files = "validation_HTU_v1/recordings/*.mp4"
 
     files = glob.glob(video_files)
