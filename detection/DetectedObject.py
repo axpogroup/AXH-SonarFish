@@ -4,7 +4,7 @@ import cv2 as cv
 import numpy as np
 
 
-class Object:
+class DetectedObject:
     def __init__(self, identifier, contour, frame_number, settings_dict):
         self.ID = identifier
         self.frames_observed = [frame_number]

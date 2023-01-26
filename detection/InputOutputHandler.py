@@ -197,7 +197,7 @@ class InputOutputHandler:
                 "main.py",
                 "FishDetector.py",
                 "InputOutputHandler.py",
-                "Object.py",
+                "DetectedObject.py",
                 "visualization_functions.py",
             ]
             with zipfile.ZipFile(

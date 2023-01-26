@@ -1,6 +1,6 @@
 import cv2 as cv
 import numpy as np
-from Object import Object
+from DetectedObject import DetectedObject
 
 fish_area_mask = cv.imread("masks/fish.png", cv.IMREAD_GRAYSCALE)
 full_area_mask = cv.imread("masks/full.png", cv.IMREAD_GRAYSCALE)
@@ -208,7 +208,7 @@ class FishDetector:
             )
             detections = {}
             for contour in contours:
-                new_object = Object(
+                new_object = DetectedObject(
                     self.get_new_id(), contour, self.frame_number, self.settings_dict
                 )
                 detections[new_object.ID] = new_object
