@@ -1,13 +1,12 @@
 # Code written by Leiv Andresen, HTD-A, leiv.andresen@axpo.com
 
-import cv2 as cv
-import numpy as np
-import math
-import pandas as pd
-import glob
-import csv
-import os
 import datetime as dt
+import glob
+import math
+import os
+
+import numpy as np
+import pandas as pd
 from dateutil.relativedelta import relativedelta
 
 
@@ -20,8 +19,8 @@ def parse_filename(filename):
     fps = 8
     if "Video 11_2022-06-16_230000_2437-3635 Abtast" in filename:
         filename_t = list(filename)
-        filename_t[31] = '_'
-        filename = ''.join(filename_t)
+        filename_t[31] = "_"
+        filename = "".join(filename_t)
 
     if ("2021" in filename) or ("Video" in filename[:10]):
         date_part = "_".join(filename.split("_")[1:3])
@@ -51,16 +50,21 @@ def parse_filename(filename):
 
 def calculate_transforms(dataframe_keypoints, transformations):
     for _, row in dataframe_keypoints.iterrows():
-        delta_x, delta_y = row["point 2x"] - row["point 1x"], row["point 2y"] - row["point 1y"]
+        delta_x, delta_y = (
+            row["point 2x"] - row["point 1x"],
+            row["point 2y"] - row["point 1y"],
+        )
 
         # Assumes the two points are on a line parallel to the rake, possibly ADJUST
         angle = -math.atan(delta_y / delta_x)
 
-        R = np.array([
-            [np.cos(angle), -np.sin(angle), 0],
-            [np.sin(angle), np.cos(angle), 0],
-            [0, 0, 1]
-        ])
+        R = np.array(
+            [
+                [np.cos(angle), -np.sin(angle), 0],
+                [np.sin(angle), np.cos(angle), 0],
+                [0, 0, 1],
+            ]
+        )
 
         if "_2021-" in row["filename"]:
             # the real world distance [mm] between the two points, possibly ADJUST
@@ -68,19 +72,11 @@ def calculate_transforms(dataframe_keypoints, transformations):
         else:
             # the real world distance [mm] between the two points, possibly ADJUST
             s = 2168 / np.hypot(delta_x, delta_y)
-        S = np.array([
-            [s, 0, 0],
-            [0, s, 0],
-            [0, 0, 1]
-        ])
+        S = np.array([[s, 0, 0], [0, s, 0], [0, 0, 1]])
 
         tx, ty = -row["point 1x"], -row["point 1y"]
 
-        T = np.array([
-            [1, 0, tx],
-            [0, 1, ty],
-            [0, 0, 1]
-        ])
+        T = np.array([[1, 0, tx], [0, 1, ty], [0, 0, 1]])
 
         if "_2021-" in row["filename"]:
             # the real world position of point 1, possibly ADJUST
@@ -89,17 +85,9 @@ def calculate_transforms(dataframe_keypoints, transformations):
             # the real world position of point 1, possibly ADJUST
             t2x, t2y = 1912, 0
 
-        T2 = np.array([
-            [1, 0, t2x],
-            [0, 1, t2y],
-            [0, 0, 1]
-        ])
+        T2 = np.array([[1, 0, t2x], [0, 1, t2y], [0, 0, 1]])
 
-        Iy = np.array([
-            [1, 0, 0],
-            [0, -1, 0],
-            [0, 0, 1]
-        ])
+        Iy = np.array([[1, 0, 0], [0, -1, 0], [0, 0, 1]])
 
         _, prefix, _ = parse_filename(os.path.split(row["filename"])[-1])
         if "_2021-" in row["filename"]:
@@ -108,7 +96,15 @@ def calculate_transforms(dataframe_keypoints, transformations):
         else:
             wasserhoehe = np.NAN
             jahr = 2022
-        transformations[prefix] = {"R": R, "S": S, "T": T, "T2": T2, "Iy": Iy, "wasserhoehe": wasserhoehe, "y": jahr}
+        transformations[prefix] = {
+            "R": R,
+            "S": S,
+            "T": T,
+            "T2": T2,
+            "Iy": Iy,
+            "wasserhoehe": wasserhoehe,
+            "y": jahr,
+        }
 
     return transformations
 
@@ -131,7 +127,9 @@ if __name__ == "__main__":
     transformations = {}
     # Specify the keypoint csv files, ADJUST
     # Wasserhöhe was added to the  2021 .csv file manually
-    keypoints_2021 = pd.read_csv("output/keypoints_2021_mit_wasserhoehe.csv", delimiter=",")
+    keypoints_2021 = pd.read_csv(
+        "output/keypoints_2021_mit_wasserhoehe.csv", delimiter=","
+    )
     transformations = calculate_transforms(keypoints_2021, transformations)
     keypoints_2022 = pd.read_csv("output/keypoints_2022_new.csv", delimiter=",")
     transformations = calculate_transforms(keypoints_2022, transformations)
@@ -170,15 +168,22 @@ if __name__ == "__main__":
         csv_frame["Jahr"] = ts["y"]
 
         csv_frame = csv_frame.drop(columns=["w - Breite", "h - Hoehe"])
-        csv_frame = csv_frame[['Zeit', 'Framenummer', 'x - Koordinate', 'y - Koordinate', 'Klassifikation',
-                               'ID', 'Wasserhoehe', 'Jahr', 'Dateiname']]
-        csv_frame.to_csv((output_directory+prefix+"_transformiert.csv"))
+        csv_frame = csv_frame[
+            [
+                "Zeit",
+                "Framenummer",
+                "x - Koordinate",
+                "y - Koordinate",
+                "Klassifikation",
+                "ID",
+                "Wasserhoehe",
+                "Jahr",
+                "Dateiname",
+            ]
+        ]
+        csv_frame.to_csv((output_directory + prefix + "_transformiert.csv"))
 
         # Add to summary df
         summary_df = pd.concat([summary_df, csv_frame])
 
-    summary_df.to_csv((output_directory+"alle_videos_transformiert.csv"))
-
-
-
-
+    summary_df.to_csv((output_directory + "alle_videos_transformiert.csv"))

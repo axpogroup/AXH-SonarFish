@@ -13,6 +13,7 @@ from dateutil.relativedelta import relativedelta
 
 # import code
 
+
 def initialize_output_recording(input_video, output_video_file):
     # grab the width, height, fps and length of the video stream.
     frame_width = int(input_video.get(cv.CAP_PROP_FRAME_WIDTH))
@@ -33,8 +34,8 @@ def parse_filename(filename):
     fps = 8
     if "Video 11_2022-06-16_230000_2437-3635 Abtast" in filename:
         filename_t = list(filename)
-        filename_t[31] = '_'
-        filename = ''.join(filename_t)
+        filename_t[31] = "_"
+        filename = "".join(filename_t)
 
     if ("2021" in filename) or ("Video" in filename[:10]):
         date_part = "_".join(filename.split("_")[1:3])

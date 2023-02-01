@@ -1,40 +1,20 @@
 # Code written by Leiv Andresen, HTD-A, leiv.andresen@axpo.com
 
-import cv2 as cv
-import numpy as np
-import glob
 import csv
+import glob
 
-# prevX,prevY=-1,-1
-# def printCoordinate(event, x, y, flags, params):
-#     global prevX,prevY
-#     if event==cv.EVENT_LBUTTONDOWN:
-#         cv.circle(img,(x,y),3,(255,255,255),-1)
-#         strXY='('+str(x)+','+str(y)+')'
-#         font=cv.FONT_HERSHEY_PLAIN
-#         cv.putText(img,strXY,(x+10,y-10),font,1,(255,255,255))
-#         if prevX==-1 and prevY==-1:
-#             prevX,prevY=x,y
-#         else:
-#             cv.line(img,(prevX,prevY),(x,y),(0,0,255),5)
-#             prevX,prevY=-1,-1
-#         cv.imshow("image",img)
-# # img = np.zeros((800,800,3),dtype=np.uint8)
-# # cv2.imshow("image",img)
-# # cv2.setMouseCallback("image",printCoordinate)
-# # cv2.waitKey()
-# # cv2.destroyAllWindows()
+import cv2 as cv
 
 global raw_frame
 global csv_line
 
 
 def printCoordinate(event, x, y, flags, params):
-    if event==cv.EVENT_LBUTTONDOWN:
-        cv.circle(raw_frame,(x,y),20,(0,0,255),3)
-        strXY='('+str(x)+','+str(y)+')'
-        font=cv.FONT_HERSHEY_PLAIN
-        cv.putText(raw_frame,strXY,(x+40,y-40),font,1,(100,100,255))
+    if event == cv.EVENT_LBUTTONDOWN:
+        cv.circle(raw_frame, (x, y), 20, (0, 0, 255), 3)
+        strXY = "(" + str(x) + "," + str(y) + ")"
+        font = cv.FONT_HERSHEY_PLAIN
+        cv.putText(raw_frame, strXY, (x + 40, y - 40), font, 1, (100, 100, 255))
         cv.imshow("frame", raw_frame)
         csv_line.append(x)
         csv_line.append(y)
@@ -62,7 +42,7 @@ if __name__ == "__main__":
         "point 2x",
         "point 2y",
         "water level x",
-        "water level y"
+        "water level y",
     ]
 
     validation_images = []
@@ -96,11 +76,11 @@ if __name__ == "__main__":
                     (200, 200, 255),
                     2,
                 )
-            if frame_no == finish_frame+1:
+            if frame_no == finish_frame + 1:
                 break
 
             # Detection
-            cv.imshow('frame', raw_frame)
+            cv.imshow("frame", raw_frame)
             if frame_no >= finish_frame:
                 validation_images.append(raw_frame)
                 cv.setMouseCallback("frame", printCoordinate)
@@ -116,7 +96,3 @@ if __name__ == "__main__":
         csv_writer.writerow(csv_line)
 
     csv_f.close()
-
-
-
-
