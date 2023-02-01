@@ -1,3 +1,5 @@
+# Code written by Leiv Andresen, HTD-A, leiv.andresen@axpo.com
+
 from math import cos, sin
 
 import cv2 as cv

@@ -1,3 +1,5 @@
+# Code written by Leiv Andresen, HTD-A, leiv.andresen@axpo.com
+
 import copy
 
 import cv2 as cv
@@ -187,6 +189,7 @@ class BoxAndDotDetector:
         for key, detection in self.detections.items():
             detection.classifications = [color]
 
+            # Filter dots, possibly ADJUST
             if detection.area[-1] < 800:
                 dot_detection_keys.append(key)
 
@@ -205,11 +208,12 @@ class BoxAndDotDetector:
         for key, detection in self.detections.items():
             # check if there was an issue with the detection
             x, y, w, h = cv.boundingRect(detection.contours[-1])
-            if abs(float(w) / h - 1) > 0.05:
+            if abs(float(w) / h - 1) > 0.2:
                 self.issue = True
 
             detection.classifications = [color]
 
+            # Filter boxes, possibly ADJUST
             if detection.area[-1] > 800:
                 dot_detection_keys.append(key)
                 # detection.classifications = ['dot ' + color]
@@ -394,7 +398,10 @@ class BoxAndDotDetector:
                 min_id, min_dist = self.closest_point(
                     detection.midpoints[-1], object_midpoints
                 )
-                if min_dist < self.max_association_dist:
+                max_association_dist = self.max_association_dist
+                if color in ["green dot", "red dot"]:
+                    max_association_dist = 5
+                if min_dist < max_association_dist:
                     self.associations.append(
                         {
                             "detection_id": detection.ID,
@@ -445,6 +452,8 @@ class BoxAndDotDetector:
             # Alternative consolidation - dilate
             # kernel = np.ones((11, 11), "uint8")
             # thres = cv.dilate(thres, kernel, iterations=1)
+            # kernel = np.ones((5, 5), np.uint8)
+            # thres = cv.erode(thres, kernel, iterations=3)
             self.current_threshold = thres
             # img = self.spatial_filter(img, kernel_size=15, method='median')
 

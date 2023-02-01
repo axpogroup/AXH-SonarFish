@@ -1,10 +1,8 @@
-# Input / Output
-#input_file:  "recordings/V2/2022-05-29_053000_193_1241  v2_dev_test.mp4"
-#input_file:  "recordings/V2/Video 5_2022-05-27_051500_771_2141 ZU BESPRECHEN passage am Schluss.mp4"
+# Code written by Leiv Andresen, HTD-A, leiv.andresen@axpo.com
 
+# Output
 output_video_dir: "output/videos/"
 csv_output_directory: "output/csv/"
-input_directory: "recordings/V2/"
 
 # Enhancement
 downsample: 100
