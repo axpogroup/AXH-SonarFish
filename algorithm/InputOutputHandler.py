@@ -194,7 +194,7 @@ class InputOutputHandler:
             import zipfile
 
             filenames = [
-                "main.py",
+                "run_algorithm.py",
                 "FishDetector.py",
                 "InputOutputHandler.py",
                 "DetectedObject.py",

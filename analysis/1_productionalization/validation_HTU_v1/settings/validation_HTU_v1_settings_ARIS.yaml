@@ -1,7 +1,9 @@
 # Input / Output
-input_file:  "recordings/new_settings/22-11-14_start_17-06-59_crop_swarms_single_2.mp4"
-output_directory: "validation_HTU_v1/output/"
-tag: "first_run"
+input_file:  "analysis/1_productionalization/validation_HTU_v1/recordings/22-11-14_start_16-36-56.mp4"
+mask_directory: "analysis/1_productionalization/validation_HTU_v1/recordings/masks"
+output_directory: "analysis/1_productionalization/validation_HTU_v1/output"
+
+tag: "test_delete"
 #record_output_video: True
 #record_output_csv: True
 

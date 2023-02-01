@@ -3,7 +3,7 @@ import glob
 import subprocess
 
 if __name__ == "__main__":
-    video_files = "validation_HTU_v1/recordings/*.mp4"
+    video_files = "analysis/1_productionalization/validation_HTU_v1/recordings/*.mp4"
 
     files = glob.glob(video_files)
     files.sort()
@@ -13,7 +13,8 @@ if __name__ == "__main__":
     for file in files:
         if "22-11-16_start_02-23-35" not in file:
             continue
-        command = f"python3 main.py -yf 'settings/validation_HTU_v1_settings_ARIS.yaml' -if {file}"
+        command = f"python3 algorithm/run_algorithm.py -yf 'analysis/1_productionalization/validation_HTU_v1/" \
+                  f"settings/validation_HTU_v1_settings_ARIS.yaml' -if {file}"
 
         try:
             output = subprocess.run(

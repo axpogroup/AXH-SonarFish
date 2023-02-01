@@ -5,10 +5,10 @@ from FishDetector_ARIS import FishDetector
 if __name__ == "__main__":
     enhanced = False
     # recording_file = (
-    #         "ARIS_test/2022-06-21_050000_1406_2480 zu besprechen abstieg oder fressen.mp4"
+    #         "HTU_ARIS_fish_detection_test/2022-06-21_050000_1406_2480 zu besprechen abstieg oder fressen.mp4"
     # ) # interessant 2
     recording_file = (
-        "ARIS_test/recordings/2022-06-23_134500_1571_1942 2 Forellen 20-25cm Rechenkontakte "
+        "HTU_ARIS_fish_detection_test/recordings/2022-06-23_134500_1571_1942 2 Forellen 20-25cm Rechenkontakte "
         "zu besprechen.mp4"
     )
 

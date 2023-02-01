@@ -1,9 +1,7 @@
 import cv2 as cv
 import numpy as np
+import os
 from DetectedObject import DetectedObject
-
-fish_area_mask = cv.imread("masks/fish.png", cv.IMREAD_GRAYSCALE)
-full_area_mask = cv.imread("masks/full.png", cv.IMREAD_GRAYSCALE)
 
 
 class FishDetector:
@@ -17,6 +15,10 @@ class FishDetector:
         self.current_enhanced = None
         self.current_output = None
         self.current_classified = None
+
+        # Masks
+        self.non_object_space_mask = cv.imread(os.path.join(settings_dict["mask_directory"], "fish.png"), cv.IMREAD_GRAYSCALE)
+        self.sonar_controls_mask = cv.imread(os.path.join(settings_dict["mask_directory"], "full.png"), cv.IMREAD_GRAYSCALE)
 
         # Enhancement
         self.framebuffer = None
@@ -77,7 +79,7 @@ class FishDetector:
 
     def enhance_frame(self, gray_frame):
         light = False  # TOD unsure if this still works
-        enhanced_temp = self.mask_regions(gray_frame, area="fish")
+        enhanced_temp = self.mask_regions(gray_frame, area="non_object_space")
         if light:
             self.update_buffer_light(enhanced_temp)
             if self.frame_number < self.long_mean_frames:
@@ -294,30 +296,29 @@ class FishDetector:
         diff[abs(diff) < threshold * self.long_std_dev] = 0
         return diff
 
-    @staticmethod
-    def mask_regions(img, area="fish"):
-        if area == "fish":
-            if img.shape[:1] != fish_area_mask.shape[:1]:
-                percent_difference = img.shape[0] / fish_area_mask.shape[0] * 100
+    def mask_regions(self, img, area="sonar_controls"):
+        if area == "non_object_space":
+            if img.shape[:1] != self.non_object_space_mask.shape[:1]:
+                percent_difference = img.shape[0] / self.non_object_space_mask.shape[0] * 100
 
                 np.place(
                     img,
-                    FishDetector.resize_img(fish_area_mask, percent_difference) < 100,
+                    FishDetector.resize_img(self.non_object_space_mask, percent_difference) < 100,
                     0,
                 )
             else:
-                np.place(img, fish_area_mask < 100, 0)
-        elif area == "full":
-            if img.shape[:1] != full_area_mask.shape[:1]:
-                percent_difference = img.shape[0] / full_area_mask.shape[0] * 100
+                np.place(img, self.non_object_space_mask < 100, 0)
+        elif area == "sonar_controls":
+            if img.shape[:1] != self.sonar_controls_mask.shape[:1]:
+                percent_difference = img.shape[0] / self.sonar_controls_mask.shape[0] * 100
 
                 np.place(
                     img,
-                    FishDetector.resize_img(full_area_mask, percent_difference) < 100,
+                    FishDetector.resize_img(self.sonar_controls_mask, percent_difference) < 100,
                     0,
                 )
             else:
-                np.place(img, full_area_mask < 100, 0)
+                np.place(img, self.sonar_controls_mask < 100, 0)
         return img
 
     @staticmethod

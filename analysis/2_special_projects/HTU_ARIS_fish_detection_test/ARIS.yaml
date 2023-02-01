@@ -1,6 +1,6 @@
 # Input / Output
-input_file: "ARIS_test/recordings/2022-06-23_134500_1571_1942 2 Forellen 20-25cm Rechenkontakte zu besprechen.mp4"
-#input_file: "ARIS_test/recordings/2022-06-21_050000_1406_2480 zu besprechen abstieg oder fressen.mp4"
+input_file: "HTU_ARIS_fish_detection_test/recordings/2022-06-23_134500_1571_1942 2 Forellen 20-25cm Rechenkontakte zu besprechen.mp4"
+#input_file: "HTU_ARIS_fish_detection_test/recordings/2022-06-21_050000_1406_2480 zu besprechen abstieg oder fressen.mp4"
 # input_file:  "output/normed_120_10_std_dev_threshold_2_median_11_drop_duplicates_crop.mp4"  # enhanced
 # input_file:  "output/components/final_old_moving_average_5s.mp4"  # enhanced
 # input_file:  "recordings/new_settings/22-11-14_start_17-06-59_crop_swarms_single.mp4"
