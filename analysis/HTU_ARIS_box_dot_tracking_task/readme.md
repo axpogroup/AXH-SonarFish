@@ -23,9 +23,11 @@ The input videos must satisfy the following requirements:
 **HOW TO RUN THE PIPELINE:**
 
 1. Start by exporting the paths and locations of the boxes and dots with 1_main_box_and_dot_multiple_videos.py
-2. Use 2_label_keypoints_for_transformation.py to extract the same two points from all videos and store them to a .csv file
+2. Use 2_label_keypoints_for_transformation.py to extract the same two points from all videos and store them to a .csv file. The frames from which the points are extracted can be stored for future reference.
 3. Use 3_transform_coordinates.py to transform the coordinates using the keypoints from step 3. Certain parameters of the transforms need to be adjusted depending on the points that are selected (Search for comments: ADJUST in the code)
 4. Use 4_validate_and_plot_detections.ipynb to validate the output and make sure e.g. that all contacts with the rake occur on the rake
+
+A zip file with the code and raw data can be found on mingle: https://mingle.axpo.com/x/aQQNDQ 
 
 _Tested with the following versions: 
 

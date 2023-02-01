@@ -21,7 +21,7 @@ def printCoordinate(event, x, y, flags, params):
 
 
 if __name__ == "__main__":
-    # Specify the input folder, possibly ADJUST
+    # Specify the input folder, possibly ADJUST or load previous keypoint frames instead
     filenames = glob.glob("ARIS_videos/2022/" + "*.mp4")
     filenames.sort()
     print("Found the following files: \n")
@@ -67,6 +67,8 @@ if __name__ == "__main__":
                 break
 
             if frame_no == finish_frame:
+                # Write keypoint frames for future reference
+                # cv.imwrite(file[:-4]+".jpg", raw_frame)
                 cv.putText(
                     raw_frame,
                     "Click two points in a line, press any key for next video ...",
