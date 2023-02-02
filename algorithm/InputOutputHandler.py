@@ -96,7 +96,9 @@ class InputOutputHandler:
         # Total runtime
         if self.last_output_time is not None:
             total_time_per_frame = int(
-                (cv.getTickCount() - self.last_output_time) / cv.getTickFrequency() * 1000
+                (cv.getTickCount() - self.last_output_time)
+                / cv.getTickFrequency()
+                * 1000
             )
         self.last_output_time = cv.getTickCount()
         if self.frame_no % 20 == 0:
