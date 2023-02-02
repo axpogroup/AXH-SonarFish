@@ -194,11 +194,11 @@ class InputOutputHandler:
             import zipfile
 
             filenames = [
-                "run_algorithm.py",
-                "FishDetector.py",
-                "InputOutputHandler.py",
-                "DetectedObject.py",
-                "visualization_functions.py",
+                "algorithm/run_algorithm.py",
+                "algorithm/FishDetector.py",
+                "algorithm/InputOutputHandler.py",
+                "algorithm/DetectedObject.py",
+                "algorithm/visualization_functions.py",
             ]
             with zipfile.ZipFile(
                 os.path.join(self.output_dir_name, "code.zip"), mode="w"
