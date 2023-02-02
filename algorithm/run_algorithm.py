@@ -5,8 +5,12 @@ from FishDetector import FishDetector
 from InputOutputHandler import InputOutputHandler
 
 if __name__ == "__main__":
-    argParser = argparse.ArgumentParser(description="Run the fish detection algorithm with a settings .yaml file.")
-    argParser.add_argument("-yf", "--yaml_file", help="path to the YAML settings file", required=True)
+    argParser = argparse.ArgumentParser(
+        description="Run the fish detection algorithm with a settings .yaml file."
+    )
+    argParser.add_argument(
+        "-yf", "--yaml_file", help="path to the YAML settings file", required=True
+    )
     argParser.add_argument("-if", "--input_file", help="path to the input video file")
 
     args = argParser.parse_args()
