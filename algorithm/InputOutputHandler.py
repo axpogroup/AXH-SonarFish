@@ -42,13 +42,20 @@ class InputOutputHandler:
         self.frames_total = int(self.video_cap.get(cv.CAP_PROP_FRAME_COUNT))
         self.fps = int(self.video_cap.get(cv.CAP_PROP_FPS))
 
+        self.frame_retrieval_time = None
+        self.last_output_time = None
+
         self.current_raw_frame = None
 
     def get_new_frame(self):
+        start = cv.getTickCount()
         tries = 0
         if self.video_cap.isOpened():
             while tries < 5:
                 ret, self.current_raw_frame = self.video_cap.read()
+                self.frame_retrieval_time = int(
+                    (cv.getTickCount() - start) / cv.getTickFrequency() * 1000
+                )
                 # if frame is read correctly ret is True
                 if not ret:
                     tries += 1
@@ -86,12 +93,18 @@ class InputOutputHandler:
             return
 
     def handle_output(self, detector):
+        # Total runtime
+        if self.last_output_time is not None:
+            total_time_per_frame = int(
+                (cv.getTickCount() - self.last_output_time) / cv.getTickFrequency() * 1000
+            )
+        self.last_output_time = cv.getTickCount()
         if self.frame_no % 20 == 0:
             print(
                 f"Processed {'{:.1f}'.format(self.frame_no / self.frames_total * 100)} % of video. "
-                f"Runtimes [ms]: Enhance: {detector.enhance_time_ms} | "
+                f"Runtimes [ms]: getFrame: {self.frame_retrieval_time} | Enhance: {detector.enhance_time_ms} | "
                 f"DetectTrack: {detector.detection_tracking_time_ms} | "
-                f"Total: {detector.total_runtime_ms} | FPS: {int(1000 / detector.total_runtime_ms)}"
+                f"Total: {total_time_per_frame} | FPS: {'{:.1f}'.format(1000 / total_time_per_frame)}"
             )
 
         if "record_output_csv" in self.settings_dict.keys():
