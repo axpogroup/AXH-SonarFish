@@ -87,9 +87,10 @@ class InputOutputHandler:
 
     def handle_output(self, detector):
         if self.frame_no % 20 == 0:
-            print(
-                f"Processed {'{:.1f}'.format(self.frame_no / self.frames_total * 100)} % of video. Runtimes [ms]: Enhance: {detector.enhance_time_ms} | DetectTrack: {detector.detection_tracking_time_ms} | Total: {detector.total_runtime_ms} | FPS: {int(1000 / detector.total_runtime_ms)}"
-            )
+            print(f"Processed {'{:.1f}'.format(self.frame_no / self.frames_total * 100)} % of video. "
+                  f"Runtimes [ms]: Enhance: {detector.enhance_time_ms} | "
+                  f"DetectTrack: {detector.detection_tracking_time_ms} | "
+                  f"Total: {detector.total_runtime_ms} | FPS: {int(1000 / detector.total_runtime_ms)}")
 
         if "record_output_csv" in self.settings_dict.keys():
             self.write_csv(detector)
