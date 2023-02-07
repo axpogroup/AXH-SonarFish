@@ -9,7 +9,9 @@ def get_visual_output(detector, rich_display=False):
         try:
             up = np.concatenate(
                 (
-                    retrieve_frame(detector.current_gray_tweaked, puttext="current_gray"),
+                    retrieve_frame(
+                        detector.current_gray_tweaked, puttext="current_gray"
+                    ),
                     retrieve_frame(
                         detector.current_mean,
                         puttext="current_mean",
@@ -22,7 +24,9 @@ def get_visual_output(detector, rich_display=False):
                         detector.current_diff,
                         puttext="current_diff",
                     ),
-                    retrieve_frame(detector.abs_current_diff, puttext="abs(current_diff)")
+                    retrieve_frame(
+                        detector.abs_current_diff, puttext="abs(current_diff)"
+                    ),
                 ),
                 axis=1,
             )
@@ -31,7 +35,10 @@ def get_visual_output(detector, rich_display=False):
                     # retrieve_frame(
                     #     detector.long_std_dev_127,
                     #     puttext="long std-dev"),
-                    retrieve_frame(detector.current_diff_thresholded, puttext="current_diff_thresholded"),
+                    retrieve_frame(
+                        detector.current_diff_thresholded,
+                        puttext="current_diff_thresholded",
+                    ),
                     retrieve_frame(
                         detector.current_enhanced,
                         puttext="median filter",
@@ -52,7 +59,9 @@ def get_visual_output(detector, rich_display=False):
                 (
                     draw_detector_output(
                         detector,
-                        retrieve_frame(detector.current_raw_downsampled, puttext="Final"),
+                        retrieve_frame(
+                            detector.current_raw_downsampled, puttext="Final"
+                        ),
                         debug=False,
                         classifications=False,
                     ),
@@ -60,9 +69,7 @@ def get_visual_output(detector, rich_display=False):
                     retrieve_frame(None),
                     draw_detector_output(
                         detector,
-                        retrieve_frame(
-                            detector.dilated, puttext="detections"
-                        ),
+                        retrieve_frame(detector.dilated, puttext="detections"),
                         debug=True,
                     ),
                     retrieve_frame(None),

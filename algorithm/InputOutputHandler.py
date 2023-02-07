@@ -88,13 +88,13 @@ class InputOutputHandler:
                 detector.long_mean_frames = value
 
         def change_alpha(value):
-            detector.alpha = float(value)/10
+            detector.alpha = float(value) / 10
 
         def change_beta(value):
             detector.beta = value
 
         def change_std_dev_threshold(value):
-            detector.std_dev_threshold = float(value)/10
+            detector.std_dev_threshold = float(value) / 10
 
         def change_diff_thresh(value):
             detector.diff_thresh = value
@@ -109,15 +109,34 @@ class InputOutputHandler:
                 value += 1
             detector.dilatation_kernel = value
 
-        cv.createTrackbar('alpha*10', "frame", int(detector.alpha*10), 30, change_alpha)
-        cv.createTrackbar('beta', "frame", detector.beta, 120, change_beta)
-        cv.createTrackbar('s_mean', "frame", detector.current_mean_frames, 120, change_current_mean_frames)
-        cv.createTrackbar('l_mean', "frame", detector.long_mean_frames, 1200, change_long_mean_frames)
+        cv.createTrackbar(
+            "alpha*10", "frame", int(detector.alpha * 10), 30, change_alpha
+        )
+        cv.createTrackbar("beta", "frame", detector.beta, 120, change_beta)
+        cv.createTrackbar(
+            "s_mean",
+            "frame",
+            detector.current_mean_frames,
+            120,
+            change_current_mean_frames,
+        )
+        cv.createTrackbar(
+            "l_mean", "frame", detector.long_mean_frames, 1200, change_long_mean_frames
+        )
         # cv.createTrackbar('stddev*10', "frame", int(detector.std_dev_threshold*10), 30, change_std_dev_threshold)
-        cv.createTrackbar('diff_thresh', "frame", int(detector.diff_thresh), 127, change_diff_thresh)
-        cv.createTrackbar('median_f', "frame", detector.median_filter_kernel, 50, change_median_filter_kernel)
-        cv.createTrackbar('dilate', "frame", detector.dilatation_kernel, 50, change_dilatation_kernel)
-
+        cv.createTrackbar(
+            "diff_thresh", "frame", int(detector.diff_thresh), 127, change_diff_thresh
+        )
+        cv.createTrackbar(
+            "median_f",
+            "frame",
+            detector.median_filter_kernel,
+            50,
+            change_median_filter_kernel,
+        )
+        cv.createTrackbar(
+            "dilate", "frame", detector.dilatation_kernel, 50, change_dilatation_kernel
+        )
 
     def show_image(self, img, detector):
         cv.imshow("frame", img)

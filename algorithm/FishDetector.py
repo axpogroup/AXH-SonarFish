@@ -96,7 +96,9 @@ class FishDetector:
     def enhance_frame(self, gray_frame):
         light = True  # TOD unsure if this still works
         enhanced_temp = self.mask_regions(gray_frame, area="sonar_controls")
-        enhanced_temp = cv.convertScaleAbs(enhanced_temp, alpha=self.alpha, beta=self.beta)
+        enhanced_temp = cv.convertScaleAbs(
+            enhanced_temp, alpha=self.alpha, beta=self.beta
+        )
         self.current_gray_tweaked = enhanced_temp
 
         if light:
@@ -217,7 +219,6 @@ class FishDetector:
 
             # Amplify lone pixels
 
-
             # Consolidate the points
             # enhanced_frame = cv.GaussianBlur(
             #     enhanced_frame,
@@ -227,10 +228,10 @@ class FishDetector:
 
             self.current_blurred_enhanced = enhanced_frame
             # Threshold
-            ret, thres = cv.threshold(enhanced_frame, 127+self.diff_thresh, 255, 0)
+            ret, thres = cv.threshold(enhanced_frame, 127 + self.diff_thresh, 255, 0)
             self.current_threshold = thres
             # Alternative consolidation - dilate
-            kernel = np.ones((self.dilatation_kernel, self.dilatation_kernel), 'uint8')
+            kernel = np.ones((self.dilatation_kernel, self.dilatation_kernel), "uint8")
             thres = cv.dilate(thres, kernel, iterations=1)
             self.dilated = thres
             # img = self.spatial_filter(img, kernel_size=15, method='median')
@@ -283,7 +284,9 @@ class FishDetector:
             self.framebuffer = self.framebuffer[:, :, : self.long_mean_frames]
 
     def calc_difference_from_buffer_light(self):
-        self.current_mean = np.mean(self.framebuffer[:, :, :self.current_mean_frames], axis=2).astype("uint8")
+        self.current_mean = np.mean(
+            self.framebuffer[:, :, : self.current_mean_frames], axis=2
+        ).astype("uint8")
 
         # If there is no current mean_buffer, initialize it with the current mean
         if self.mean_buffer is None:
