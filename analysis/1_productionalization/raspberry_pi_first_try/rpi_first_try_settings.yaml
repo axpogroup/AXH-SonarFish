@@ -1,0 +1,31 @@
+# Input / Output
+# input_file:  "analysis/demo/22-11-14_start_16-36-56_trim.mp4"
+input_file:  "analysis/demo/22-11-14_start_16-36-56_trim_small.mp4"
+# input_file:  "analysis/demo/22-11-14_start_16-46-57.mp4"
+mask_directory: "analysis/demo/masks"
+output_directory: "analysis/1_productionalization/raspberry_pi_first_try/output"
+
+tag: "speed_test_rpi"
+# record_output_video: True
+record_output_csv: True
+
+#display_output_video: True
+# display_mode_rich: False
+
+# Enhancement
+downsample: 100
+long_mean_frames: 120
+current_mean_frames: 10
+std_dev_threshold: 2
+median_filter_kernel: 3
+
+# Detection and Tracking
+blur_filter_kernel: 11
+threshold_contours: 127
+max_association_dist: 60
+phase_out_after_x_frames: 5
+min_occurences_in_last_x_frames: [13, 15]
+
+# Classification
+river_pixel_velocity: [-1.91, -0.85] # At full resolution
+min_occurences_for_fish: 20
