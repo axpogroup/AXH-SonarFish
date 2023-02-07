@@ -1,13 +1,13 @@
 # Input / Output
-input_file:  "analysis/demo/demo_sample_sonar_recording.mp4"
-mask_directory: "analysis/demo/masks"
-output_directory: "analysis/demo/output"
+input_file:  "analysis/1_productionalization/raspberry_pi_first_try/22-11-14_start_16-36-56_trim_small.m4v"
+mask_directory: "analysis/1_productionalization/validation_HTU_v1/recordings/masks"
+output_directory: "analysis/1_productionalization/raspberry_pi_first_try/output"
 
-tag: "demo"
+tag: "speed_test_mac"
 # record_output_video: True
-# record_output_csv: True
+record_output_csv: True
 
-display_output_video: True
+#display_output_video: True
 # display_mode_rich: False
 
 # Enhancement
