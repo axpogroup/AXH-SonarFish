@@ -171,6 +171,8 @@ class InputOutputHandler:
             )
         self.last_output_time = cv.getTickCount()
         if self.frame_no % 20 == 0:
+            if total_time_per_frame == 0:
+                total_time_per_frame = 1
             print(
                 f"Processed {'{:.1f}'.format(self.frame_no / self.frames_total * 100)} % of video. "
                 f"Runtimes [ms]: getFrame: {self.frame_retrieval_time} | Enhance: {detector.enhance_time_ms} | "
