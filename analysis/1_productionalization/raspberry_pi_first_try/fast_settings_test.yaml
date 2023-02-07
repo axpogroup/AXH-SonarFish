@@ -1,9 +1,11 @@
 # Input / Output
-input_file:  "analysis/1_productionalization/validation_HTU_v1/recordings/22-11-14_start_16-36-56.mp4"
-mask_directory: "analysis/1_productionalization/validation_HTU_v1/recordings/masks"
+# input_file:  "analysis/demo/22-11-14_start_16-46-57.mp4"
+# input_file:  "analysis/demo/22-11-14_start_16-36-56_trim.mp4"
+input_file:  "analysis/demo/22-11-14_start_16-36-56_trim_small.mp4"
+mask_directory: "analysis/demo/masks"
 output_directory: "analysis/1_productionalization/raspberry_pi_first_try/output"
 
-tag: "hyperfast_v1_runtime_test"
+tag: "fast_v2_runtime_test_rpi"
 #record_output_video: True
 record_output_csv: True
 
