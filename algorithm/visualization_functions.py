@@ -9,11 +9,42 @@ def get_visual_output(detector, rich_display=False):
         try:
             up = np.concatenate(
                 (
-                    retrieve_frame(detector.current_enhanced, puttext="enhanced"),
+                    retrieve_frame(detector.current_gray_tweaked, puttext="current_gray"),
                     retrieve_frame(
-                        detector.current_blurred_enhanced,
-                        puttext="blurred enhanced",
+                        detector.current_mean,
+                        puttext="current_mean",
                     ),
+                    retrieve_frame(
+                        detector.current_long_mean_uint8,
+                        puttext="long_mean",
+                    ),
+                    retrieve_frame(
+                        detector.current_diff,
+                        puttext="current_diff",
+                    ),
+                    retrieve_frame(detector.abs_current_diff, puttext="abs(current_diff)")
+                ),
+                axis=1,
+            )
+            mid = np.concatenate(
+                (
+                    # retrieve_frame(
+                    #     detector.long_std_dev_127,
+                    #     puttext="long std-dev"),
+                    retrieve_frame(detector.current_diff_thresholded, puttext="current_diff_thresholded"),
+                    retrieve_frame(
+                        detector.current_enhanced,
+                        puttext="median filter",
+                    ),
+                    retrieve_frame(
+                        detector.current_threshold,
+                        puttext="current_threshold",
+                    ),
+                    retrieve_frame(
+                        detector.dilated,
+                        puttext="dilated",
+                    ),
+                    retrieve_frame(None),
                 ),
                 axis=1,
             )
@@ -21,27 +52,30 @@ def get_visual_output(detector, rich_display=False):
                 (
                     draw_detector_output(
                         detector,
-                        retrieve_frame(detector.current_raw_downsampled, puttext="raw"),
+                        retrieve_frame(detector.current_raw_downsampled, puttext="Final"),
                         debug=False,
-                        classifications=True,
+                        classifications=False,
                     ),
+                    retrieve_frame(None),
+                    retrieve_frame(None),
                     draw_detector_output(
                         detector,
                         retrieve_frame(
-                            detector.current_threshold, puttext="thresholded"
+                            detector.dilated, puttext="detections"
                         ),
                         debug=True,
                     ),
+                    retrieve_frame(None),
                 ),
                 axis=1,
             )
-            disp = np.concatenate((up, down))
-            disp = draw_detector_output(
-                detector,
-                detector.resize_img(disp, 5000 / detector.downsample),
-                only_runtime=True,
-                runtiming=True,
-            )
+            disp = np.concatenate((up, mid, down))
+            # disp = draw_detector_output(
+            #     detector,
+            #     detector.resize_img(disp, 5000 / detector.downsample),
+            #     only_runtime=True,
+            #     runtiming=True,
+            # )
         except KeyError as e:
             print(e)
             disp = detector.current_raw
@@ -70,11 +104,11 @@ def retrieve_frame(img, puttext=None):
         cv.putText(
             out,
             puttext,
-            (50, 50),
+            (20, 20),
             cv.FONT_HERSHEY_SIMPLEX,
-            0.75,
+            0.5,
             (255, 255, 255),
-            2,
+            1,
         )
 
     return out
@@ -174,12 +208,8 @@ def draw_objects(detector, img, debug=False, classifications=False, fullres=Fals
                 else:
                     draw_object_classifications_box(obj, img)
             else:
-                if obj.classifications[-1] == "Fisch":
-                    draw_object_bounding_box(obj, img, color=(0, 255, 0))
-                    draw_object_past_midpoints(obj, img, color=(0, 255, 0))
-                else:
-                    draw_object_bounding_box(obj, img, color=(255, 0, 0))
-                    draw_object_past_midpoints(obj, img, color=(255, 0, 0))
+                draw_object_bounding_box(obj, img, color=(255, 0, 0))
+                draw_object_past_midpoints(obj, img, color=(255, 0, 0))
         elif (obj.frames_observed[-1] == detector.frame_number) & debug:
             draw_object_bounding_box(obj, img, color=(20, 20, 20))
             draw_object_past_midpoints(obj, img, color=(20, 20, 20))
