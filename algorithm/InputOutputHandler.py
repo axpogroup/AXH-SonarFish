@@ -174,8 +174,8 @@ class InputOutputHandler:
             self.start_ticks = cv.getTickCount()
 
         total_runtime = int(
-                (cv.getTickCount() - self.start_ticks)
-                / cv.getTickFrequency()*1000)
+            (cv.getTickCount() - self.start_ticks) / cv.getTickFrequency() * 1000
+        )
         self.last_output_time = cv.getTickCount()
         if self.frame_no % 20 == 0:
             if total_time_per_frame == 0:
