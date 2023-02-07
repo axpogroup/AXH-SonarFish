@@ -45,6 +45,7 @@ class InputOutputHandler:
         self.frame_no = 0
         self.frames_total = int(self.video_cap.get(cv.CAP_PROP_FRAME_COUNT))
         self.fps = int(self.video_cap.get(cv.CAP_PROP_FPS))
+        self.start_ticks = 1
 
         self.frame_retrieval_time = None
         self.last_output_time = None
@@ -169,6 +170,12 @@ class InputOutputHandler:
                 / cv.getTickFrequency()
                 * 1000
             )
+        else:
+            self.start_ticks = cv.getTickCount()
+
+        total_runtime = int(
+                (cv.getTickCount() - self.start_ticks)
+                / cv.getTickFrequency()*1000)
         self.last_output_time = cv.getTickCount()
         if self.frame_no % 20 == 0:
             if total_time_per_frame == 0:
@@ -177,7 +184,7 @@ class InputOutputHandler:
                 f"Processed {'{:.1f}'.format(self.frame_no / self.frames_total * 100)} % of video. "
                 f"Runtimes [ms]: getFrame: {self.frame_retrieval_time} | Enhance: {detector.enhance_time_ms} | "
                 f"DetectTrack: {detector.detection_tracking_time_ms} | "
-                f"Total: {total_time_per_frame} | FPS: {'{:.1f}'.format(1000 / total_time_per_frame)}"
+                f"Total: {total_time_per_frame} | FPS: {'{:.1f}'.format(self.frame_no/(2*total_runtime/1000))}"
             )
 
         if "record_output_csv" in self.settings_dict.keys():

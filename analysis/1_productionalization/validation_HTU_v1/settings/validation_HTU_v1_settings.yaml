@@ -7,9 +7,9 @@ tag: "hyperfast_v1_less_sensitive"
 #record_output_video: True
 #record_output_csv: True
 
-display_output_video: True
-display_mode_rich: True
-display_trackbars: True
+#display_output_video: True
+#display_mode_rich: True
+#display_trackbars: True
 
 # Enhancement
 downsample: 25
