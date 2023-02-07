@@ -1,5 +1,5 @@
 # Input / Output
-input_file:  "analysis/1_productionalization/raspberry_pi_first_try/22-11-14_start_16-36-56_trim.mp4"
+input_file:  "analysis/1_productionalization/validation_HTU_v1/recordings/22-11-14_start_16-36-56.mp4"
 mask_directory: "analysis/1_productionalization/validation_HTU_v1/recordings/masks"
 output_directory: "analysis/1_productionalization/raspberry_pi_first_try/output"
 
