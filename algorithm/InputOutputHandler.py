@@ -36,6 +36,10 @@ class InputOutputHandler:
         except ValueError:
             self.start_datetime = dt.datetime(year=2000, month=1, day=1)
 
+        if "display_trackbars" in settings_dict.keys():
+            self.display_trackbars = settings_dict["display_trackbars"]
+        else:
+            self.display_trackbars = False
         self.frame_by_frame = False
         self.usr_input = None
         self.frame_no = 0
@@ -71,8 +75,54 @@ class InputOutputHandler:
             print("ERROR: Video Capturer is not open.")
             return False
 
-    def show_image(self, img):
+    def trackbars(self, detector):
+        def change_current_mean_frames(value):
+            if value == 0:
+                value = 1
+            detector.current_mean_frames = value
+
+        def change_long_mean_frames(value):
+            if value < detector.current_mean_frames:
+                detector.long_mean_frames = detector.current_mean_frames
+            else:
+                detector.long_mean_frames = value
+
+        def change_alpha(value):
+            detector.alpha = float(value)/10
+
+        def change_beta(value):
+            detector.beta = value
+
+        def change_std_dev_threshold(value):
+            detector.std_dev_threshold = float(value)/10
+
+        def change_diff_thresh(value):
+            detector.diff_thresh = value
+
+        def change_median_filter_kernel(value):
+            if (float(value) / 2 % 1) == 0:
+                value += 1
+            detector.median_filter_kernel = value
+
+        def change_dilatation_kernel(value):
+            if (float(value) / 2 % 1) == 0:
+                value += 1
+            detector.dilatation_kernel = value
+
+        cv.createTrackbar('alpha*10', "frame", int(detector.alpha*10), 30, change_alpha)
+        cv.createTrackbar('beta', "frame", detector.beta, 120, change_beta)
+        cv.createTrackbar('s_mean', "frame", detector.current_mean_frames, 120, change_current_mean_frames)
+        cv.createTrackbar('l_mean', "frame", detector.long_mean_frames, 1200, change_long_mean_frames)
+        # cv.createTrackbar('stddev*10', "frame", int(detector.std_dev_threshold*10), 30, change_std_dev_threshold)
+        cv.createTrackbar('diff_thresh', "frame", int(detector.diff_thresh), 127, change_diff_thresh)
+        cv.createTrackbar('median_f', "frame", detector.median_filter_kernel, 50, change_median_filter_kernel)
+        cv.createTrackbar('dilate', "frame", detector.dilatation_kernel, 50, change_dilatation_kernel)
+
+
+    def show_image(self, img, detector):
         cv.imshow("frame", img)
+        if self.display_trackbars:
+            self.trackbars(detector)
 
         if not self.frame_by_frame:
             self.usr_input = cv.waitKey(1)
@@ -131,7 +181,7 @@ class InputOutputHandler:
                 "display_output_video" in self.settings_dict.keys()
                 and self.settings_dict["display_output_video"]
             ):
-                self.show_image(disp)
+                self.show_image(disp, detector)
 
     def initialize_output_recording(self):
         # grab the width, height, fps and length of the video stream.

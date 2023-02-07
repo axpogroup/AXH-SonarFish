@@ -1,9 +1,9 @@
 # Input / Output
-input_file:  "analysis/1_productionalization/validation_HTU_v1/recordings/22-11-14_start_16-36-56.mp4"
+input_file:  "analysis/1_productionalization/validation_HTU_v1/recordings/22-11-14_start_16-.mp4"
 mask_directory: "analysis/1_productionalization/validation_HTU_v1/recordings/masks"
 output_directory: "analysis/1_productionalization/validation_HTU_v1/output"
 
-tag: "hyperfast_v1_less_sensitive"
+tag: "test_delete"
 #record_output_video: True
 #record_output_csv: True
 
@@ -13,8 +13,8 @@ display_trackbars: True
 
 # Enhancement
 downsample: 25
-long_mean_frames: 200
-current_mean_frames: 10
+long_mean_frames: 120
+current_mean_frames: 20
 std_dev_threshold: 1
 median_filter_kernel: 3  # 3
 
@@ -22,7 +22,7 @@ median_filter_kernel: 3  # 3
 blur_filter_kernel: 3
 threshold_contours: 127  # 139
 
-max_association_dist: 30
+max_association_dist: 20
 phase_out_after_x_frames: 10
 min_occurences_in_last_x_frames: [13, 15]
 
