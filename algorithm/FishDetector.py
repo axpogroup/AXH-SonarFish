@@ -112,7 +112,9 @@ class FishDetector:
         self.current_diff = (enhanced_temp + 127).astype("uint8")
         self.abs_current_diff = (abs(enhanced_temp) + 127).astype("uint8")
         # TOD: validate if the blur helps
-        adaptive_threshold = self.difference_threshold_scaler * cv.blur(self.long_mean, (10, 10))
+        adaptive_threshold = self.difference_threshold_scaler * cv.blur(
+            self.long_mean, (10, 10)
+        )
         enhanced_temp[abs(enhanced_temp) < adaptive_threshold] = 0
 
         self.current_diff_thresholded = (enhanced_temp + 127).astype("uint8")
@@ -207,7 +209,9 @@ class FishDetector:
             )
 
             # Threshold
-            ret, thres = cv.threshold(enhanced_frame, 127 + self.difference_threshold_scaler, 255, 0)
+            ret, thres = cv.threshold(
+                enhanced_frame, 127 + self.difference_threshold_scaler, 255, 0
+            )
             self.current_threshold = thres
             # Alternative consolidation - dilate
             kernel = np.ones((self.dilatation_kernel, self.dilatation_kernel), "uint8")
