@@ -3,31 +3,15 @@ import os
 import cv2 as cv
 import numpy as np
 from DetectedObject import DetectedObject
+from utils import get_elapsed_ms, resize_img
 
 
 class FishDetector:
     def __init__(self, settings_dict):
         self.settings_dict = settings_dict
-        self.frame_number = 0  # TOD Must not overflow - recycle
-
-        self.total_runtime_ms = None
-        self.enhance_time_ms = None
-
-        # Frames
-        self.current_raw = None
-        self.current_raw_downsampled = None
-        self.current_gray = None
-        self.current_gray_tweaked = None
-        self.current_enhanced = None
-
-        self.current_long_mean_uint8 = None
-        self.current_diff = None
-        self.abs_current_diff = None
-        self.current_diff_thresholded = None
-        self.dilated = None
-
-        self.current_output = None
-        self.current_classified = None
+        self.frame_number = 0
+        self.latest_obj_index = 0
+        self.current_objects = {}
 
         # Masks
         self.non_object_space_mask = cv.imread(
@@ -43,93 +27,79 @@ class FishDetector:
         self.framebuffer = None
         self.mean_buffer = None
         self.mean_buffer_counter = None
-        self.current_mean = None
+        self.short_mean = None
         self.long_mean = None
-        self.long_std_dev = None
-        self.long_std_dev_127 = None
 
         self.downsample = settings_dict["downsample"]
-        self.alpha = settings_dict["contrast"]
-        self.beta = settings_dict["brightness"]
+        self.contrast = settings_dict["contrast"]
+        self.brightness = settings_dict["brightness"]
         self.long_mean_frames = settings_dict["long_mean_frames"]
-        self.current_mean_frames = settings_dict["current_mean_frames"]
+        self.current_mean_frames = settings_dict["short_mean_frames"]
         self.median_filter_kernel = settings_dict["median_filter_kernel"]
         self.dilatation_kernel = settings_dict["dilatation_kernel"]
         self.difference_threshold_scaler = settings_dict["difference_threshold_scaler"]
 
         # Detection and Tracking
-        self.detections = {}
-        self.current_objects = {}
-        self.current_threshold = None
-        self.associations = []
-        self.latest_obj_index = 0
-        self.detection_tracking_time_ms = None
         self.max_association_dist = settings_dict["max_association_dist"]
         self.phase_out_after_x_frames = settings_dict["phase_out_after_x_frames"]
         self.min_occurences_in_last_x_frames = settings_dict[
             "min_occurences_in_last_x_frames"
         ]
 
-    def process_frame(self, raw_frame, secondary=None):
+    def process_frame(self, raw_frame, object_history):
         start = cv.getTickCount()
-        self.current_raw = raw_frame
+        runtimes_ms = {}
+        frames = {}
+        self.current_objects = object_history
+        frames["raw"] = raw_frame
+
+        # Image enhancement
         if self.downsample:
-            self.current_raw_downsampled = self.resize_img(raw_frame, self.downsample)
-            self.current_gray = self.rgb_to_gray(self.current_raw_downsampled)
+            frames["raw_downsampled"] = resize_img(raw_frame, self.downsample)
+            frames["gray"] = self.rgb_to_gray(frames["raw_downsampled"])
         else:
-            self.current_gray = self.rgb_to_gray(self.current_raw)
+            frames["gray"] = self.rgb_to_gray(frames["raw"])
 
-        self.current_enhanced = self.enhance_frame(self.current_gray)
-        self.enhance_time_ms = int(
-            (cv.getTickCount() - start) / cv.getTickFrequency() * 1000
-        )
-
-        if self.frame_number > self.long_mean_frames:
-            self.detect_and_track(self.current_enhanced)
-            self.detection_tracking_time_ms = (
-                int((cv.getTickCount() - start) / cv.getTickFrequency() * 1000)
-                - self.enhance_time_ms
-            )
-
-        self.frame_number += 1
-        self.total_runtime_ms = int(
-            (cv.getTickCount() - start) / cv.getTickFrequency() * 1000
-        )
-        return
-
-    def enhance_frame(self, gray_frame):
-        enhanced_temp = self.mask_regions(gray_frame, area="sonar_controls")
+        enhanced_temp = self.mask_regions(frames["gray"], area="sonar_controls")
         enhanced_temp = cv.convertScaleAbs(
-            enhanced_temp, alpha=self.alpha, beta=self.beta
+            enhanced_temp, alpha=self.contrast, beta=self.brightness
         )
-        self.current_gray_tweaked = enhanced_temp
-
+        frames["gray_boosted"] = enhanced_temp
         self.update_buffer(enhanced_temp)
+
         if self.frame_number < self.long_mean_frames:
-            return enhanced_temp * 0
+            runtimes_ms["enhance"] = get_elapsed_ms(start)
+            runtimes_ms["detection_tracking"] = get_elapsed_ms(start) - runtimes_ms["enhance"]
+        else:
+            enhanced_temp = self.calc_difference_from_buffer()
+            frames["long_mean"] = self.long_mean
+            frames["short_mean"] = self.short_mean
+            frames["difference"] = (enhanced_temp + 127).astype("uint8")
+            frames["absolute_difference"] = (abs(enhanced_temp) + 127).astype("uint8")
+            # TOD: validate if the blur helps
+            adaptive_threshold = self.difference_threshold_scaler * cv.blur(
+                self.long_mean, (10, 10)
+            )
+            enhanced_temp[abs(enhanced_temp) < adaptive_threshold] = 0
+            frames["difference_thresholded"] = (enhanced_temp + 127).astype("uint8")
 
-        enhanced_temp = self.calc_difference_from_buffer()
-        self.current_diff = (enhanced_temp + 127).astype("uint8")
-        self.abs_current_diff = (abs(enhanced_temp) + 127).astype("uint8")
-        # TOD: validate if the blur helps
-        adaptive_threshold = self.difference_threshold_scaler * cv.blur(
-            self.long_mean, (10, 10)
-        )
-        enhanced_temp[abs(enhanced_temp) < adaptive_threshold] = 0
+            enhanced_temp = (enhanced_temp + 127).astype("uint8")
+            enhanced_temp = cv.medianBlur(enhanced_temp, self.median_filter_kernel)
+            frames["median_filter"] = enhanced_temp
+            frames["enhanced"] = enhanced_temp
+            runtimes_ms["enhance"] = get_elapsed_ms(start)
 
-        self.current_diff_thresholded = (enhanced_temp + 127).astype("uint8")
-        self.current_long_mean_uint8 = self.long_mean.astype("uint8")
+            # Detection and Tracking
+            detections, frames = self.find_points_of_interest(enhanced_temp, frames, mode="contour")
+            object_history = self.associate_detections(detections, object_history)
+            object_history = self.filter_objects(object_history)
+            runtimes_ms["detection_tracking"] = get_elapsed_ms(start) - runtimes_ms["enhance"]
 
-        enhanced_temp = (enhanced_temp + 127).astype("uint8")
-        enhanced_temp = cv.medianBlur(enhanced_temp, self.median_filter_kernel)
-        return enhanced_temp
+        runtimes_ms["total"] = get_elapsed_ms(start)
+        self.frame_number += 1
+        return frames, object_history, runtimes_ms
 
-    def detect_and_track(self, enhanced_frame):
-        self.detections = self.find_points_of_interest(enhanced_frame, mode="contour")
-        self.current_objects = self.associate_detections(self.detections)
-        self.current_objects = self.filter_objects(self.current_objects)
-        return
-
+    # TOD: This function will be updated once the algorithm development resumes
     def filter_objects(self, current_objects):
         to_delete = []
         for ID, obj in current_objects.items():
@@ -157,24 +127,25 @@ class FishDetector:
 
         return current_objects
 
-    def associate_detections(self, detections):
-        if len(self.current_objects) == 0:
-            self.current_objects = detections
-            return self.current_objects
+    # TOD: This function will be updated once the algorithm development resumes
+    def associate_detections(self, detections, object_history):
+        if len(object_history) == 0:
+            object_history = detections
+            return object_history
 
         object_midpoints = [
             existing_object.midpoints[-1]
-            for _, existing_object in self.current_objects.items()
+            for _, existing_object in object_history.items()
         ]
-        object_ids = list(self.current_objects.keys())
+        object_ids = list(object_history.keys())
         new_objects = []
-        self.associations = []
+        associations = []
         for detection_id, detection in detections.items():
             min_id, min_dist = self.closest_point(
                 detection.midpoints[-1], object_midpoints
             )
             if min_dist < self.max_association_dist:
-                self.associations.append(
+                associations.append(
                     {
                         "detection_id": detection.ID,
                         "existing_object_id": object_ids[min_id],
@@ -185,14 +156,14 @@ class FishDetector:
                 new_objects.append(detection)
 
         for new_object in new_objects:
-            self.current_objects[new_object.ID] = new_object
+            object_history[new_object.ID] = new_object
 
-        for association in self.associations:
-            self.current_objects[association["existing_object_id"]].update_object(
+        for association in associations:
+            object_history[association["existing_object_id"]].update_object(
                 detections[association["detection_id"]]
             )
 
-        return self.current_objects
+        return object_history
 
     @staticmethod
     def closest_point(point, points):
@@ -201,7 +172,8 @@ class FishDetector:
         min_index = np.argmin(dist_2)
         return min_index, dist_2[min_index]
 
-    def find_points_of_interest(self, enhanced_frame, mode="contour"):
+    # TOD: This function will be updated once the algorithm development resumes
+    def find_points_of_interest(self, enhanced_frame, frame_dict, mode="contour"):
         if mode == "contour":
             # Make positive and negative differences the same
             enhanced_frame = (abs(enhanced_frame.astype("int16") - 127) + 127).astype(
@@ -212,11 +184,11 @@ class FishDetector:
             ret, thres = cv.threshold(
                 enhanced_frame, 127 + self.difference_threshold_scaler, 255, 0
             )
-            self.current_threshold = thres
+            frame_dict["binary"] = thres
             # Alternative consolidation - dilate
             kernel = np.ones((self.dilatation_kernel, self.dilatation_kernel), "uint8")
             thres = cv.dilate(thres, kernel, iterations=1)
-            self.dilated = thres
+            frame_dict["dilated"] = thres
             # img = self.spatial_filter(img, kernel_size=15, method='median')
 
             contours, hier = cv.findContours(
@@ -229,7 +201,7 @@ class FishDetector:
                 )
                 detections[new_object.ID] = new_object
 
-            return detections
+            return detections, frame_dict
 
         elif mode == "blob":  # TOD there is an issue, it Segmentation faults instantly
             blob_detector = cv.SimpleBlobDetector()
@@ -256,20 +228,20 @@ class FishDetector:
             self.framebuffer = self.framebuffer[:, :, : self.current_mean_frames]
 
     def calc_difference_from_buffer(self):
-        self.current_mean = np.mean(
+        self.short_mean = np.mean(
             self.framebuffer[:, :, : self.current_mean_frames], axis=2
         ).astype("uint8")
 
         # If there is no current mean_buffer, initialize it with the current mean
         if self.mean_buffer is None:
-            self.mean_buffer = self.current_mean[:, :, np.newaxis]
+            self.mean_buffer = self.short_mean[:, :, np.newaxis]
             self.mean_buffer_counter = 1
-            self.long_mean = np.mean(self.mean_buffer, axis=2).astype("int16")
+            self.long_mean = np.mean(self.mean_buffer, axis=2).astype("uint8")
 
         # else if another current_mean_frames number of frames have passed, add the current_mean
         elif self.mean_buffer_counter % self.current_mean_frames == 0:
             self.mean_buffer = np.concatenate(
-                (self.current_mean[..., np.newaxis], self.mean_buffer), axis=2
+                (self.short_mean[..., np.newaxis], self.mean_buffer), axis=2
             )
             # if the long mean buffer has gotten to big, take the end off
             if self.mean_buffer.shape[2] > int(
@@ -279,14 +251,14 @@ class FishDetector:
                     :, :, : int(self.long_mean_frames / self.current_mean_frames)
                 ]
 
-            self.long_mean = np.mean(self.mean_buffer, axis=2).astype("int16")
+            self.long_mean = np.mean(self.mean_buffer, axis=2).astype("uint8")
             self.mean_buffer_counter = 1
             # else:
             #     self.mean_buffer_counter += 1
         else:
             self.mean_buffer_counter += 1
 
-        return self.current_mean.astype("int16") - self.long_mean
+        return self.short_mean.astype("int16") - self.long_mean.astype("int16")
 
     def mask_regions(self, img, area="sonar_controls"):
         if area == "non_object_space":
@@ -297,7 +269,7 @@ class FishDetector:
 
                 np.place(
                     img,
-                    FishDetector.resize_img(
+                    resize_img(
                         self.non_object_space_mask, percent_difference
                     )
                     < 100,
@@ -313,7 +285,7 @@ class FishDetector:
 
                 np.place(
                     img,
-                    FishDetector.resize_img(
+                    resize_img(
                         self.sonar_controls_mask, percent_difference
                     )
                     < 100,
@@ -332,12 +304,3 @@ class FishDetector:
             self.latest_obj_index = 0
         self.latest_obj_index += 1
         return self.latest_obj_index
-
-    @staticmethod
-    def resize_img(img, scale_percent):
-        width = int(img.shape[1] * scale_percent / 100)
-        height = int(img.shape[0] * scale_percent / 100)
-        dim = (width, height)
-
-        # resize image
-        return cv.resize(img, dim, interpolation=cv.INTER_AREA)

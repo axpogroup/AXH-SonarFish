@@ -4,6 +4,7 @@ import os
 
 import cv2 as cv
 import visualization_functions
+from utils import get_elapsed_ms
 
 
 class InputOutputHandler:
@@ -58,9 +59,8 @@ class InputOutputHandler:
         if self.video_cap.isOpened():
             while tries < 5:
                 ret, self.current_raw_frame = self.video_cap.read()
-                self.frame_retrieval_time = int(
-                    (cv.getTickCount() - start) / cv.getTickFrequency() * 1000
-                )
+                self.frame_retrieval_time = get_elapsed_ms(start)
+
                 # if frame is read correctly ret is True
                 if not ret:
                     tries += 1
@@ -89,13 +89,10 @@ class InputOutputHandler:
                 detector.long_mean_frames = value
 
         def change_alpha(value):
-            detector.alpha = float(value) / 10
+            detector.contrast = float(value) / 10
 
         def change_beta(value):
-            detector.beta = value
-
-        def change_std_dev_threshold(value):
-            detector.std_dev_threshold = float(value) / 10
+            detector.brightness = value
 
         def change_diff_thresh(value):
             detector.difference_threshold_scaler = value / 10
@@ -111,9 +108,9 @@ class InputOutputHandler:
             detector.dilatation_kernel = value
 
         cv.createTrackbar(
-            "contrast*10", "frame", int(detector.alpha * 10), 30, change_alpha
+            "contrast*10", "frame", int(detector.contrast * 10), 30, change_alpha
         )
-        cv.createTrackbar("brightness", "frame", detector.beta, 120, change_beta)
+        cv.createTrackbar("brightness", "frame", detector.brightness, 120, change_beta)
         cv.createTrackbar(
             "s_mean",
             "frame",
@@ -124,7 +121,6 @@ class InputOutputHandler:
         cv.createTrackbar(
             "l_mean", "frame", detector.long_mean_frames, 1200, change_long_mean_frames
         )
-        # cv.createTrackbar('stddev*10', "frame", int(detector.std_dev_threshold*10), 30, change_std_dev_threshold)
         cv.createTrackbar(
             "diff_thresh*10",
             "frame",
@@ -166,28 +162,22 @@ class InputOutputHandler:
             self.shutdown()
             return
 
-    def handle_output(self, detector):
+    def handle_output(self, processed_frame, object_history, runtimes, detector):
         # Total runtime
         if self.last_output_time is not None:
-            total_time_per_frame = int(
-                (cv.getTickCount() - self.last_output_time)
-                / cv.getTickFrequency()
-                * 1000
-            )
+            total_time_per_frame = get_elapsed_ms(self.last_output_time)
         else:
             self.start_ticks = cv.getTickCount()
-
-        total_runtime = int(
-            (cv.getTickCount() - self.start_ticks) / cv.getTickFrequency() * 1000
-        )
+        total_runtime = get_elapsed_ms(self.start_ticks)
         self.last_output_time = cv.getTickCount()
+
         if self.frame_no % 20 == 0:
             if total_time_per_frame == 0:
                 total_time_per_frame = 1
             print(
                 f"Processed {'{:.1f}'.format(self.frame_no / self.frames_total * 100)} % of video. "
-                f"Runtimes [ms]: getFrame: {self.frame_retrieval_time} | Enhance: {detector.enhance_time_ms} | "
-                f"DetectTrack: {detector.detection_tracking_time_ms} | "
+                f"Runtimes [ms]: getFrame: {self.frame_retrieval_time} | Enhance: {runtimes['enhance']} | "
+                f"DetectTrack: {runtimes['detection_tracking']} | "
                 f"Total: {total_time_per_frame} | FPS: {'{:.1f}'.format(self.frame_no/(2*total_runtime/1000))}"
             )
 
@@ -203,7 +193,7 @@ class InputOutputHandler:
                 else self.settings_dict["display_mode_rich"]
             )
             disp = visualization_functions.get_visual_output(
-                detector, rich_display=rich_display
+                detector, processed_frame, rich_display=rich_display
             )
 
             if "record_output_video" in self.settings_dict.keys():

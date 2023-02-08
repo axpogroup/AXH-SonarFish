@@ -4,93 +4,50 @@ import cv2 as cv
 import numpy as np
 
 
-def get_visual_output(detector, rich_display=False):
+def get_visual_output(detector, processed_frame, rich_display=False):
     if rich_display:
-        try:
-            up = np.concatenate(
-                (
+        up = ["gray_boosted", "short_mean", "long_mean", "difference", "absolute_difference"]
+        mid = ["difference_thresholded", "median_filter", "binary", "dilated", "blank"]
+
+        for count, frame in enumerate(up):
+            if count == 0:
+                up_images = retrieve_frame(frame, processed_frame, puttext=frame)
+            else:
+                up_images = np.concatenate((up_images, retrieve_frame(frame, processed_frame, puttext=frame)), axis=1)
+
+        for count, frame in enumerate(mid):
+            if count == 0:
+                mid_images = retrieve_frame(frame, processed_frame, puttext=frame)
+            else:
+                mid_images = np.concatenate((mid_images, retrieve_frame(frame, processed_frame, puttext=frame)), axis=1)
+
+        down_images = np.concatenate(
+            (
+                draw_detector_output(
+                    detector,
                     retrieve_frame(
-                        detector.current_gray_tweaked, puttext="current_gray"
+                        "raw_downsampled", processed_frame, puttext="Final"
                     ),
-                    retrieve_frame(
-                        detector.current_mean,
-                        puttext="current_mean",
-                    ),
-                    retrieve_frame(
-                        detector.current_long_mean_uint8,
-                        puttext="long_mean",
-                    ),
-                    retrieve_frame(
-                        detector.current_diff,
-                        puttext="current_diff",
-                    ),
-                    retrieve_frame(
-                        detector.abs_current_diff, puttext="abs(current_diff)"
-                    ),
+                    debug=False,
+                    classifications=False,
                 ),
-                axis=1,
-            )
-            mid = np.concatenate(
-                (
-                    # retrieve_frame(
-                    #     detector.long_std_dev_127,
-                    #     puttext="long std-dev"),
-                    retrieve_frame(
-                        detector.current_diff_thresholded,
-                        puttext="current_diff_thresholded",
-                    ),
-                    retrieve_frame(
-                        detector.current_enhanced,
-                        puttext="median filter",
-                    ),
-                    retrieve_frame(
-                        detector.current_threshold,
-                        puttext="current_threshold",
-                    ),
-                    retrieve_frame(
-                        detector.dilated,
-                        puttext="dilated",
-                    ),
-                    retrieve_frame(None),
+                retrieve_frame(None, processed_frame),
+                retrieve_frame(None, processed_frame),
+                draw_detector_output(
+                    detector,
+                    retrieve_frame("dilated", processed_frame, puttext="detections"),
+                    debug=True,
                 ),
-                axis=1,
-            )
-            down = np.concatenate(
-                (
-                    draw_detector_output(
-                        detector,
-                        retrieve_frame(
-                            detector.current_raw_downsampled, puttext="Final"
-                        ),
-                        debug=False,
-                        classifications=False,
-                    ),
-                    retrieve_frame(None),
-                    retrieve_frame(None),
-                    draw_detector_output(
-                        detector,
-                        retrieve_frame(detector.dilated, puttext="detections"),
-                        debug=True,
-                    ),
-                    retrieve_frame(None),
-                ),
-                axis=1,
-            )
-            disp = np.concatenate((up, mid, down))
-            # disp = draw_detector_output(
-            #     detector,
-            #     detector.resize_img(disp, 5000 / detector.downsample),
-            #     only_runtime=True,
-            #     runtiming=True,
-            # )
-        except KeyError as e:
-            print(e)
-            disp = detector.current_raw
+                retrieve_frame(None, processed_frame),
+            ),
+            axis=1,
+        )
+        disp = np.concatenate((up_images, mid_images, down_images))
 
     else:
         disp = draw_detector_output(
             detector,
-            detector.current_raw,
+            retrieve_frame("raw", processed_frame),
             classifications=True,
             runtiming=True,
             fullres=True,
@@ -99,7 +56,12 @@ def get_visual_output(detector, rich_display=False):
     return disp
 
 
-def retrieve_frame(img, puttext=None):
+def retrieve_frame(frame, frame_dict, puttext=None):
+    if frame not in frame_dict.keys():
+        img = None
+    else:
+        img = frame_dict[frame]
+
     out = copy.deepcopy(img)
     if out is None:
         out = np.zeros((270, 480, 3), dtype=np.uint8)
@@ -130,7 +92,7 @@ def draw_detector_output(
     fullres=False,
     only_runtime=False,
 ):
-    output = retrieve_frame(img)
+    output = img
     if not only_runtime:
         output = draw_objects(
             detector,
@@ -139,65 +101,66 @@ def draw_detector_output(
             debug=debug,
             fullres=fullres,
         )
-    if runtiming:
-        cv.rectangle(output, (1390, 25), (1850, 155), (0, 0, 0), -1)
-        color = (255, 255, 255)
-        cv.putText(
-            output,
-            f"Frame no. {detector.frame_number}",
-            (1500, 50),
-            cv.FONT_HERSHEY_SIMPLEX,
-            0.75,
-            color,
-            2,
-        )
-        cv.putText(
-            output,
-            f"{detector.enhance_time_ms} ms - Enhancement",
-            (1400, 80),
-            cv.FONT_HERSHEY_SIMPLEX,
-            0.75,
-            color,
-            2,
-        )
-        cv.putText(
-            output,
-            f"{detector.detection_tracking_time_ms} ms - Detection & Tracking",
-            (1400, 110),
-            cv.FONT_HERSHEY_SIMPLEX,
-            0.75,
-            color,
-            2,
-        )
-        if detector.total_runtime_ms > 40:
-            color = (100, 100, 255)
-        if detector.total_runtime_ms == 0:
-            detector.total_runtime_ms = 1
-        cv.putText(
-            output,
-            f"{detector.total_runtime_ms} ms - Total - FPS: {int(1000/detector.total_runtime_ms)}",
-            (1400, 140),
-            cv.FONT_HERSHEY_SIMPLEX,
-            0.75,
-            color,
-            2,
-        )
+    # TOD Currently broken.
+    # if runtiming:
+    #     cv.rectangle(output, (1390, 25), (1850, 155), (0, 0, 0), -1)
+    #     color = (255, 255, 255)
+    #     cv.putText(
+    #         output,
+    #         f"Frame no. {detector.frame_number}",
+    #         (1500, 50),
+    #         cv.FONT_HERSHEY_SIMPLEX,
+    #         0.75,
+    #         color,
+    #         2,
+    #     )
+    #     cv.putText(
+    #         output,
+    #         f"{detector.enhance_time_ms} ms - Enhancement",
+    #         (1400, 80),
+    #         cv.FONT_HERSHEY_SIMPLEX,
+    #         0.75,
+    #         color,
+    #         2,
+    #     )
+    #     cv.putText(
+    #         output,
+    #         f"{detector.detection_tracking_time_ms} ms - Detection & Tracking",
+    #         (1400, 110),
+    #         cv.FONT_HERSHEY_SIMPLEX,
+    #         0.75,
+    #         color,
+    #         2,
+    #     )
+    #     if detector.total_runtime_ms > 40:
+    #         color = (100, 100, 255)
+    #     if detector.total_runtime_ms == 0:
+    #         detector.total_runtime_ms = 1
+    #     cv.putText(
+    #         output,
+    #         f"{detector.total_runtime_ms} ms - Total - FPS: {int(1000/detector.total_runtime_ms)}",
+    #         (1400, 140),
+    #         cv.FONT_HERSHEY_SIMPLEX,
+    #         0.75,
+    #         color,
+    #         2,
+    #     )
     return output
 
 
-def draw_associations(detector, img, color):
-    for association in detector.associations:
+def draw_associations(associations, detections, object_history, img, color):
+    for association in associations:
         cv.line(
             img,
-            detector.detections[association["detection_id"]].midpoints[-1],
-            detector.current_objects[association["existing_object_id"]].midpoints[-1],
+            detections[association["detection_id"]].midpoints[-1],
+            object_history[association["existing_object_id"]].midpoints[-1],
             color,
             2,
         )
         cv.putText(
             img,
             str(association["distance"]),
-            detector.detections[association["detection_id"]].midpoints[-1],
+            detections[association["detection_id"]].midpoints[-1],
             cv.FONT_HERSHEY_SIMPLEX,
             0.75,
             color,

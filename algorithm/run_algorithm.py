@@ -23,9 +23,11 @@ if __name__ == "__main__":
 
     input_output_handler = InputOutputHandler(settings_dict)
     detector = FishDetector(settings_dict)
+    object_history = {}
 
     while input_output_handler.get_new_frame():
         if float(input_output_handler.frame_no) / 2 % 1 != 0:
             continue
-        detector.process_frame(input_output_handler.current_raw_frame)
-        input_output_handler.handle_output(detector)
+        processed_frame, object_history, runtimes = detector.process_frame(input_output_handler.current_raw_frame,
+                                                                           object_history)
+        input_output_handler.handle_output(processed_frame, object_history, runtimes, detector=detector)

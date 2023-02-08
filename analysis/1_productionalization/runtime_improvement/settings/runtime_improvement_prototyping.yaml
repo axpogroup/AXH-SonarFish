@@ -16,7 +16,7 @@ downsample: 25
 contrast: 2
 brightness: 30
 long_mean_frames: 200
-current_mean_frames: 10
+short_mean_frames: 10
 difference_threshold_scaler: 0.2
 dilatation_kernel: 11
 median_filter_kernel: 5
