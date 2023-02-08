@@ -1,7 +1,7 @@
 # Input / Output
 input_file:  "analysis/1_productionalization/validation_HTU_v1/recordings/22-11-14_start_16-36-56.mp4"
 mask_directory: "analysis/1_productionalization/validation_HTU_v1/recordings/masks"
-output_directory: "analysis/1_productionalization/validation_HTU_v1/output"
+output_directory: "analysis/1_productionalization/runtime_improvement/output"
 
 tag: "hyperfast_v2_long_mean_threshold"
 #record_output_video: True
