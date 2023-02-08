@@ -6,28 +6,38 @@ import numpy as np
 
 def get_visual_output(detector, processed_frame, rich_display=False):
     if rich_display:
-        up = ["gray_boosted", "short_mean", "long_mean", "difference", "absolute_difference"]
+        up = [
+            "gray_boosted",
+            "short_mean",
+            "long_mean",
+            "difference",
+            "absolute_difference",
+        ]
         mid = ["difference_thresholded", "median_filter", "binary", "dilated", "blank"]
 
         for count, frame in enumerate(up):
             if count == 0:
                 up_images = retrieve_frame(frame, processed_frame, puttext=frame)
             else:
-                up_images = np.concatenate((up_images, retrieve_frame(frame, processed_frame, puttext=frame)), axis=1)
+                up_images = np.concatenate(
+                    (up_images, retrieve_frame(frame, processed_frame, puttext=frame)),
+                    axis=1,
+                )
 
         for count, frame in enumerate(mid):
             if count == 0:
                 mid_images = retrieve_frame(frame, processed_frame, puttext=frame)
             else:
-                mid_images = np.concatenate((mid_images, retrieve_frame(frame, processed_frame, puttext=frame)), axis=1)
+                mid_images = np.concatenate(
+                    (mid_images, retrieve_frame(frame, processed_frame, puttext=frame)),
+                    axis=1,
+                )
 
         down_images = np.concatenate(
             (
                 draw_detector_output(
                     detector,
-                    retrieve_frame(
-                        "raw_downsampled", processed_frame, puttext="Final"
-                    ),
+                    retrieve_frame("raw_downsampled", processed_frame, puttext="Final"),
                     debug=False,
                     classifications=False,
                 ),

@@ -69,7 +69,9 @@ class FishDetector:
 
         if self.frame_number < self.long_mean_frames:
             runtimes_ms["enhance"] = get_elapsed_ms(start)
-            runtimes_ms["detection_tracking"] = get_elapsed_ms(start) - runtimes_ms["enhance"]
+            runtimes_ms["detection_tracking"] = (
+                get_elapsed_ms(start) - runtimes_ms["enhance"]
+            )
         else:
             enhanced_temp = self.calc_difference_from_buffer()
             frames["long_mean"] = self.long_mean
@@ -90,10 +92,14 @@ class FishDetector:
             runtimes_ms["enhance"] = get_elapsed_ms(start)
 
             # Detection and Tracking
-            detections, frames = self.find_points_of_interest(enhanced_temp, frames, mode="contour")
+            detections, frames = self.find_points_of_interest(
+                enhanced_temp, frames, mode="contour"
+            )
             object_history = self.associate_detections(detections, object_history)
             object_history = self.filter_objects(object_history)
-            runtimes_ms["detection_tracking"] = get_elapsed_ms(start) - runtimes_ms["enhance"]
+            runtimes_ms["detection_tracking"] = (
+                get_elapsed_ms(start) - runtimes_ms["enhance"]
+            )
 
         runtimes_ms["total"] = get_elapsed_ms(start)
         self.frame_number += 1
@@ -269,10 +275,7 @@ class FishDetector:
 
                 np.place(
                     img,
-                    resize_img(
-                        self.non_object_space_mask, percent_difference
-                    )
-                    < 100,
+                    resize_img(self.non_object_space_mask, percent_difference) < 100,
                     0,
                 )
             else:
@@ -285,10 +288,7 @@ class FishDetector:
 
                 np.place(
                     img,
-                    resize_img(
-                        self.sonar_controls_mask, percent_difference
-                    )
-                    < 100,
+                    resize_img(self.sonar_controls_mask, percent_difference) < 100,
                     0,
                 )
             else:
