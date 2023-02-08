@@ -29,6 +29,3 @@ if __name__ == "__main__":
             continue
         detector.process_frame(input_output_handler.current_raw_frame)
         input_output_handler.handle_output(detector)
-
-    del detector
-    del input_output_handler
