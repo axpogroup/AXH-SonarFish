@@ -109,7 +109,14 @@ class FishDetector:
             enhanced_temp = self.calc_difference_from_buffer_light()
             self.current_diff = (enhanced_temp + 127).astype("uint8")
             self.abs_current_diff = (abs(enhanced_temp) + 127).astype("uint8")
-            enhanced_temp[abs(enhanced_temp) < self.diff_thresh/10*self.spatial_filter(self.long_mean, )] = 0
+            enhanced_temp[
+                abs(enhanced_temp)
+                < self.diff_thresh
+                / 10
+                * self.spatial_filter(
+                    self.long_mean,
+                )
+            ] = 0
             self.current_diff_thresholded = (enhanced_temp + 127).astype("uint8")
 
         else:
