@@ -9,12 +9,23 @@ class FishDetector:
     def __init__(self, settings_dict):
         self.settings_dict = settings_dict
         self.frame_number = 0  # TOD Must not overflow - recycle
+
         self.total_runtime_ms = None
+        self.enhance_time_ms = None
+
+        # Frames
         self.current_raw = None
         self.current_raw_downsampled = None
         self.current_gray = None
         self.current_gray_tweaked = None
         self.current_enhanced = None
+
+        self.current_long_mean_uint8 = None
+        self.current_diff = None
+        self.abs_current_diff = None
+        self.current_diff_thresholded = None
+        self.dilated = None
+
         self.current_output = None
         self.current_classified = None
 
@@ -32,27 +43,19 @@ class FishDetector:
         self.framebuffer = None
         self.mean_buffer = None
         self.mean_buffer_counter = None
+        self.current_mean = None
         self.long_mean = None
         self.long_std_dev = None
         self.long_std_dev_127 = None
-        self.current_mean = None
-        self.enhance_time_ms = None
-        self.current_long_mean_uint8 = None
-        self.current_diff = None
-        self.abs_current_diff = None
-        self.current_diff_thresholded = None
-        self.current_blurred_enhanced = None
+
         self.downsample = settings_dict["downsample"]
+        self.alpha = settings_dict["contrast"]
+        self.beta = settings_dict["brightness"]
         self.long_mean_frames = settings_dict["long_mean_frames"]
         self.current_mean_frames = settings_dict["current_mean_frames"]
-        self.std_dev_threshold = settings_dict["std_dev_threshold"]
         self.median_filter_kernel = settings_dict["median_filter_kernel"]
-        self.blur_filter_kernel = settings_dict["blur_filter_kernel"]
-        self.dilatation_kernel = 11
-        self.threshold_contours = settings_dict["threshold_contours"]
-        self.alpha, self.beta = 2, 30
-        self.diff_thresh = 2
-        self.dilated = None
+        self.dilatation_kernel = settings_dict["dilatation_kernel"]
+        self.difference_threshold_scaler = settings_dict["difference_threshold_scaler"]
 
         # Detection and Tracking
         self.detections = {}
@@ -109,13 +112,12 @@ class FishDetector:
         self.current_diff = (enhanced_temp + 127).astype("uint8")
         self.abs_current_diff = (abs(enhanced_temp) + 127).astype("uint8")
         # TOD: validate if the blur helps
-        adaptive_threshold = self.diff_thresh / 10 * cv.blur(self.long_mean, (10, 10))
+        adaptive_threshold = self.difference_threshold_scaler * cv.blur(self.long_mean, (10, 10))
         enhanced_temp[abs(enhanced_temp) < adaptive_threshold] = 0
 
         self.current_diff_thresholded = (enhanced_temp + 127).astype("uint8")
         self.current_long_mean_uint8 = self.long_mean.astype("uint8")
 
-        # Transform into visual/uint8 image and filter salt and pepper noise
         enhanced_temp = (enhanced_temp + 127).astype("uint8")
         enhanced_temp = cv.medianBlur(enhanced_temp, self.median_filter_kernel)
         return enhanced_temp
@@ -204,16 +206,8 @@ class FishDetector:
                 "uint8"
             )
 
-            # Consolidate the points
-            # enhanced_frame = cv.GaussianBlur(
-            #     enhanced_frame,
-            #     (self.blur_filter_kernel, self.blur_filter_kernel),
-            #     0,
-            # )
-
-            self.current_blurred_enhanced = enhanced_frame
             # Threshold
-            ret, thres = cv.threshold(enhanced_frame, 127 + self.diff_thresh, 255, 0)
+            ret, thres = cv.threshold(enhanced_frame, 127 + self.difference_threshold_scaler, 255, 0)
             self.current_threshold = thres
             # Alternative consolidation - dilate
             kernel = np.ones((self.dilatation_kernel, self.dilatation_kernel), "uint8")

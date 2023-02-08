@@ -98,7 +98,7 @@ class InputOutputHandler:
             detector.std_dev_threshold = float(value) / 10
 
         def change_diff_thresh(value):
-            detector.diff_thresh = value
+            detector.difference_threshold_scaler = value / 10
 
         def change_median_filter_kernel(value):
             if (float(value) / 2 % 1) == 0:
@@ -111,9 +111,9 @@ class InputOutputHandler:
             detector.dilatation_kernel = value
 
         cv.createTrackbar(
-            "alpha*10", "frame", int(detector.alpha * 10), 30, change_alpha
+            "contrast*10", "frame", int(detector.alpha * 10), 30, change_alpha
         )
-        cv.createTrackbar("beta", "frame", detector.beta, 120, change_beta)
+        cv.createTrackbar("brightness", "frame", detector.beta, 120, change_beta)
         cv.createTrackbar(
             "s_mean",
             "frame",
@@ -126,7 +126,7 @@ class InputOutputHandler:
         )
         # cv.createTrackbar('stddev*10', "frame", int(detector.std_dev_threshold*10), 30, change_std_dev_threshold)
         cv.createTrackbar(
-            "diff_thresh", "frame", int(detector.diff_thresh), 127, change_diff_thresh
+            "diff_thresh*10", "frame", int(detector.difference_threshold_scaler*10), 127, change_diff_thresh
         )
         cv.createTrackbar(
             "median_f",

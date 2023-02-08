@@ -13,15 +13,15 @@ display_trackbars: True
 
 # Enhancement
 downsample: 25
+contrast: 2
+brightness: 30
 long_mean_frames: 200
 current_mean_frames: 10
-std_dev_threshold: 1
-median_filter_kernel: 5  # 3
+difference_threshold_scaler: 0.2
+dilatation_kernel: 11
+median_filter_kernel: 5
 
 # Detection and Tracking
-blur_filter_kernel: 3
-threshold_contours: 127  # 139
-
 max_association_dist: 30
 phase_out_after_x_frames: 10
 min_occurences_in_last_x_frames: [13, 15]
