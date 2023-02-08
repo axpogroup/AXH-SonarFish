@@ -1,5 +1,5 @@
 # Input / Output
-input_file:  "analysis/1_productionalization/validation_HTU_v1/recordings/22-11-14_start_16-36-56.mp4"
+input_file:  "analysis/0_proof_of_concept/recordings/old_settings/Jet_to_gray.mp4"
 mask_directory: "analysis/1_productionalization/validation_HTU_v1/recordings/masks"
 output_directory: "analysis/1_productionalization/validation_HTU_v1/output"
 
@@ -7,13 +7,13 @@ tag: "hyperfast_v1_less_sensitive"
 #record_output_video: True
 #record_output_csv: True
 
-#display_output_video: True
-#display_mode_rich: True
-#display_trackbars: True
+display_output_video: True
+display_mode_rich: True
+display_trackbars: True
 
 # Enhancement
 downsample: 25
-long_mean_frames: 200
+long_mean_frames: 120
 current_mean_frames: 10
 std_dev_threshold: 1
 median_filter_kernel: 3  # 3
