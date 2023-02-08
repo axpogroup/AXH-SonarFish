@@ -75,6 +75,7 @@ class FishDetector:
             self.current_gray = self.rgb_to_gray(self.current_raw_downsampled)
         else:
             self.current_gray = self.rgb_to_gray(self.current_raw)
+
         self.current_enhanced = self.enhance_frame(self.current_gray)
         self.enhance_time_ms = int(
             (cv.getTickCount() - start) / cv.getTickFrequency() * 1000
@@ -94,45 +95,24 @@ class FishDetector:
         return
 
     def enhance_frame(self, gray_frame):
-        light = True  # TOD unsure if this still works
         enhanced_temp = self.mask_regions(gray_frame, area="sonar_controls")
         enhanced_temp = cv.convertScaleAbs(
             enhanced_temp, alpha=self.alpha, beta=self.beta
         )
         self.current_gray_tweaked = enhanced_temp
 
-        if light:
-            self.update_buffer_light(enhanced_temp)
-            if self.frame_number < self.long_mean_frames:
-                return enhanced_temp * 0
+        self.update_buffer(enhanced_temp)
+        if self.frame_number < self.long_mean_frames:
+            return enhanced_temp * 0
 
-            enhanced_temp = self.calc_difference_from_buffer_light()
-            self.current_diff = (enhanced_temp + 127).astype("uint8")
-            self.abs_current_diff = (abs(enhanced_temp) + 127).astype("uint8")
-            enhanced_temp[
-                abs(enhanced_temp)
-                < self.diff_thresh
-                / 10
-                * self.spatial_filter(
-                    self.long_mean,
-                )
-            ] = 0
-            self.current_diff_thresholded = (enhanced_temp + 127).astype("uint8")
+        enhanced_temp = self.calc_difference_from_buffer()
+        self.current_diff = (enhanced_temp + 127).astype("uint8")
+        self.abs_current_diff = (abs(enhanced_temp) + 127).astype("uint8")
+        # TOD: validate if the blur helps
+        adaptive_threshold = self.diff_thresh / 10 * cv.blur(self.long_mean, (10, 10))
+        enhanced_temp[abs(enhanced_temp) < adaptive_threshold] = 0
 
-        else:
-            self.update_buffer(enhanced_temp)
-            if self.frame_number < self.long_mean_frames:
-                return enhanced_temp * 0
-
-            enhanced_temp = self.calc_difference_from_buffer()
-            self.current_diff = (enhanced_temp + 127).astype("uint8")
-            self.abs_current_diff = (abs(enhanced_temp) + 127).astype("uint8")
-            # enhanced_temp = self.threshold_diff(
-            #     enhanced_temp, threshold=self.std_dev_threshold
-            # )
-            enhanced_temp[abs(enhanced_temp) < self.diff_thresh] = 0
-            self.current_diff_thresholded = (enhanced_temp + 127).astype("uint8")
-
+        self.current_diff_thresholded = (enhanced_temp + 127).astype("uint8")
         self.current_long_mean_uint8 = self.long_mean.astype("uint8")
 
         # Transform into visual/uint8 image and filter salt and pepper noise
@@ -224,8 +204,6 @@ class FishDetector:
                 "uint8"
             )
 
-            # Amplify lone pixels
-
             # Consolidate the points
             # enhanced_frame = cv.GaussianBlur(
             #     enhanced_frame,
@@ -268,7 +246,7 @@ class FishDetector:
             )
             return im_with_keypoints
 
-    def update_buffer_light(self, img):
+    def update_buffer(self, img):
         if self.framebuffer is None:
             self.framebuffer = img[:, :, np.newaxis]
         else:
@@ -279,18 +257,7 @@ class FishDetector:
         if self.framebuffer.shape[2] > self.current_mean_frames:
             self.framebuffer = self.framebuffer[:, :, : self.current_mean_frames]
 
-    def update_buffer(self, img):
-        if self.framebuffer is None:
-            self.framebuffer = img[:, :, np.newaxis]
-        else:
-            self.framebuffer = np.concatenate(
-                (img[..., np.newaxis], self.framebuffer), axis=2
-            )
-
-        if self.framebuffer.shape[2] > self.long_mean_frames:
-            self.framebuffer = self.framebuffer[:, :, : self.long_mean_frames]
-
-    def calc_difference_from_buffer_light(self):
+    def calc_difference_from_buffer(self):
         self.current_mean = np.mean(
             self.framebuffer[:, :, : self.current_mean_frames], axis=2
         ).astype("uint8")
@@ -300,6 +267,7 @@ class FishDetector:
             self.mean_buffer = self.current_mean[:, :, np.newaxis]
             self.mean_buffer_counter = 1
             self.long_mean = np.mean(self.mean_buffer, axis=2).astype("int16")
+
         # else if another current_mean_frames number of frames have passed, add the current_mean
         elif self.mean_buffer_counter % self.current_mean_frames == 0:
             self.mean_buffer = np.concatenate(
@@ -321,23 +289,6 @@ class FishDetector:
             self.mean_buffer_counter += 1
 
         return self.current_mean.astype("int16") - self.long_mean
-
-    def calc_difference_from_buffer(self):
-        self.long_mean = np.mean(self.framebuffer, axis=2).astype("int16")
-        self.current_mean = np.mean(
-            self.framebuffer[:, :, : self.current_mean_frames], axis=2
-        ).astype("uint8")
-        return self.current_mean.astype("int16") - self.long_mean
-
-    def threshold_diff(
-        self,
-        diff,
-        threshold=2,
-    ):
-        self.long_std_dev = np.std(self.framebuffer, axis=2).astype("uint8")
-        self.long_std_dev_127 = self.long_std_dev + 127
-        diff[abs(diff) < threshold * self.long_std_dev] = 0
-        return diff
 
     def mask_regions(self, img, area="sonar_controls"):
         if area == "non_object_space":
@@ -378,28 +329,11 @@ class FishDetector:
     def rgb_to_gray(img):
         return cv.cvtColor(img, cv.COLOR_BGR2GRAY)
 
-    @staticmethod
-    def spatial_filter(img, kernel_size=10, method="average"):
-        if method == "average":
-            return cv.blur(img, (kernel_size, kernel_size))
-        if method == "median":
-            return cv.medianBlur(img, kernel_size)
-
     def get_new_id(self):
         if self.latest_obj_index > 300000:
             self.latest_obj_index = 0
         self.latest_obj_index += 1
         return self.latest_obj_index
-
-    def is_duplicate(self, img, threshold=25):
-        if self.framebuffer is None:
-            return False
-        elif (
-            np.mean(abs(img - self.framebuffer[:, :, self.framebuffer.shape[2]]))
-            < threshold
-        ):
-            print("Duplicate frame.")
-            return True
 
     @staticmethod
     def resize_img(img, scale_percent):
