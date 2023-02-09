@@ -19,13 +19,19 @@ def get_visual_output(detector, processed_frame, extensive=False):
         second_row_images = np.ndarray(shape=(270, 0, 3), dtype="uint8")
         for frame_type in FIRST_ROW:
             first_row_images = np.concatenate(
-                (first_row_images, retrieve_frame(frame_type, processed_frame, puttext=frame_type)),
+                (
+                    first_row_images,
+                    retrieve_frame(frame_type, processed_frame, puttext=frame_type),
+                ),
                 axis=1,
             )
 
         for frame_type in SECOND_ROW:
             second_row_images = np.concatenate(
-                (second_row_images, retrieve_frame(frame_type, processed_frame, puttext=frame_type)),
+                (
+                    second_row_images,
+                    retrieve_frame(frame_type, processed_frame, puttext=frame_type),
+                ),
                 axis=1,
             )
 
