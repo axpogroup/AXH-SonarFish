@@ -187,13 +187,13 @@ class InputOutputHandler:
         if ("display_output_video" in self.settings_dict.keys()) or (
             "record_output_video" in self.settings_dict.keys()
         ):
-            rich_display = (
+            extensive = (
                 False
-                if "display_mode_rich" not in self.settings_dict.keys()
-                else self.settings_dict["display_mode_rich"]
+                if "display_mode_extensive" not in self.settings_dict.keys()
+                else self.settings_dict["display_mode_extensive"]
             )
             disp = visualization_functions.get_visual_output(
-                detector, processed_frame, rich_display=rich_display
+                detector, processed_frame, extensive=extensive
             )
 
             if "record_output_video" in self.settings_dict.keys():

@@ -88,7 +88,6 @@ class FishDetector:
             enhanced_temp = (enhanced_temp + 127).astype("uint8")
             enhanced_temp = cv.medianBlur(enhanced_temp, self.median_filter_kernel)
             frames["median_filter"] = enhanced_temp
-            frames["enhanced"] = enhanced_temp
             runtimes_ms["enhance"] = get_elapsed_ms(start)
 
             # Detection and Tracking

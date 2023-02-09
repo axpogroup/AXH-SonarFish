@@ -8,7 +8,7 @@ tag: "hyperfast_v2_long_mean_threshold"
 #record_output_csv: True
 
 display_output_video: True
-display_mode_rich: True
+display_mode_extensive: True
 display_trackbars: True
 
 # Enhancement

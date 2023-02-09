@@ -3,37 +3,33 @@ import copy
 import cv2 as cv
 import numpy as np
 
+FIRST_ROW = [
+    "gray_boosted",
+    "short_mean",
+    "long_mean",
+    "difference",
+    "absolute_difference",
+]
+SECOND_ROW = ["difference_thresholded", "median_filter", "binary", "dilated", "blank"]
 
-def get_visual_output(detector, processed_frame, rich_display=False):
-    if rich_display:
-        up = [
-            "gray_boosted",
-            "short_mean",
-            "long_mean",
-            "difference",
-            "absolute_difference",
-        ]
-        mid = ["difference_thresholded", "median_filter", "binary", "dilated", "blank"]
 
-        for count, frame in enumerate(up):
-            if count == 0:
-                up_images = retrieve_frame(frame, processed_frame, puttext=frame)
-            else:
-                up_images = np.concatenate(
-                    (up_images, retrieve_frame(frame, processed_frame, puttext=frame)),
-                    axis=1,
-                )
+def get_visual_output(detector, processed_frame, extensive=False):
+    if extensive:
+        first_row_images = np.ndarray(shape=(270, 0, 3), dtype="uint8")
+        second_row_images = np.ndarray(shape=(270, 0, 3), dtype="uint8")
+        for frame_type in FIRST_ROW:
+            first_row_images = np.concatenate(
+                (first_row_images, retrieve_frame(frame_type, processed_frame, puttext=frame_type)),
+                axis=1,
+            )
 
-        for count, frame in enumerate(mid):
-            if count == 0:
-                mid_images = retrieve_frame(frame, processed_frame, puttext=frame)
-            else:
-                mid_images = np.concatenate(
-                    (mid_images, retrieve_frame(frame, processed_frame, puttext=frame)),
-                    axis=1,
-                )
+        for frame_type in SECOND_ROW:
+            second_row_images = np.concatenate(
+                (second_row_images, retrieve_frame(frame_type, processed_frame, puttext=frame_type)),
+                axis=1,
+            )
 
-        down_images = np.concatenate(
+        third_row_images = np.concatenate(
             (
                 draw_detector_output(
                     detector,
@@ -52,7 +48,7 @@ def get_visual_output(detector, processed_frame, rich_display=False):
             ),
             axis=1,
         )
-        disp = np.concatenate((up_images, mid_images, down_images))
+        disp = np.concatenate((first_row_images, second_row_images, third_row_images))
 
     else:
         disp = draw_detector_output(
