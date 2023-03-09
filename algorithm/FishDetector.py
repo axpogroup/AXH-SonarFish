@@ -85,6 +85,10 @@ class FishDetector:
             enhanced_temp[abs(enhanced_temp) < adaptive_threshold] = 0
             frames["difference_thresholded"] = (enhanced_temp + 127).astype("uint8")
 
+            # enhanced_temp = cv.Laplacian(enhanced_temp, cv.CV_64F, ksize=5)
+            # enhanced_temp = (enhanced_temp + 127)
+            # enhanced_temp[enhanced_temp < 0] = 0
+            # enhanced_temp[enhanced_temp > 255] = 255
             enhanced_temp = (enhanced_temp + 127).astype("uint8")
             enhanced_temp = cv.medianBlur(enhanced_temp, self.median_filter_kernel)
             frames["median_filter"] = enhanced_temp
