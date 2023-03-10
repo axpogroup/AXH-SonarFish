@@ -1,5 +1,5 @@
 # Input / Output
-input_file:  "analysis/1_productionalization/validation_HTU_v1/recordings/22-11-14_start_16-36-56_trim_longer.mp4"
+input_file:  "analysis/0_proof_of_concept/recordings/old_settings/Jet_to_gray.mp4"
 mask_directory: "analysis/1_productionalization/validation_HTU_v1/recordings/masks"
 output_directory: "analysis/1_productionalization/runtime_improvement/output"
 
@@ -8,14 +8,14 @@ tag: "hyperfast_v2_long_mean_threshold"
 #record_output_csv: True
 
 display_output_video: True
-#display_mode_extensive: True
+display_mode_extensive: True
 display_trackbars: True
 
 # Enhancement
 downsample: 25
-contrast: 2
-brightness: 30
-long_mean_frames: 200
+contrast: 1
+brightness: 0
+long_mean_frames: 120
 short_mean_frames: 10
 difference_threshold_scaler: 0.2
 dilatation_kernel: 11
@@ -23,8 +23,8 @@ median_filter_kernel: 5
 
 # Detection and Tracking
 max_association_dist: 10
-phase_out_after_x_frames: 50
-min_occurences_in_last_x_frames: [30, 40]
+phase_out_after_x_frames: 10
+min_occurences_in_last_x_frames: [13, 15]
 
 river_pixel_velocity: [2.35, -0.9] # At full resolution
 min_occurences_for_fish: 20

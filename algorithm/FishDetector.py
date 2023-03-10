@@ -89,7 +89,7 @@ class FishDetector:
             # enhanced_temp = (enhanced_temp + 127)
             # enhanced_temp[enhanced_temp < 0] = 0
             # enhanced_temp[enhanced_temp > 255] = 255
-            enhanced_temp = (enhanced_temp + 127).astype("uint8")
+            enhanced_temp = (abs(enhanced_temp) + 127).astype("uint8")
             enhanced_temp = cv.medianBlur(enhanced_temp, self.median_filter_kernel)
             frames["median_filter"] = enhanced_temp
             runtimes_ms["enhance"] = get_elapsed_ms(start)
@@ -99,7 +99,6 @@ class FishDetector:
                 enhanced_temp, frames, mode="contour"
             )
             object_history = self.associate_detections(detections, object_history)
-            object_history = self.filter_objects(object_history)
             runtimes_ms["detection_tracking"] = (
                 get_elapsed_ms(start) - runtimes_ms["enhance"]
             )
@@ -109,34 +108,6 @@ class FishDetector:
         return frames, object_history, runtimes_ms
 
     # TOD: This function will be updated once the algorithm development resumes
-    def filter_objects(self, current_objects):
-        to_delete = []
-        for ID, obj in current_objects.items():
-            # Delete if it hasn't been observed in the last x frames
-            if (
-                self.frame_number - obj.frames_observed[-1]
-                > self.phase_out_after_x_frames
-            ):
-                to_delete.append(ID)
-                continue
-
-            # Show if x occurences in the last y frames
-            if (
-                obj.occurences_in_last_x(
-                    self.frame_number, self.min_occurences_in_last_x_frames[1]
-                )
-                >= self.min_occurences_in_last_x_frames[0]
-            ):
-                obj.show[-1] = True
-            else:
-                obj.show[-1] = False
-
-        for key in to_delete:
-            current_objects.pop(key)
-
-        return current_objects
-
-    # TOD: This function will be updated once the algorithm development resumes
     def associate_detections(self, detections, object_history):
         if len(object_history) == 0:
             object_history = detections
@@ -144,32 +115,55 @@ class FishDetector:
 
         object_midpoints = [
             existing_object.midpoints[-1]
-            for _, existing_object in object_history.items()
+            for _, existing_object in object_history.items() if (
+                self.frame_number - existing_object.frames_observed[-1]
+                < self.phase_out_after_x_frames
+            )
         ]
-        object_ids = list(object_history.keys())
+
+        if len(object_midpoints) == 0:
+            object_history = detections
+            return object_history
+
+        object_ids = [
+            key
+            for key, existing_object in object_history.items() if (
+                self.frame_number - existing_object.frames_observed[-1]
+                < self.phase_out_after_x_frames
+            )
+        ]
+
         new_objects = []
-        associations = []
-        for detection_id, detection in detections.items():
+        associations = {}
+        for _, detection in detections.items():
             min_id, min_dist = self.closest_point(
                 detection.midpoints[-1], object_midpoints
             )
             if min_dist < self.max_association_dist:
-                associations.append(
-                    {
+                if object_ids[min_id] in associations.keys():
+                    if associations[object_ids[min_id]]["distance"] > min_dist:
+                        new_objects.append(associations[object_ids[min_id]]["detection"])
+                        associations[object_ids[min_id]] = {
+                                "detection_id": detection.ID,
+                                "distance": min_dist,
+                                "detection": detection
+                            }
+                    new_objects.append(detection)
+                else:
+                    associations[object_ids[min_id]] = {
                         "detection_id": detection.ID,
-                        "existing_object_id": object_ids[min_id],
                         "distance": min_dist,
+                        "detection": detection
                     }
-                )
             else:
                 new_objects.append(detection)
 
         for new_object in new_objects:
             object_history[new_object.ID] = new_object
 
-        for association in associations:
-            object_history[association["existing_object_id"]].update_object(
-                detections[association["detection_id"]]
+        for existing_object_id, associated_detection in associations.items():
+            object_history[existing_object_id].update_object(
+                detections[associated_detection["detection_id"]]
             )
 
         return object_history
@@ -195,11 +189,14 @@ class FishDetector:
             )
             frame_dict["binary"] = thres
             # Alternative consolidation - dilate
-            kernel = np.ones((self.dilatation_kernel, self.dilatation_kernel), "uint8")
-            thres = cv.dilate(thres, kernel, iterations=1)
-            frame_dict["dilated"] = thres
+            # kernel = np.ones((self.dilatation_kernel, self.dilatation_kernel), "uint8")
+            kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (self.dilatation_kernel, self.dilatation_kernel))
+            frame_dict["dilated"] = cv.dilate(thres, kernel, iterations=1)
+            frame_dict["closed"] = cv.morphologyEx(thres, cv.MORPH_CLOSE, kernel)
+            frame_dict["opened"] = cv.morphologyEx(thres, cv.MORPH_OPEN, kernel)
             # img = self.spatial_filter(img, kernel_size=15, method='median')
 
+            thres = frame_dict["dilated"]
             contours, hier = cv.findContours(
                 thres, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE
             )
@@ -212,8 +209,8 @@ class FishDetector:
 
             return detections, frame_dict
 
-        elif mode == "blob":  # TOD there is an issue, it Segmentation faults instantly
-            blob_detector = cv.SimpleBlobDetector()
+        elif mode == "blob":  # TOD0 there is an issue, it Segmentation faults instantly
+            blob_detector = cv.SimpleBlobDetector_create()
             keypoints = blob_detector.detect(enhanced_frame)
             # cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS ensures the size of the circle corresponds to the size of blob
             im_with_keypoints = cv.drawKeypoints(
@@ -223,7 +220,8 @@ class FishDetector:
                 (0, 0, 255),
                 cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS,
             )
-            return im_with_keypoints
+            frame_dict["blobs"] = im_with_keypoints
+            return {}, frame_dict
 
     def update_buffer(self, img):
         if self.framebuffer is None:
