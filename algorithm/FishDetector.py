@@ -115,7 +115,8 @@ class FishDetector:
 
         object_midpoints = [
             existing_object.midpoints[-1]
-            for _, existing_object in object_history.items() if (
+            for _, existing_object in object_history.items()
+            if (
                 self.frame_number - existing_object.frames_observed[-1]
                 < self.phase_out_after_x_frames
             )
@@ -127,7 +128,8 @@ class FishDetector:
 
         object_ids = [
             key
-            for key, existing_object in object_history.items() if (
+            for key, existing_object in object_history.items()
+            if (
                 self.frame_number - existing_object.frames_observed[-1]
                 < self.phase_out_after_x_frames
             )
@@ -142,18 +144,20 @@ class FishDetector:
             if min_dist < self.max_association_dist:
                 if object_ids[min_id] in associations.keys():
                     if associations[object_ids[min_id]]["distance"] > min_dist:
-                        new_objects.append(associations[object_ids[min_id]]["detection"])
+                        new_objects.append(
+                            associations[object_ids[min_id]]["detection"]
+                        )
                         associations[object_ids[min_id]] = {
-                                "detection_id": detection.ID,
-                                "distance": min_dist,
-                                "detection": detection
-                            }
+                            "detection_id": detection.ID,
+                            "distance": min_dist,
+                            "detection": detection,
+                        }
                     new_objects.append(detection)
                 else:
                     associations[object_ids[min_id]] = {
                         "detection_id": detection.ID,
                         "distance": min_dist,
-                        "detection": detection
+                        "detection": detection,
                     }
             else:
                 new_objects.append(detection)
@@ -190,7 +194,9 @@ class FishDetector:
             frame_dict["binary"] = thres
             # Alternative consolidation - dilate
             # kernel = np.ones((self.dilatation_kernel, self.dilatation_kernel), "uint8")
-            kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (self.dilatation_kernel, self.dilatation_kernel))
+            kernel = cv.getStructuringElement(
+                cv.MORPH_ELLIPSE, (self.dilatation_kernel, self.dilatation_kernel)
+            )
             frame_dict["dilated"] = cv.dilate(thres, kernel, iterations=1)
             frame_dict["closed"] = cv.morphologyEx(thres, cv.MORPH_CLOSE, kernel)
             frame_dict["opened"] = cv.morphologyEx(thres, cv.MORPH_OPEN, kernel)

@@ -98,12 +98,12 @@ def draw_detector_output(
     classifications=False,
     paths=False,
     fullres=False,
-    association_dist=False
+    association_dist=False,
 ):
     for ID, obj in detector.current_objects.items():
         if (
-                detector.frame_number - obj.frames_observed[-1]
-                > detector.phase_out_after_x_frames
+            detector.frame_number - obj.frames_observed[-1]
+            > detector.phase_out_after_x_frames
         ):
             continue
 
@@ -136,7 +136,7 @@ def draw_detector_output(
             else:
                 color = (250, 150, 150)
 
-            cv.rectangle(img, (x, y), (x + w, y + h), color, 1*scale)
+            cv.rectangle(img, (x, y), (x + w, y + h), color, 1 * scale)
             if fullres:
                 cv.putText(
                     img,
@@ -149,15 +149,26 @@ def draw_detector_output(
                 )
         else:
             color = (255, 0, 0)
-            cv.rectangle(img, (x, y), (x + w, y + h), color, thickness=1*scale)
+            cv.rectangle(img, (x, y), (x + w, y + h), color, thickness=1 * scale)
 
         if paths:
             for point in obj.midpoints:
-                cv.circle(img, (point[0]*scale, point[1]*scale), 1*scale, color, thickness=-1)
+                cv.circle(
+                    img,
+                    (point[0] * scale, point[1] * scale),
+                    1 * scale,
+                    color,
+                    thickness=-1,
+                )
 
         if association_dist:
-            cv.circle(img, (obj.midpoints[-1][0]*scale, obj.midpoints[-1][1]*scale),
-                      int(detector.max_association_dist*scale), (0, 0, 255), 1*scale)
+            cv.circle(
+                img,
+                (obj.midpoints[-1][0] * scale, obj.midpoints[-1][1] * scale),
+                int(detector.max_association_dist * scale),
+                (0, 0, 255),
+                1 * scale,
+            )
 
     return img
 
