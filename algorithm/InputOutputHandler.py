@@ -125,9 +125,15 @@ class InputOutputHandler:
             detector.conf["dilation_kernel_mm"] = value
 
         cv.createTrackbar(
-            "contrast*10", "frame", int(detector.conf["contrast"] * 10), 30, change_alpha
+            "contrast*10",
+            "frame",
+            int(detector.conf["contrast"] * 10),
+            30,
+            change_alpha,
         )
-        cv.createTrackbar("brightness", "frame", detector.conf["brightness"], 120, change_beta)
+        cv.createTrackbar(
+            "brightness", "frame", detector.conf["brightness"], 120, change_beta
+        )
         cv.createTrackbar(
             "s_mean",
             "frame",
@@ -136,7 +142,11 @@ class InputOutputHandler:
             change_current_mean_frames,
         )
         cv.createTrackbar(
-            "l_mean", "frame", detector.conf["long_mean_frames"], 1200, change_long_mean_frames
+            "l_mean",
+            "frame",
+            detector.conf["long_mean_frames"],
+            1200,
+            change_long_mean_frames,
         )
         cv.createTrackbar(
             "diff_thresh*10",
@@ -153,7 +163,11 @@ class InputOutputHandler:
             change_median_filter_kernel,
         )
         cv.createTrackbar(
-            "dilate", "frame", detector.conf["dilation_kernel_mm"], 1200, change_dilatation_kernel
+            "dilate",
+            "frame",
+            detector.conf["dilation_kernel_mm"],
+            1200,
+            change_dilatation_kernel,
         )
 
     def show_image(self, img, detector):

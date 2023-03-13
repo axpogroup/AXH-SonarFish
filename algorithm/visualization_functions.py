@@ -165,7 +165,9 @@ def draw_detector_output(
             cv.circle(
                 img,
                 (obj.midpoints[-1][0] * scale, obj.midpoints[-1][1] * scale),
-                int(detector.mm_to_px(detector.conf["max_association_dist_mm"]) * scale),
+                int(
+                    detector.mm_to_px(detector.conf["max_association_dist_mm"]) * scale
+                ),
                 (0, 0, 255),
                 1 * scale,
             )

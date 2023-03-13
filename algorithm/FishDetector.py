@@ -74,15 +74,15 @@ class FishDetector:
             # enhanced_temp[enhanced_temp < 0] = 0
             # enhanced_temp[enhanced_temp > 255] = 255
             enhanced_temp = (abs(enhanced_temp) + 127).astype("uint8")
-            median_filter_kernel_px = self.mm_to_px(self.conf["median_filter_kernel_mm"], uneven=True)
+            median_filter_kernel_px = self.mm_to_px(
+                self.conf["median_filter_kernel_mm"], uneven=True
+            )
             enhanced_temp = cv.medianBlur(enhanced_temp, median_filter_kernel_px)
             frames["median_filter"] = enhanced_temp
             runtimes_ms["enhance"] = get_elapsed_ms(start)
 
             # Detection and Tracking
-            detections, frames = self.find_points_of_interest(
-                enhanced_temp, frames
-            )
+            detections, frames = self.find_points_of_interest(enhanced_temp, frames)
             object_history = self.associate_detections(detections, object_history)
             runtimes_ms["detection_tracking"] = (
                 get_elapsed_ms(start) - runtimes_ms["enhance"]
@@ -126,7 +126,9 @@ class FishDetector:
             min_id, min_dist = self.closest_point(
                 detection.midpoints[-1], object_midpoints
             )
-            max_association_distance_px = self.mm_to_px(self.conf["max_association_dist_mm"])
+            max_association_distance_px = self.mm_to_px(
+                self.conf["max_association_dist_mm"]
+            )
             if min_dist < max_association_distance_px:
                 if object_ids[min_id] in associations.keys():
                     if associations[object_ids[min_id]]["distance"] > min_dist:
@@ -232,7 +234,11 @@ class FishDetector:
                 self.conf["long_mean_frames"] / self.conf["short_mean_frames"]
             ):
                 self.mean_buffer = self.mean_buffer[
-                    :, :, : int(self.conf["long_mean_frames"] / self.conf["short_mean_frames"])
+                    :,
+                    :,
+                    : int(
+                        self.conf["long_mean_frames"] / self.conf["short_mean_frames"]
+                    ),
                 ]
 
             self.long_mean = np.mean(self.mean_buffer, axis=2).astype("uint8")
@@ -284,7 +290,12 @@ class FishDetector:
         return self.latest_obj_index
 
     def mm_to_px(self, millimeters, uneven=False):
-        px = millimeters * self.conf["input_pixels_per_mm"] * self.conf["downsample"] / 100
+        px = (
+            millimeters
+            * self.conf["input_pixels_per_mm"]
+            * self.conf["downsample"]
+            / 100
+        )
         if uneven:
             px = int(px)
             if (float(px) / 2 % 1) == 0:
