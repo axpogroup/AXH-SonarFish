@@ -77,66 +77,83 @@ class InputOutputHandler:
             return False
 
     def trackbars(self, detector):
+        # settings = ["short_mean_frames", "long_mean_frames"]
+        #
+        # def change(value):
+        #     for setting in settings:
+        #         val = cv.getTrackbarPos(setting, 'frame')
+        #         if (setting == "short_mean_frames") and val == 0:
+        #             val = 1
+        #         if (setting == "long_mean_frames") and val < detector.conf["short_mean_frames"]:
+        #             val = detector.conf["short_mean_frames"]
+        #         if (setting in ["dilation_kernel_m", "median_filter_kernel_m"]) and (float(val) / 2 % 1) == 0:
+        #             val = int(val) + 1
+        #
+        #         detector.conf[setting] = val
+        #
+        # # TOD0 for some reason it doesn't work if the setting is shown in text - weird
+        # for setting in settings:
+        #     name = str(detector.conf[setting])  + "_" + setting
+        #     cv.createTrackbar(
+        #         name, "frame", detector.conf[setting], int(detector.conf[setting]*2), change
+        #     )
+
         def change_current_mean_frames(value):
             if value == 0:
                 value = 1
-            detector.current_mean_frames = value
+            detector.conf["short_mean_frames"] = value
 
         def change_long_mean_frames(value):
             if value < detector.current_mean_frames:
-                detector.long_mean_frames = detector.current_mean_frames
+                detector.conf["long_mean_frames"] = detector.conf["short_mean_frames"]
             else:
-                detector.long_mean_frames = value
+                detector.conf["long_mean_frames"] = value
 
         def change_alpha(value):
-            detector.contrast = float(value) / 10
+            detector.conf["contrast"] = float(value) / 10
 
         def change_beta(value):
-            detector.brightness = value
+            detector.conf["brightness"] = value
 
         def change_diff_thresh(value):
-            detector.difference_threshold_scaler = value / 10
+            detector.conf["difference_threshold_scaler"] = value / 10
 
         def change_median_filter_kernel(value):
-            if (float(value) / 2 % 1) == 0:
-                value += 1
-            detector.median_filter_kernel = value
+            detector.conf["median_filter_kernel_mm"] = value
 
         def change_dilatation_kernel(value):
-            if (float(value) / 2 % 1) == 0:
-                value += 1
-            detector.dilatation_kernel = value
+            detector.conf["dilation_kernel_mm"] = value
 
         cv.createTrackbar(
-            "contrast*10", "frame", int(detector.contrast * 10), 30, change_alpha
+            "contrast*10", "frame", int(detector.conf["contrast"] * 10), 30, change_alpha
         )
-        cv.createTrackbar("brightness", "frame", detector.brightness, 120, change_beta)
+        cv.createTrackbar("brightness", "frame", detector.conf["brightness"], 120, change_beta)
         cv.createTrackbar(
             "s_mean",
             "frame",
-            detector.current_mean_frames,
+            detector.conf["short_mean_frames"],
             120,
             change_current_mean_frames,
         )
         cv.createTrackbar(
-            "l_mean", "frame", detector.long_mean_frames, 1200, change_long_mean_frames
+            "l_mean", "frame", detector.conf["long_mean_frames"], 1200, change_long_mean_frames
         )
         cv.createTrackbar(
             "diff_thresh*10",
             "frame",
-            int(detector.difference_threshold_scaler * 10),
+            int(detector.conf["difference_threshold_scaler"] * 10),
             127,
             change_diff_thresh,
         )
         cv.createTrackbar(
             "median_f",
             "frame",
-            detector.median_filter_kernel,
-            50,
+            detector.conf["median_filter_kernel_mm"],
+            1200,
             change_median_filter_kernel,
         )
         cv.createTrackbar(
-            "dilate", "frame", detector.dilatation_kernel, 50, change_dilatation_kernel
+            "dilate", "frame", detector.conf["dilation_kernel_mm"], 1200, change_dilatation_kernel
         )
 
     def show_image(self, img, detector):

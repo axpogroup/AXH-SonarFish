@@ -103,7 +103,7 @@ def draw_detector_output(
     for ID, obj in detector.current_objects.items():
         if (
             detector.frame_number - obj.frames_observed[-1]
-            > detector.phase_out_after_x_frames
+            > detector.conf["phase_out_after_x_frames"]
         ):
             continue
 
@@ -112,14 +112,14 @@ def draw_detector_output(
 
         # if (
         #         obj.occurences_in_last_x(
-        #             detector.frame_number, detector.min_occurences_in_last_x_frames[1]
+        #             detector.frame_number, detector.conf["min_occurences_in_last_x_frames"][1]
         #         )
-        #         <= detector.min_occurences_in_last_x_frames[0]
+        #         <= detector.conf["min_occurences_in_last_x_frames"][0]
         # ):
         #     continue
 
         if fullres:
-            scale = int(100 / detector.downsample)
+            scale = int(100 / detector.conf["downsample"])
         else:
             scale = 1
         x, y, w, h = cv.boundingRect(obj.contours[-1])
@@ -165,7 +165,7 @@ def draw_detector_output(
             cv.circle(
                 img,
                 (obj.midpoints[-1][0] * scale, obj.midpoints[-1][1] * scale),
-                int(detector.max_association_dist * scale),
+                int(detector.mm_to_px(detector.conf["max_association_dist_mm"]) * scale),
                 (0, 0, 255),
                 1 * scale,
             )

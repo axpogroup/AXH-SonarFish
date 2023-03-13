@@ -8,18 +8,18 @@ from utils import get_elapsed_ms, resize_img
 
 class FishDetector:
     def __init__(self, settings_dict):
-        self.settings_dict = settings_dict
+        self.conf = settings_dict
         self.frame_number = 0
         self.latest_obj_index = 0
         self.current_objects = {}
 
         # Masks
         self.non_object_space_mask = cv.imread(
-            os.path.join(settings_dict["mask_directory"], "fish.png"),
+            os.path.join(self.conf["mask_directory"], "fish.png"),
             cv.IMREAD_GRAYSCALE,
         )
         self.sonar_controls_mask = cv.imread(
-            os.path.join(settings_dict["mask_directory"], "full.png"),
+            os.path.join(self.conf["mask_directory"], "full.png"),
             cv.IMREAD_GRAYSCALE,
         )
 
@@ -30,22 +30,6 @@ class FishDetector:
         self.short_mean = None
         self.long_mean = None
 
-        self.downsample = settings_dict["downsample"]
-        self.contrast = settings_dict["contrast"]
-        self.brightness = settings_dict["brightness"]
-        self.long_mean_frames = settings_dict["long_mean_frames"]
-        self.current_mean_frames = settings_dict["short_mean_frames"]
-        self.median_filter_kernel = settings_dict["median_filter_kernel"]
-        self.dilatation_kernel = settings_dict["dilatation_kernel"]
-        self.difference_threshold_scaler = settings_dict["difference_threshold_scaler"]
-
-        # Detection and Tracking
-        self.max_association_dist = settings_dict["max_association_dist"]
-        self.phase_out_after_x_frames = settings_dict["phase_out_after_x_frames"]
-        self.min_occurences_in_last_x_frames = settings_dict[
-            "min_occurences_in_last_x_frames"
-        ]
-
     def process_frame(self, raw_frame, object_history):
         start = cv.getTickCount()
         runtimes_ms = {}
@@ -54,20 +38,20 @@ class FishDetector:
         frames["raw"] = raw_frame
 
         # Image enhancement
-        if self.downsample:
-            frames["raw_downsampled"] = resize_img(raw_frame, self.downsample)
+        if self.conf["downsample"]:
+            frames["raw_downsampled"] = resize_img(raw_frame, self.conf["downsample"])
             frames["gray"] = self.rgb_to_gray(frames["raw_downsampled"])
         else:
             frames["gray"] = self.rgb_to_gray(frames["raw"])
 
         enhanced_temp = self.mask_regions(frames["gray"], area="sonar_controls")
         enhanced_temp = cv.convertScaleAbs(
-            enhanced_temp, alpha=self.contrast, beta=self.brightness
+            enhanced_temp, alpha=self.conf["contrast"], beta=self.conf["brightness"]
         )
         frames["gray_boosted"] = enhanced_temp
         self.update_buffer(enhanced_temp)
 
-        if self.frame_number < self.long_mean_frames:
+        if self.frame_number < self.conf["long_mean_frames"]:
             runtimes_ms["enhance"] = get_elapsed_ms(start)
             runtimes_ms["detection_tracking"] = (
                 get_elapsed_ms(start) - runtimes_ms["enhance"]
@@ -79,7 +63,7 @@ class FishDetector:
             frames["difference"] = (enhanced_temp + 127).astype("uint8")
             frames["absolute_difference"] = (abs(enhanced_temp) + 127).astype("uint8")
             # TOD: validate if the blur helps
-            adaptive_threshold = self.difference_threshold_scaler * cv.blur(
+            adaptive_threshold = self.conf["difference_threshold_scaler"] * cv.blur(
                 self.long_mean, (10, 10)
             )
             enhanced_temp[abs(enhanced_temp) < adaptive_threshold] = 0
@@ -90,13 +74,14 @@ class FishDetector:
             # enhanced_temp[enhanced_temp < 0] = 0
             # enhanced_temp[enhanced_temp > 255] = 255
             enhanced_temp = (abs(enhanced_temp) + 127).astype("uint8")
-            enhanced_temp = cv.medianBlur(enhanced_temp, self.median_filter_kernel)
+            median_filter_kernel_px = self.mm_to_px(self.conf["median_filter_kernel_mm"], uneven=True)
+            enhanced_temp = cv.medianBlur(enhanced_temp, median_filter_kernel_px)
             frames["median_filter"] = enhanced_temp
             runtimes_ms["enhance"] = get_elapsed_ms(start)
 
             # Detection and Tracking
             detections, frames = self.find_points_of_interest(
-                enhanced_temp, frames, mode="contour"
+                enhanced_temp, frames
             )
             object_history = self.associate_detections(detections, object_history)
             runtimes_ms["detection_tracking"] = (
@@ -118,7 +103,7 @@ class FishDetector:
             for _, existing_object in object_history.items()
             if (
                 self.frame_number - existing_object.frames_observed[-1]
-                < self.phase_out_after_x_frames
+                < self.conf["phase_out_after_x_frames"]
             )
         ]
 
@@ -131,7 +116,7 @@ class FishDetector:
             for key, existing_object in object_history.items()
             if (
                 self.frame_number - existing_object.frames_observed[-1]
-                < self.phase_out_after_x_frames
+                < self.conf["phase_out_after_x_frames"]
             )
         ]
 
@@ -141,7 +126,8 @@ class FishDetector:
             min_id, min_dist = self.closest_point(
                 detection.midpoints[-1], object_midpoints
             )
-            if min_dist < self.max_association_dist:
+            max_association_distance_px = self.mm_to_px(self.conf["max_association_dist_mm"])
+            if min_dist < max_association_distance_px:
                 if object_ids[min_id] in associations.keys():
                     if associations[object_ids[min_id]]["distance"] > min_dist:
                         new_objects.append(
@@ -180,54 +166,39 @@ class FishDetector:
         return min_index, dist_2[min_index]
 
     # TOD: This function will be updated once the algorithm development resumes
-    def find_points_of_interest(self, enhanced_frame, frame_dict, mode="contour"):
-        if mode == "contour":
-            # Make positive and negative differences the same
-            enhanced_frame = (abs(enhanced_frame.astype("int16") - 127) + 127).astype(
-                "uint8"
-            )
+    def find_points_of_interest(self, enhanced_frame, frame_dict):
+        # Make positive and negative differences the same
+        enhanced_frame = (abs(enhanced_frame.astype("int16") - 127) + 127).astype(
+            "uint8"
+        )
 
-            # Threshold
-            ret, thres = cv.threshold(
-                enhanced_frame, 127 + self.difference_threshold_scaler, 255, 0
-            )
-            frame_dict["binary"] = thres
-            # Alternative consolidation - dilate
-            # kernel = np.ones((self.dilatation_kernel, self.dilatation_kernel), "uint8")
-            kernel = cv.getStructuringElement(
-                cv.MORPH_ELLIPSE, (self.dilatation_kernel, self.dilatation_kernel)
-            )
-            frame_dict["dilated"] = cv.dilate(thres, kernel, iterations=1)
-            frame_dict["closed"] = cv.morphologyEx(thres, cv.MORPH_CLOSE, kernel)
-            frame_dict["opened"] = cv.morphologyEx(thres, cv.MORPH_OPEN, kernel)
-            # img = self.spatial_filter(img, kernel_size=15, method='median')
+        # Threshold
+        ret, thres = cv.threshold(
+            enhanced_frame, 127 + self.conf["difference_threshold_scaler"], 255, 0
+        )
+        frame_dict["binary"] = thres
+        # Alternative consolidation - dilate
+        dilation_kernel_px = self.mm_to_px(self.conf["dilation_kernel_mm"], uneven=True)
+        kernel = cv.getStructuringElement(
+            cv.MORPH_ELLIPSE, (dilation_kernel_px, dilation_kernel_px)
+        )
+        frame_dict["dilated"] = cv.dilate(thres, kernel, iterations=1)
+        # frame_dict["closed"] = cv.morphologyEx(thres, cv.MORPH_CLOSE, kernel)
+        # frame_dict["opened"] = cv.morphologyEx(thres, cv.MORPH_OPEN, kernel)
+        # img = self.spatial_filter(img, kernel_size=15, method='median')
 
-            thres = frame_dict["dilated"]
-            contours, hier = cv.findContours(
-                thres, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE
+        thres = frame_dict["dilated"]
+        contours, hier = cv.findContours(
+            thres, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE
+        )
+        detections = {}
+        for contour in contours:
+            new_object = DetectedObject(
+                self.get_new_id(), contour, self.frame_number, self.conf
             )
-            detections = {}
-            for contour in contours:
-                new_object = DetectedObject(
-                    self.get_new_id(), contour, self.frame_number, self.settings_dict
-                )
-                detections[new_object.ID] = new_object
+            detections[new_object.ID] = new_object
 
-            return detections, frame_dict
-
-        elif mode == "blob":  # TOD0 there is an issue, it Segmentation faults instantly
-            blob_detector = cv.SimpleBlobDetector_create()
-            keypoints = blob_detector.detect(enhanced_frame)
-            # cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS ensures the size of the circle corresponds to the size of blob
-            im_with_keypoints = cv.drawKeypoints(
-                enhanced_frame,
-                keypoints,
-                enhanced_frame,
-                (0, 0, 255),
-                cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS,
-            )
-            frame_dict["blobs"] = im_with_keypoints
-            return {}, frame_dict
+        return detections, frame_dict
 
     def update_buffer(self, img):
         if self.framebuffer is None:
@@ -237,12 +208,12 @@ class FishDetector:
                 (img[..., np.newaxis], self.framebuffer), axis=2
             )
 
-        if self.framebuffer.shape[2] > self.current_mean_frames:
-            self.framebuffer = self.framebuffer[:, :, : self.current_mean_frames]
+        if self.framebuffer.shape[2] > self.conf["short_mean_frames"]:
+            self.framebuffer = self.framebuffer[:, :, : self.conf["short_mean_frames"]]
 
     def calc_difference_from_buffer(self):
         self.short_mean = np.mean(
-            self.framebuffer[:, :, : self.current_mean_frames], axis=2
+            self.framebuffer[:, :, : self.conf["short_mean_frames"]], axis=2
         ).astype("uint8")
 
         # If there is no current mean_buffer, initialize it with the current mean
@@ -251,17 +222,17 @@ class FishDetector:
             self.mean_buffer_counter = 1
             self.long_mean = np.mean(self.mean_buffer, axis=2).astype("uint8")
 
-        # else if another current_mean_frames number of frames have passed, add the current_mean
-        elif self.mean_buffer_counter % self.current_mean_frames == 0:
+        # else if another conf["short_mean_frames"] number of frames have passed, add the current_mean
+        elif self.mean_buffer_counter % self.conf["short_mean_frames"] == 0:
             self.mean_buffer = np.concatenate(
                 (self.short_mean[..., np.newaxis], self.mean_buffer), axis=2
             )
             # if the long mean buffer has gotten to big, take the end off
             if self.mean_buffer.shape[2] > int(
-                self.long_mean_frames / self.current_mean_frames
+                self.conf["long_mean_frames"] / self.conf["short_mean_frames"]
             ):
                 self.mean_buffer = self.mean_buffer[
-                    :, :, : int(self.long_mean_frames / self.current_mean_frames)
+                    :, :, : int(self.conf["long_mean_frames"] / self.conf["short_mean_frames"])
                 ]
 
             self.long_mean = np.mean(self.mean_buffer, axis=2).astype("uint8")
@@ -311,3 +282,11 @@ class FishDetector:
             self.latest_obj_index = 0
         self.latest_obj_index += 1
         return self.latest_obj_index
+
+    def mm_to_px(self, millimeters, uneven=False):
+        px = millimeters * self.conf["input_pixels_per_mm"] * self.conf["downsample"] / 100
+        if uneven:
+            px = int(px)
+            if (float(px) / 2 % 1) == 0:
+                px += 1
+        return px
