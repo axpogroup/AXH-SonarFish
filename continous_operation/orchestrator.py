@@ -119,9 +119,7 @@ if __name__ == "__main__":
 
     while True:
         try:
-            logger.info(
-                "Checking recording status and new files to detect fish."
-            )
+            logger.info("Checking recording status and new files to detect fish.")
             new_files = check_recordings()
             logger.info(f"Recording running. Found {len(new_files)} new files.")
 
@@ -155,8 +153,10 @@ if __name__ == "__main__":
 
             # Write to watchdog
             logger.info("Wrote to watchdog.")
-            logger.info(f"Sleeping for {settings_dict['sleep_interval_minutes']} minutes.")
-            time.sleep(int(settings_dict['sleep_interval_minutes']*60))
+            logger.info(
+                f"Sleeping for {settings_dict['sleep_interval_minutes']} minutes."
+            )
+            time.sleep(int(settings_dict["sleep_interval_minutes"] * 60))
 
         except Exception as e:
             orchestrating_error = e
