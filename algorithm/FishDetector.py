@@ -2,6 +2,7 @@ import os
 
 import cv2 as cv
 import numpy as np
+
 from algorithm.DetectedObject import DetectedObject
 from algorithm.utils import get_elapsed_ms, resize_img
 
