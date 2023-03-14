@@ -2,13 +2,12 @@ import datetime as dt
 import glob
 import os
 import sys
+sys.path.append("/home/fish-pi/code/")
 import time
 
 import pandas as pd
 import utils
 import yaml
-
-sys.path.append("..")
 
 
 def modified_in_past_x_minutes(filepath, x):
@@ -190,9 +189,9 @@ def upload_logs_of_past_hour():
 
 
 if __name__ == "__main__":
-    time.sleep(20)  # Wait for time sync and also for the recording to start
+    # time.sleep(20)  # Wait for time sync and also for the recording to start
 
-    cwd = "/home/soundsedrun/code/AXH-SonarFish/continous_operation/"
+    cwd = "/home/fish-pi/code/continous_operation/"
     # cwd = "/Users/leivandresen/Documents/Hydro_code/AXH-SonarFish/continous_operation"
     with open(os.path.join(cwd, "orchestrator_settings.yaml")) as f:
         orchestrator_settings_dict = yaml.load(f, Loader=yaml.SafeLoader)

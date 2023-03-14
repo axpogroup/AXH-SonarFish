@@ -1,10 +1,10 @@
-recording_directory: "/Users/leivandresen/Documents/Hydro_code/AXH-SonarFish/continous_operation/fishdisk/test_1/recordings"
-log_directory: "/Users/leivandresen/Documents/Hydro_code/AXH-SonarFish/continous_operation/fishdisk/test_1/logs"
-detections_directory: "/Users/leivandresen/Documents/Hydro_code/AXH-SonarFish/continous_operation/fishdisk/test_1/detections"
-file_list_directory: "/Users/leivandresen/Documents/Hydro_code/AXH-SonarFish/continous_operation/fishdisk/test_1/file_lists"
+recording_directory: "/media/fish-pi/PortableSSD/test_1/recordings"
+log_directory: "/media/fish-pi/PortableSSD/test_1/logs"
+detections_directory: "/media/fish-pi/PortableSSD/test_1/detections"
+file_list_directory: "/media/fish-pi/PortableSSD/test_1/file_lists"
 
 recording_interval_minutes: 10
-sleep_interval_minutes: 0.2
+sleep_interval_minutes: 1
 error_after_no_file_modification_minutes: 2
 
 use_cloud: True
