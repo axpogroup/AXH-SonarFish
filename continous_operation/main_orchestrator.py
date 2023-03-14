@@ -252,6 +252,7 @@ if __name__ == "__main__":
                     )
 
         # Write to watchdog
+        pd.DataFrame([dt.datetime.now(dt.timezone.utc).isoformat(timespec="milliseconds")]).to_csv(orchestrator_settings_dict["watchdog_food_file"])
         logger.info("Wrote to watchdog.")
         logger.info(
             f"Sleeping for {orchestrator_settings_dict['sleep_interval_minutes']} minutes."

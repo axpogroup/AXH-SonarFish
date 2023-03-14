@@ -1,24 +1,23 @@
 # Raspberry Pi setup
 
-# Packages
-sudo apt update; sudo apt upgrade; sudo apt autoremove; sudo reboot;
+# ---- SW DEV ----
 
-# SW dev.
+# Packages
+sudo apt update
+sudo apt upgrade
+sudo apt autoremove
+sudo reboot
+
+# SW dev. 
 sudo apt install git
-sudo ssh-keygen
-sudo cat home/fish-pi/.ssh/id_rsa.pub
+# Authentiation, reference: https://learn.microsoft.com/en-us/azure/devops/repos/git/use-ssh-keys-to-authenticate?view=azure-devops
+ssh-keygen
+cat home/fish-pi/.ssh/id_rsa.pub
 # Copy key to account https://dev.azure.com/Axpo-AXP/
 # Clone repo using command from https://dev.azure.com/Axpo-AXP/AXH-Secret-Module-Development/_git/AXH-SonarFish
-# Some troubleshooting was needed here to get the ssh to work, in the end I created ~/.ssh/config with: 
-# 
-# Host github.com
-#  User git
-#  Hostname github.com
-#  IdentityFile ~/.ssh/id_rsa
 
-# and ran this command
+# if the key is not found run this command to direct git to the key
 git config core.sshCommand "ssh -i ~/.ssh/id_rsa"
-
 
 # setup venv
 sudo apt install python3-venv python3-pip
@@ -26,32 +25,46 @@ sudo apt install python3-venv python3-pip
 python3 -m venv venv
 # activate: 
 source venv/bin/activate 
+# then install the requirements of the repo and set the pre-commit hook if applicable
+pip install -r requirements.txt
+# reference https://mingle.axpo.com/display/HTD/Repo+Creation+and+Content+at+HTD-A 
+pre-commit install --hook-type pre-push
 
-# img viewer
-pip install timg
+# Have jobs run at reboot with crontab
+crontab -e
+# add the following lines
+@reboot sleep 120 && XDG_RUNTIME_DIR="/run/user/1000" code/AXH-Sound/venv/bin/python3.10  
+code/AXH-Sound/acoustic_monitoring/recording_handler.py
+@reboot sleep 120 && XDG_RUNTIME_DIR="/run/user/1000" code/AXH-Sound/venv/bin/python3.10  
+code/AXH-Sound/acoustic_monitoring/orchestrator.py
 
+
+# ---- SONAR FISH ----
+sudo apt install ffmpeg
+sudo apt install v4l-utils
 
 # ---- OTHER ----
 
-sudo apt install v4l-utils
-sudo apt install ffmpeg
+# Ubuntu version
+Ubuntu desktop LTS 22.04 https://ubuntu.com/tutorials/how-to-install-ubuntu-desktop-on-raspberry-pi-4#1-overview
 
 # System monitoring
 sudo apt install htop
-sudo apt install s-tui
-# sudo apt install lm-sensor
+# For temperature
+sudo apt install s-tui 
+# Browsing
+sudo apt install chromium-browser
+
+# ArgonOne Fan controller
+https://github.com/wimpysworld/argon1-ubuntu
 
 # Modify inputrc files (system and local) to scroll up history
-# sudo nano /etc/.inputrc 
-# sudo nano ~/.inputrc 
+# sudo nano /etc/inputrc 
+# sudo nano ~/inputrc 
 
-# add these lines
-# "\e[A": history-search-backward
-# "\e[B": history-search-forward
+# add / uncomment these lines
+"\e[A": history-search-backward
+"\e[B": history-search-forward
 
-# Aliases
+# Aliases # Add to ~/.bashrc
 alias gcm='git commit -m'
-alias gs='git status'
-alias gpl='git pull'
-alias gps='git push'
-# Add to ~/.bashrc

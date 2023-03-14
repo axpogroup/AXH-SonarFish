@@ -7,7 +7,12 @@ import utils
 import yaml
 
 if __name__ == "__main__":
-    cwd = "/home/soundsedrun/code/AXH-Sound/acoustic_monitoring/"
+    os.system(
+        "sh /home/fish-pi/code/continous_operation/initialize_capture/initialize_capture.sh"
+    )
+    time.sleep(5)
+
+    cwd = "/home/fish-pi/code/continous_operation/"
     with open(os.path.join(cwd, "orchestrator_settings.yaml")) as f:
         settings_dict = yaml.load(f, Loader=yaml.SafeLoader)
 
@@ -15,7 +20,7 @@ if __name__ == "__main__":
     os.makedirs(name=settings_dict["recording_directory"], exist_ok=True)
 
     duration = int(settings_dict["recording_interval_minutes"] * 60)
-    record_cmd_prefix = f"ffmpeg -f alsa -i pulse -t {duration} -channels 2 -b:a 128"
+    record_cmd_prefix = f"ffmpeg -framerate 25 -pixel_format uyvy422 -i /dev/video0 -vcodec h264_v4l2m2m -b:v 6M -r 20 -t {duration}"
 
     logger.info("Starting recording...")
     while True:
@@ -24,7 +29,7 @@ if __name__ == "__main__":
             (
                 "start_"
                 + dt.datetime.now(dt.timezone.utc).isoformat(timespec="milliseconds")
-                + ".mp3"
+                + ".mp4"
             ),
         )
         savepath = savepath.replace(":", "-")
