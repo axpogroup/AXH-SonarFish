@@ -4,7 +4,9 @@ import time
 from datetime import datetime as dt
 
 if __name__ == "__main__":
-    os.system("sh /home/fish-pi/code/continous_operation/initialize_capture/initialize_capture.sh")
+    os.system(
+        "sh /home/fish-pi/code/continous_operation/initialize_capture/initialize_capture.sh"
+    )
     # directory = "recordings_findingnewsettings_141122/"
     # directory = "/media/fish-pi/SONAR_STICK/recordings_stroppel_weekend/"
     directory = "/media/fish-pi/PortableSSD/test_rpi/recordings/"
