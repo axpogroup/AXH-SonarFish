@@ -7,12 +7,39 @@ import pymsteams
 from azure.storage.blob import BlobServiceClient
 from dotenv import load_dotenv
 
+from algorithm.FishDetector import FishDetector
+from algorithm.InputOutputHandler import InputOutputHandler
+
 TEAMS_LINK = (
     "https://axpogrp.webhook.office.com/webhookb2/1c7d8e30-f530-4faf-acc0-7ef098a2a388@8619c67c-945a-48ae-8e77-"
     "35b1b71c9b98/IncomingWebhook/c065e1582cc24039a640a25ba0b953e7/adfeab72-7d9c-4e19-a21b-6781b139b707"
 )
 RED = "FF0000"
 GREEN = "00FF00"
+
+
+class DetectionHandler:
+    def __init__(self, settings_dict):
+        self.detector = FishDetector(settings_dict)
+        self.settings_dict = settings_dict
+
+    def detect_from_file(self, filename):
+        self.settings_dict["input_file"] = filename
+        input_output_handler = InputOutputHandler(self.settings_dict)
+        self.detector.frame_number = 0
+        object_history = {}
+
+        while input_output_handler.get_new_frame():
+            if float(input_output_handler.frame_no) / 2 % 1 != 0:
+                continue
+            processed_frame, object_history, runtimes = self.detector.process_frame(
+                input_output_handler.current_raw_frame, object_history
+            )
+            # input_output_handler.handle_output(
+            #     processed_frame, object_history, runtimes, detector=detector
+            # )
+
+        return input_output_handler.get_detections_pd(object_history)
 
 
 def get_logger(log_directory, nametag):

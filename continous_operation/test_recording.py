@@ -6,7 +6,7 @@ import yaml
 
 if __name__ == "__main__":
     cwd = "/home/soundsedrun/code/AXH-Sound/acoustic_monitoring/"
-    with open(os.path.join(cwd, "settings.yaml")) as f:
+    with open(os.path.join(cwd, "orchestrator_settings.yaml")) as f:
         settings_dict = yaml.load(f, Loader=yaml.SafeLoader)
 
     recording_directory = "sedrun_tests/recordings"

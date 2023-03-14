@@ -28,7 +28,7 @@ def upload_latest_logs(n):
 if __name__ == "__main__":
     cwd = "/home/soundsedrun/code/AXH-Sound/acoustic_monitoring/"
     # cwd = os.getcwd()
-    with open(os.path.join(cwd, "settings.yaml")) as f:
+    with open(os.path.join(cwd, "orchestrator_settings.yaml")) as f:
         settings_dict = yaml.load(f, Loader=yaml.SafeLoader)
 
     cloud_handler = utils.CloudHandler()

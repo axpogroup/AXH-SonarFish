@@ -3,8 +3,10 @@ import datetime as dt
 import os
 
 import cv2 as cv
-import visualization_functions
-from utils import get_elapsed_ms
+import pandas as pd
+
+import algorithm.visualization_functions as visualization_functions
+from algorithm.utils import get_elapsed_ms
 
 
 class InputOutputHandler:
@@ -75,6 +77,10 @@ class InputOutputHandler:
         else:
             print("ERROR: Video Capturer is not open.")
             return False
+
+    @staticmethod
+    def get_detections_pd(object_history):
+        return pd.DataFrame([0, 2, 34], columns=["test"])
 
     def trackbars(self, detector):
         # settings = ["short_mean_frames", "long_mean_frames"]

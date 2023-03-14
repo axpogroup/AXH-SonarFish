@@ -1,0 +1,24 @@
+# Input / Output
+input_file:  ""
+mask_directory: "/Users/leivandresen/Documents/Hydro_code/AXH-SonarFish/analysis/1_productionalization/validation_HTU_v1/recordings/masks"
+
+# Size
+input_pixels_per_mm: 0.0838
+
+# Enhancement
+downsample: 25
+contrast: 2
+brightness: 30
+long_mean_frames: 200
+short_mean_frames: 10
+difference_threshold_scaler: 0.3
+dilation_kernel_mm: 770
+median_filter_kernel_mm: 340
+
+# Detection and Tracking
+max_association_dist_mm: 600
+phase_out_after_x_frames: 10
+min_occurences_in_last_x_frames: [30, 40]
+
+river_pixel_velocity: [2.35, -0.9] # At full resolution
+min_occurences_for_fish: 20
