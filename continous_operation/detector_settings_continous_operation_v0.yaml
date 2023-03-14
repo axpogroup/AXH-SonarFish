@@ -1,6 +1,6 @@
 # Input / Output
 input_file:  ""
-mask_directory: "/Users/leivandresen/Documents/Hydro_code/AXH-SonarFish/analysis/1_productionalization/validation_HTU_v1/recordings/masks"
+mask_directory: "/home/fish-pi/code/analysis/1_productionalization/validation_HTU_v1/recordings/masks"
 
 # Size
 input_pixels_per_mm: 0.0838

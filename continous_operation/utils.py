@@ -35,9 +35,9 @@ class DetectionHandler:
             processed_frame, object_history, runtimes = self.detector.process_frame(
                 input_output_handler.current_raw_frame, object_history
             )
-            # input_output_handler.handle_output(
-            #     processed_frame, object_history, runtimes, detector=detector
-            # )
+            input_output_handler.handle_output(
+                 processed_frame, object_history, runtimes, detector=self.detector
+            )
 
         return input_output_handler.get_detections_pd(object_history)
 

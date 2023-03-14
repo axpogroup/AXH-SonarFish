@@ -1,7 +1,7 @@
-recording_directory: "/media/fish-pi/PortableSSD/test_1/recordings"
-log_directory: "/media/fish-pi/PortableSSD/test_1/logs"
-detections_directory: "/media/fish-pi/PortableSSD/test_1/detections"
-file_list_directory: "/media/fish-pi/PortableSSD/test_1/file_lists"
+recording_directory: "/media/fish-pi/PortableSSD/test_rpi/recordings"
+log_directory: "/media/fish-pi/PortableSSD/test_rpi/logs"
+detections_directory: "/media/fish-pi/PortableSSD/test_rpi/detections"
+file_list_directory: "/media/fish-pi/PortableSSD/test_rpi/file_lists"
 
 recording_interval_minutes: 10
 sleep_interval_minutes: 1
