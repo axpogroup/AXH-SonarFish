@@ -190,7 +190,7 @@ def upload_logs_of_past_hour():
 
 
 if __name__ == "__main__":
-    # time.sleep(20)  # Wait for time sync and also for the recording to start
+    time.sleep(60)  # Wait for time sync and also for the recording to start
 
     cwd = "/home/fish-pi/code/continous_operation/"
     # cwd = "/Users/leivandresen/Documents/Hydro_code/AXH-SonarFish/continous_operation"
