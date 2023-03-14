@@ -9,6 +9,13 @@ from continous_operation import utils
 import yaml
 
 if __name__ == "__main__":
+    cwd = "/home/fish-pi/code/continous_operation/"
+    with open(os.path.join(cwd, "orchestrator_settings.yaml")) as f:
+        settings_dict = yaml.load(f, Loader=yaml.SafeLoader)
+
+    logger = utils.get_logger(settings_dict["log_directory"], "recording")
+    os.makedirs(name=settings_dict["recording_directory"], exist_ok=True)
+    
     capture_initialization_command = "sh /home/fish-pi/code/continous_operation/initialize_capture/initialize_capture.sh"
     logger.info("Initializing capture device ...")
     try:
@@ -27,13 +34,6 @@ if __name__ == "__main__":
         )
 
     time.sleep(5)
-
-    cwd = "/home/fish-pi/code/continous_operation/"
-    with open(os.path.join(cwd, "orchestrator_settings.yaml")) as f:
-        settings_dict = yaml.load(f, Loader=yaml.SafeLoader)
-
-    logger = utils.get_logger(settings_dict["log_directory"], "recording")
-    os.makedirs(name=settings_dict["recording_directory"], exist_ok=True)
 
     duration = int(settings_dict["recording_interval_minutes"] * 60)
     record_cmd_prefix = f"ffmpeg -framerate 25 -pixel_format uyvy422 -i /dev/video0 -vcodec h264_v4l2m2m -b:v 6M -r 20 -t {duration}"
