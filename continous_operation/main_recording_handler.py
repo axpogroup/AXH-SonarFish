@@ -1,9 +1,11 @@
 import datetime as dt
 import os
+import sys
+sys.path.append("/home/fish-pi/code/")
 import subprocess
 import time
 
-import utils
+from continous_operation import utils
 import yaml
 
 if __name__ == "__main__":

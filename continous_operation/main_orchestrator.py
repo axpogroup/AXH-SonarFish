@@ -7,7 +7,7 @@ sys.path.append("/home/fish-pi/code/")
 import time
 
 import pandas as pd
-import utils
+from continous_operation import utils
 import yaml
 
 
@@ -218,75 +218,69 @@ if __name__ == "__main__":
     initial_teams_message_sent = False
 
     while True:
-        # try:
-        logger.info("Checking recording status and new files to detect fish.")
-        new_files = check_recordings()
-        logger.info(f"Recording running. Found {len(new_files)} new files.")
-        new_detections = detect_on_new_files()
-        logger.info(f"Detected fish on {len(new_detections)} recordings.")
+        try:
+	        logger.info("Checking recording status and new files to detect fish.")
+	        new_files = check_recordings()
+	        logger.info(f"Recording running. Found {len(new_files)} new files.")
+	        new_detections = detect_on_new_files()
+	        logger.info(f"Detected fish on {len(new_detections)} recordings.")
 
-        # Cloud stuff
-        if orchestrator_settings_dict["use_cloud"]:
-            try:
-                cloud_handler = utils.CloudHandler()
-                upload_new_files()
+	        # Cloud stuff
+	        if orchestrator_settings_dict["use_cloud"]:
+	            try:
+	                cloud_handler = utils.CloudHandler()
+	                upload_new_files()
 
-                # Send initial heartbeat to MS Teams
-                if not initial_teams_message_sent:
-                    cloud_handler.send_message(
-                        "green",
-                        "Uploaded detections in new session.",
-                        f"Instance start time UTC: "
-                        f"{instance_start_dt.isoformat(timespec='milliseconds')}",
-                    )
-                    logger.info("Sent initial Heartbeat to MS Teams.")
-                    initial_teams_message_sent = True
-            except Exception as file_upload_exception:
-                if orchestrator_settings_dict["raise_exception_on_cloud_error"]:
-                    raise Exception(
-                        "Issue with the cloud. \n" + str(file_upload_exception)
-                    )
-                else:
-                    logger.warning(
-                        "Issue with the cloud. \n" + str(file_upload_exception)
-                    )
+	                # Send initial heartbeat to MS Teams
+	                if not initial_teams_message_sent:
+	                    cloud_handler.send_message(
+	                        "green",
+	                        "Uploaded detections in new session.",
+	                        f"Instance start time UTC: "
+	                        f"{instance_start_dt.isoformat(timespec='milliseconds')}",
+	                    )
+	                    logger.info("Sent initial Heartbeat to MS Teams.")
+	                    initial_teams_message_sent = True
+	            except Exception as file_upload_exception:
+	                if orchestrator_settings_dict["raise_exception_on_cloud_error"]:
+	                    raise Exception(
+	                        "Issue with the cloud. \n" + str(file_upload_exception)
+	                    )
+	                else:
+	                    logger.warning(
+	                        "Issue with the cloud. \n" + str(file_upload_exception)
+	                    )
 
-        # Write to watchdog
-        pd.DataFrame(
-            [dt.datetime.now(dt.timezone.utc).isoformat(timespec="milliseconds")]
-        ).to_csv(orchestrator_settings_dict["watchdog_food_file"])
-        logger.info("Wrote to watchdog.")
-        logger.info(
-            f"Sleeping for {orchestrator_settings_dict['sleep_interval_minutes']} minutes."
-        )
-        time.sleep(int(orchestrator_settings_dict["sleep_interval_minutes"] * 60))
+	        # Write to watchdog
+	        pd.DataFrame(
+	            [dt.datetime.now(dt.timezone.utc).isoformat(timespec="milliseconds")]
+	        ).to_csv(orchestrator_settings_dict["watchdog_food_file"])
+	        logger.info("Wrote to watchdog.")
+	        logger.info(
+	            f"Sleeping for {orchestrator_settings_dict['sleep_interval_minutes']} minutes."
+	        )
+	        time.sleep(int(orchestrator_settings_dict["sleep_interval_minutes"] * 60))
 
-        # except Exception as e:
-        #     orchestrating_error = e
-        #     logger.error("An exception occured while orchestrating! \n" + str(e))
-        #     if orchestrator_settings_dict["use_cloud"]:
-        #         try:
-        #             cloud_handler = utils.CloudHandler()
-        #             logger.info("Attempting to send error Message to MS Teams.")
-        #             cloud_handler.send_message(
-        #                 "red",
-        #                 "ERROR",
-        #                 f"UTC Time: "
-        #                 f"{dt.datetime.now(dt.timezone.utc).isoformat(timespec='milliseconds')}:"
-        #                 f" {str(orchestrating_error)})",
-        #             )
-        #         except Exception as e:
-        #             logger.error("Error sending Message to MS Teams. \n" + str(e))
-        #         try:
-        #             cloud_handler = utils.CloudHandler()
-        #             logger.info("Attempting to upload logs.")
-        #             upload_logs_of_past_hour()
-        #         except Exception as e:
-        #             logger.error("Error sending uploading logs. \n" + str(e))
+        except Exception as e:
+             orchestrating_error = e
+             logger.error("An exception occured while orchestrating! \n" + str(e))
+             if orchestrator_settings_dict["use_cloud"]:
+                 try:
+                     cloud_handler = utils.CloudHandler()
+                     logger.info("Attempting to send error Message to MS Teams.")
+                     cloud_handler.send_message(
+                         "red",
+                         "ERROR",
+                         f"UTC Time: "
+                         f"{dt.datetime.now(dt.timezone.utc).isoformat(timespec='milliseconds')}:"
+                         f" {str(orchestrating_error)})",
+                     )
+                 except Exception as e:
+                     logger.error("Error sending Message to MS Teams. \n" + str(e))
+                 try:
+                     cloud_handler = utils.CloudHandler()
+                     logger.info("Attempting to upload logs.")
+                     upload_logs_of_past_hour()
+                 except Exception as e:
+                     logger.error("Error sending uploading logs. \n" + str(e))
 
-    # Initiate reboot
-    # logger.info("Initiating reboot.")
-    # out = os.system("shutdown -r +1")
-    # logger.info("Return code of os.system('shutdown -r +1'): " + out)
-    # os.system('systemctl reboot -i') Note that you need to install
-    # the systemd package in order to use this command. Install with sudo apt-get install systemd

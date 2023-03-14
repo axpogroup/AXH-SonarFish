@@ -17,7 +17,7 @@ def modified_in_past_x_minutes(filepath, x):
 
 def check_recordings():
     all_recordings = glob.glob(
-        os.path.join(settings_dict["recording_directory"], "*.mp3")
+        os.path.join(settings_dict["recording_directory"], "*.mp4")
     )
     if len(all_recordings) == 0:
         raise Exception("No recordings found.")
@@ -53,8 +53,7 @@ def get_latest_logs():
 
 
 if __name__ == "__main__":
-    cwd = "/home/soundsedrun/code/AXH-Sound/acoustic_monitoring/"
-    # cwd = os.getcwd()
+    cwd = "/home/fish-pi/code/continous_operation/"
     with open(os.path.join(cwd, "orchestrator_settings.yaml")) as f:
         settings_dict = yaml.load(f, Loader=yaml.SafeLoader)
 
