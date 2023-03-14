@@ -264,23 +264,27 @@ if __name__ == "__main__":
         except Exception as e:
              orchestrating_error = e
              logger.error("An exception occured while orchestrating! \n" + str(e))
-             if orchestrator_settings_dict["use_cloud"]:
-                 try:
-                     cloud_handler = utils.CloudHandler()
-                     logger.info("Attempting to send error Message to MS Teams.")
-                     cloud_handler.send_message(
-                         "red",
-                         "ERROR",
-                         f"UTC Time: "
-                         f"{dt.datetime.now(dt.timezone.utc).isoformat(timespec='milliseconds')}:"
-                         f" {str(orchestrating_error)})",
-                     )
-                 except Exception as e:
-                     logger.error("Error sending Message to MS Teams. \n" + str(e))
-                 try:
-                     cloud_handler = utils.CloudHandler()
-                     logger.info("Attempting to upload logs.")
-                     upload_logs_of_past_hour()
-                 except Exception as e:
-                     logger.error("Error sending uploading logs. \n" + str(e))
+             break
+    
+    logger.info("Ending execution. Watchdog will not be fed and cause reboot inside 30 min.")
+
+    if orchestrator_settings_dict["use_cloud"]:
+        try:
+            cloud_handler = utils.CloudHandler()
+            logger.info("Attempting to send error Message to MS Teams.")
+            cloud_handler.send_message(
+                "red",
+                "ERROR",
+                f"UTC Time: "
+                f"{dt.datetime.now(dt.timezone.utc).isoformat(timespec='milliseconds')}:"
+                f" {str(orchestrating_error)})",
+            )
+        except Exception as e:
+            logger.error("Error sending Message to MS Teams. \n" + str(e))
+        try:
+            cloud_handler = utils.CloudHandler()
+            logger.info("Attempting to upload logs.")
+            upload_logs_of_past_hour()
+        except Exception as e:
+            logger.error("Error sending uploading logs. \n" + str(e))
 
