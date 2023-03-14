@@ -9,9 +9,23 @@ from continous_operation import utils
 import yaml
 
 if __name__ == "__main__":
-    os.system(
-        "sh /home/fish-pi/code/continous_operation/initialize_capture/initialize_capture.sh"
-    )
+    capture_initialization_command = "sh /home/fish-pi/code/continous_operation/initialize_capture/initialize_capture.sh"
+    logger.info("Initializing capture device ...")
+    try:
+        output = subprocess.run(
+            capture_initialization_command,
+            check=True,
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+        logger.info(output.stdout)
+    except subprocess.CalledProcessError as e:
+        logger.error(
+            f"Error. \n {e.output}"
+        )
+
     time.sleep(5)
 
     cwd = "/home/fish-pi/code/continous_operation/"
