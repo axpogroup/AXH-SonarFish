@@ -7,14 +7,15 @@ sys.path.append("/home/fish-pi/code/")
 import time
 
 import pandas as pd
-from continous_operation import utils
 import yaml
+
+from continous_operation import utils
 
 
 def modified_in_past_x_minutes(filepath, x):
     if (
-            dt.datetime.now(dt.timezone.utc)
-            - dt.datetime.fromtimestamp(os.path.getmtime(filepath), tz=dt.timezone.utc)
+        dt.datetime.now(dt.timezone.utc)
+        - dt.datetime.fromtimestamp(os.path.getmtime(filepath), tz=dt.timezone.utc)
     ) < dt.timedelta(minutes=x):
         return True
     else:
@@ -46,11 +47,11 @@ def check_recordings():
         rec
         for rec in all_recordings
         if (rec not in existing_completed_recordings)
-           and not modified_in_past_x_minutes(rec, no_mod_thres)
+        and not modified_in_past_x_minutes(rec, no_mod_thres)
     ]
 
     existing_completed_recordings = (
-            existing_completed_recordings + new_completed_recordings
+        existing_completed_recordings + new_completed_recordings
     )
     pd.DataFrame(existing_completed_recordings, columns=["path"]).to_csv(
         os.path.join(
@@ -266,7 +267,9 @@ if __name__ == "__main__":
             logger.error("An exception occured while orchestrating! \n" + str(e))
             break
 
-    logger.info("Ending execution. Watchdog will not be fed and cause reboot inside 30 min.")
+    logger.info(
+        "Ending execution. Watchdog will not be fed and cause reboot inside 30 min."
+    )
 
     if orchestrator_settings_dict["use_cloud"]:
         try:

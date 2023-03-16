@@ -1,12 +1,13 @@
 import argparse
-import pandas as pd
 import datetime as dt
 import glob
-from continous_operation.main_orchestrator import check_recordings
-from continous_operation.utils import CloudHandler
 import os
 
+import pandas as pd
 import yaml
+
+from continous_operation.main_orchestrator import check_recordings
+from continous_operation.utils import CloudHandler
 
 
 def upload_sample_of_latest_recording():
@@ -34,7 +35,8 @@ def modified_in_past_x_minutes(filepath, x):
 
 def get_latest_logs():
     log_files = glob.glob(
-        os.path.join(orchestrator_settings_dict["log_directory"], "**/*.log*"), recursive=True
+        os.path.join(orchestrator_settings_dict["log_directory"], "**/*.log*"),
+        recursive=True,
     )
 
     if len(log_files) == 0:
@@ -58,7 +60,9 @@ def get_latest_logs():
 
 
 def check_status():
-    no_mod_thres = orchestrator_settings_dict["error_after_no_file_modification_minutes"]
+    no_mod_thres = orchestrator_settings_dict[
+        "error_after_no_file_modification_minutes"
+    ]
     print("Checking recording status...")
     try:
         check_recordings()

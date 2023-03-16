@@ -83,12 +83,14 @@ class InputOutputHandler:
         rows = []
         for _, obj in object_history.items():
             for i in range(len(obj.frames_observed)):
-                rows.append([
-                    obj.ID,
-                    obj.frames_observed[i],
-                    obj.midpoints[i],
-                    obj.areas[i],
-                ])
+                rows.append(
+                    [
+                        obj.ID,
+                        obj.frames_observed[i],
+                        obj.midpoints[i],
+                        obj.areas[i],
+                    ]
+                )
 
         return pd.DataFrame(
             rows, columns=["ID", "frames_observed", "midpoints", "areas"]
