@@ -2,6 +2,8 @@ import argparse
 import datetime as dt
 import glob
 import os
+import sys
+sys.path.append("/home/fish-pi/code/")
 
 import pandas as pd
 import yaml
