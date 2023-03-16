@@ -80,7 +80,12 @@ class InputOutputHandler:
 
     @staticmethod
     def get_detections_pd(object_history):
-        return pd.DataFrame([0, 2, 34], columns=["test"])
+        rows = []
+        for _, obj in object_history.items():
+            for i in range(len(obj.frames_observed)):
+                rows.append = [obj.ID, obj.frames_observed[i], obj.midpoints[i], obj.areas[i]]
+
+        return pd.DataFrame(rows, columns=["ID", "frames_observed", "midpoints", "areas"])
 
     def trackbars(self, detector):
         # settings = ["short_mean_frames", "long_mean_frames"]

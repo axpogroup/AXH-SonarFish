@@ -13,6 +13,7 @@ class DetectedObject:
 
         x, y, w, h = cv.boundingRect(contour)
         self.midpoints = [(int(x + w / 2), int(y + h / 2))]
+        self.areas = [cv.contourArea(contour)]
 
         self.classifications = ["Objekt"]
         self.velocity = []
@@ -36,6 +37,7 @@ class DetectedObject:
         self.show.append(False)
         self.contours.append(detection.contours[-1])
         self.midpoints.append(detection.midpoints[-1])
+        self.areas.append(cv.contourArea(detection.contours[-1]))
 
         self.calculate_speed()
         self.classify_object()
