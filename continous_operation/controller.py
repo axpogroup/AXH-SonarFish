@@ -8,8 +8,7 @@ sys.path.append("/home/fish-pi/code/")
 import pandas as pd
 import yaml
 
-from continous_operation.main_orchestrator import check_recordings
-from continous_operation.utils import CloudHandler
+from utils import CloudHandler
 
 
 def upload_sample_of_latest_recording():
@@ -88,27 +87,31 @@ if __name__ == "__main__":
         description="Various controls for the continous fish detection system."
     )
 
+    argParser.add_argument("-command", "--command", help="path to the input video file")
+    argParser.add_argument("-file", "--file", help="path to the input video file")
+
     args = argParser.parse_args()
 
     cwd = "/home/fish-pi/code/continous_operation/"
     with open(os.path.join(cwd, "orchestrator_settings.yaml")) as f:
         orchestrator_settings_dict = yaml.load(f, Loader=yaml.SafeLoader)
 
-    if args[0] == "check_status":
+    if args.command == "check_status":
         check_status()
-    if args[0] == "start_recording_detection":
+    if args.command == "start_recording_detection":
         pass
-    if args[0] == "stop_all":
+    if args.command == "stop_all":
         pass
-    if args[0] == "start_recording":
+    if args.command == "start_recording":
         pass
-    if args[0] == "upload_logs":
+    if args.command == "upload_logs":
         pass
-    if args[0] == "upload_sample":
+    if args.command == "upload_sample":
         upload_sample_of_latest_recording()
-    if args[0] == "upload_file":
-        pass
-    if args[0] == "feed_watchdog":
+    if args.command == "upload_file":
+        cloud_handler = CloudHandler()
+        cloud_handler.upload_file_to_container(yaml.file)
+    if args.command == "feed_watchdog":
         # Write to watchdog
         pd.DataFrame(
             [dt.datetime.now(dt.timezone.utc).isoformat(timespec="milliseconds")]
