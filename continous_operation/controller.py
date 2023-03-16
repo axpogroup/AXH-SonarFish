@@ -1,8 +1,26 @@
 import argparse
 import pandas as pd
 import datetime as dt
+import glob
+from continous_operation.main_orchestrator import check_recordings
+from continous_operation.utils import CloudHandler
+import os
 
 import yaml
+
+
+def upload_sample_of_latest_recording():
+    existing_completed_recordings = pd.read_csv(
+        os.path.join(
+            orchestrator_settings_dict["file_list_directory"],
+            "completed_recordings_list.csv",
+        )
+    )["path"].to_list()
+
+    print(f"Attempting to upload last recording: {existing_completed_recordings[-1]}")
+    cloud_handler = CloudHandler()
+    cloud_handler.upload_file_to_container(existing_completed_recordings[-1])
+
 
 def modified_in_past_x_minutes(filepath, x):
     if (
@@ -12,18 +30,6 @@ def modified_in_past_x_minutes(filepath, x):
         return True
     else:
         return False
-
-
-def check_recordings():
-    all_recordings = glob.glob(
-        os.path.join(orchestrator_settings_dict["recording_directory"], "*.mp4")
-    )
-    if len(all_recordings) == 0:
-        raise Exception("No recordings found.")
-
-    sorted(all_recordings, key=os.path.getmtime)
-    if not modified_in_past_x_minutes(all_recordings[-1], no_mod_thres):
-        raise Exception(f"No file modification in the past {no_mod_thres} minutes.")
 
 
 def get_latest_logs():
@@ -75,10 +81,6 @@ if __name__ == "__main__":
     argParser = argparse.ArgumentParser(
         description="Various controls for the continous fish detection system."
     )
-    argParser.add_argument(
-        "-yf", "--yaml_file", help="path to the YAML settings file", required=True
-    )
-    argParser.add_argument("-if", "--input_file", help="path to the input video file")
 
     args = argParser.parse_args()
 
@@ -89,13 +91,15 @@ if __name__ == "__main__":
     if args[0] == "check_status":
         check_status()
     if args[0] == "start_recording_detection":
-        detections_directory
+        pass
     if args[0] == "stop_all":
         pass
     if args[0] == "start_recording":
         pass
     if args[0] == "upload_logs":
         pass
+    if args[0] == "upload_sample":
+        upload_sample_of_latest_recording()
     if args[0] == "upload_file":
         pass
     if args[0] == "feed_watchdog":

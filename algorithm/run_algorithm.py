@@ -34,3 +34,5 @@ if __name__ == "__main__":
         input_output_handler.handle_output(
             processed_frame, object_history, runtimes, detector=detector
         )
+
+    detections = input_output_handler.get_detections_pd(object_history)

@@ -13,8 +13,8 @@ import yaml
 
 def modified_in_past_x_minutes(filepath, x):
     if (
-        dt.datetime.now(dt.timezone.utc)
-        - dt.datetime.fromtimestamp(os.path.getmtime(filepath), tz=dt.timezone.utc)
+            dt.datetime.now(dt.timezone.utc)
+            - dt.datetime.fromtimestamp(os.path.getmtime(filepath), tz=dt.timezone.utc)
     ) < dt.timedelta(minutes=x):
         return True
     else:
@@ -46,11 +46,11 @@ def check_recordings():
         rec
         for rec in all_recordings
         if (rec not in existing_completed_recordings)
-        and not modified_in_past_x_minutes(rec, no_mod_thres)
+           and not modified_in_past_x_minutes(rec, no_mod_thres)
     ]
 
     existing_completed_recordings = (
-        existing_completed_recordings + new_completed_recordings
+            existing_completed_recordings + new_completed_recordings
     )
     pd.DataFrame(existing_completed_recordings, columns=["path"]).to_csv(
         os.path.join(
@@ -219,53 +219,53 @@ if __name__ == "__main__":
 
     while True:
         try:
-	        logger.info("Checking recording status and new files to detect fish.")
-	        new_files = check_recordings()
-	        logger.info(f"Recording running. Found {len(new_files)} new files.")
-	        new_detections = detect_on_new_files()
-	        logger.info(f"Detected fish on {len(new_detections)} recordings.")
+            logger.info("Checking recording status and new files to detect fish.")
+            new_files = check_recordings()
+            logger.info(f"Recording running. Found {len(new_files)} new files.")
+            new_detections = detect_on_new_files()
+            logger.info(f"Detected fish on {len(new_detections)} recordings.")
 
-	        # Cloud stuff
-	        if orchestrator_settings_dict["use_cloud"]:
-	            try:
-	                cloud_handler = utils.CloudHandler()
-	                upload_new_files()
+            # Cloud stuff
+            if orchestrator_settings_dict["use_cloud"]:
+                try:
+                    cloud_handler = utils.CloudHandler()
+                    upload_new_files()
 
-	                # Send initial heartbeat to MS Teams
-	                if not initial_teams_message_sent:
-	                    cloud_handler.send_message(
-	                        "green",
-	                        "Uploaded detections in new session.",
-	                        f"Instance start time UTC: "
-	                        f"{instance_start_dt.isoformat(timespec='milliseconds')}",
-	                    )
-	                    logger.info("Sent initial Heartbeat to MS Teams.")
-	                    initial_teams_message_sent = True
-	            except Exception as file_upload_exception:
-	                if orchestrator_settings_dict["raise_exception_on_cloud_error"]:
-	                    raise Exception(
-	                        "Issue with the cloud. \n" + str(file_upload_exception)
-	                    )
-	                else:
-	                    logger.warning(
-	                        "Issue with the cloud. \n" + str(file_upload_exception)
-	                    )
+                    # Send initial heartbeat to MS Teams
+                    if not initial_teams_message_sent:
+                        cloud_handler.send_message(
+                            "green",
+                            "Uploaded detections in new session.",
+                            f"Instance start time UTC: "
+                            f"{instance_start_dt.isoformat(timespec='milliseconds')}",
+                        )
+                        logger.info("Sent initial Heartbeat to MS Teams.")
+                        initial_teams_message_sent = True
+                except Exception as file_upload_exception:
+                    if orchestrator_settings_dict["raise_exception_on_cloud_error"]:
+                        raise Exception(
+                            "Issue with the cloud. \n" + str(file_upload_exception)
+                        )
+                    else:
+                        logger.warning(
+                            "Issue with the cloud. \n" + str(file_upload_exception)
+                        )
 
-	        # Write to watchdog
-	        pd.DataFrame(
-	            [dt.datetime.now(dt.timezone.utc).isoformat(timespec="milliseconds")]
-	        ).to_csv(orchestrator_settings_dict["watchdog_food_file"])
-	        logger.info("Wrote to watchdog.")
-	        logger.info(
-	            f"Sleeping for {orchestrator_settings_dict['sleep_interval_minutes']} minutes."
-	        )
-	        time.sleep(int(orchestrator_settings_dict["sleep_interval_minutes"] * 60))
+            # Write to watchdog
+            pd.DataFrame(
+                [dt.datetime.now(dt.timezone.utc).isoformat(timespec="milliseconds")]
+            ).to_csv(orchestrator_settings_dict["watchdog_food_file"])
+            logger.info("Wrote to watchdog.")
+            logger.info(
+                f"Sleeping for {orchestrator_settings_dict['sleep_interval_minutes']} minutes."
+            )
+            time.sleep(int(orchestrator_settings_dict["sleep_interval_minutes"] * 60))
 
         except Exception as e:
-             orchestrating_error = e
-             logger.error("An exception occured while orchestrating! \n" + str(e))
-             break
-    
+            orchestrating_error = e
+            logger.error("An exception occured while orchestrating! \n" + str(e))
+            break
+
     logger.info("Ending execution. Watchdog will not be fed and cause reboot inside 30 min.")
 
     if orchestrator_settings_dict["use_cloud"]:
@@ -287,4 +287,3 @@ if __name__ == "__main__":
             upload_logs_of_past_hour()
         except Exception as e:
             logger.error("Error sending uploading logs. \n" + str(e))
-
