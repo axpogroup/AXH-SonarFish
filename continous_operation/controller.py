@@ -49,7 +49,7 @@ def upload_sample_of_latest_recording():
     if success:
         print(f"Attempting to upload last recording: {existing_completed_recordings[-1]}")
         cloud_handler = CloudHandler()
-        cloud_handler.upload_file_to_container(existing_completed_recordings[-1], orchestrator_settings_dict["azure_container_name"])
+        cloud_handler.upload_file_to_container(snippet_name, orchestrator_settings_dict["azure_container_name"])
 
 
 def modified_in_past_x_minutes(filepath, x):
