@@ -21,7 +21,7 @@ def upload_sample_of_latest_recording():
 
     print(f"Attempting to upload last recording: {existing_completed_recordings[-1]}")
     cloud_handler = CloudHandler()
-    cloud_handler.upload_file_to_container(existing_completed_recordings[-1])
+    cloud_handler.upload_file_to_container(existing_completed_recordings[-1], orchestrator_settings_dict["azure_container_name"])
 
 
 def modified_in_past_x_minutes(filepath, x):
@@ -110,7 +110,7 @@ if __name__ == "__main__":
         upload_sample_of_latest_recording()
     if args.command == "upload_file":
         cloud_handler = CloudHandler()
-        cloud_handler.upload_file_to_container(yaml.file)
+        cloud_handler.upload_file_to_container(args.file)
     if args.command == "feed_watchdog":
         # Write to watchdog
         pd.DataFrame(
