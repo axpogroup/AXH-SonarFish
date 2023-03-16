@@ -2,7 +2,9 @@ import argparse
 import datetime as dt
 import glob
 import os
+import time
 import sys
+import subprocess
 sys.path.append("/home/fish-pi/code/")
 
 import pandas as pd
@@ -19,9 +21,35 @@ def upload_sample_of_latest_recording():
         )
     )["path"].to_list()
 
-    print(f"Attempting to upload last recording: {existing_completed_recordings[-1]}")
-    cloud_handler = CloudHandler()
-    cloud_handler.upload_file_to_container(existing_completed_recordings[-1], orchestrator_settings_dict["azure_container_name"])
+    snippet_name = existing_completed_recordings[-1][:-4] + "_snippet.mp4"
+    snippet_cmd = f"ffmpeg -i {existing_completed_recordings[-1]} -c:v libx264 -preset medium -crf 46 -t 00:00:10 {snippet_name}"
+    success = False
+    try:
+        output = subprocess.run(
+            snippet_cmd,
+            check=True,
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+        print(output.stdout)
+        print("Snippet created: ", snippet_name)
+        success = True
+    except subprocess.CalledProcessError as e:
+        print("-------- ERROR making snippet. ---------")
+        print("Original file: " + existing_completed_recordings[-1])
+        print("Command: " + snippet_cmd)
+        print("Output of subprocess: \n")
+        print(e.output)
+
+    time.sleep(3)
+
+    # Upload the snippet
+    if success:
+        print(f"Attempting to upload last recording: {existing_completed_recordings[-1]}")
+        cloud_handler = CloudHandler()
+        cloud_handler.upload_file_to_container(existing_completed_recordings[-1], orchestrator_settings_dict["azure_container_name"])
 
 
 def modified_in_past_x_minutes(filepath, x):
