@@ -108,8 +108,10 @@ class FishDetector:
             )
         ]
 
+        # This makes for a reset object history if there hasn't been any frames in a while - fix
         if len(object_midpoints) == 0:
-            object_history = detections
+            for _, detection in detections.items():
+                object_history[detection.ID] = detection
             return object_history
 
         object_ids = [
