@@ -14,7 +14,9 @@ from utils import CloudHandler
 
 
 def downsample_and_upload_recording(file):
-    downsampled_rec_name = file[:-4] + "_downsampled.mp4"
+    detection_uploads_dir = os.path.join(os.path.split(orchestrator_settings_dict["detections_directory"][0], "detection_uploads"))
+    os.makedirs(detection_uploads_dir, exist_ok=True)
+    downsampled_rec_name = os.path.join(detection_uploads_dir, (os.path.split(file)[-1][:-4] + "_downsampled.mp4"))
     downsample_cmd = f"ffmpeg -y -i {file} -c:v libx264 -preset medium -crf 30 -vf scale=iw*0.25:ih*0.25 -r 10 {downsampled_rec_name}"
     print(f"creating downsampled version with command: {downsample_cmd}")
     success = False
@@ -50,13 +52,19 @@ def downsample_and_upload_recording(file):
 
 
 def upload_sample_of_latest_recording():
+    detection_uploads_dir = os.path.join(os.path.split(orchestrator_settings_dict["detections_directory"][0], "detection_uploads"))
+    os.makedirs(detection_uploads_dir, exist_ok=True)
+
+
+
+
     existing_completed_recordings = pd.read_csv(
         os.path.join(
             orchestrator_settings_dict["file_list_directory"],
             "completed_recordings_list.csv",
         )
     )["path"].to_list()
-    snippet_name = existing_completed_recordings[-1][:-4] + "_snippet.mp4"
+    snippet_name = os.path.join(detection_uploads_dir, (os.path.split(existing_completed_recordings[-1])[-1][:-4] + "_downsampled.mp4"))
     snippet_cmd = f"ffmpeg -y -i {existing_completed_recordings[-1]} -c:v libx264 -preset medium -crf 46 -t 00:00:10 {snippet_name}"
     print(f"creating snippet with command: {snippet_cmd}")
     success = False
