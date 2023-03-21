@@ -140,10 +140,12 @@ if __name__ == "__main__":
     if args.command == "upload_file":
         print(f"Attempting to upload: {args.file}")
         cloud_handler = CloudHandler()
-        cloud_handler.upload_file_to_container(args.file)
+        cloud_handler.upload_file_to_container(args.file, orchestrator_settings_dict["azure_container_name"])
         print("Success!")
     if args.command == "feed_watchdog":
         # Write to watchdog
         pd.DataFrame(
             [dt.datetime.now(dt.timezone.utc).isoformat(timespec="milliseconds")]
         ).to_csv(orchestrator_settings_dict["watchdog_food_file"])
+    else:
+        print(f"Command {args.command} not known.")
