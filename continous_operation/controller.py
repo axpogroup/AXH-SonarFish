@@ -15,7 +15,7 @@ from utils import CloudHandler
 
 def downsample_and_upload_recording(file):
     downsampled_rec_name = file[:-4] + "_downsampled.mp4"
-    downsample_cmd = f"ffmpeg -y -i {file} -c:v libx264 -preset medium -crf 30 -vf scale=iw*0.25:ih*0.25 -r 10 -t 100 {downsampled_rec_name}"
+    downsample_cmd = f"ffmpeg -y -i {file} -c:v libx264 -preset medium -crf 30 -vf scale=iw*0.25:ih*0.25 -r 10 {downsampled_rec_name}"
     print(f"creating downsampled version with command: {downsample_cmd}")
     success = False
     try:
