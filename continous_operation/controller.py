@@ -13,6 +13,39 @@ import yaml
 from utils import CloudHandler
 
 
+def downsample_and_upload_recording(file):
+    downsampled_rec_name = file[:-4] + "_downsampled.mp4"
+    downsample_cmd = f"ffmpeg -i {file} -vcodec h264_v4l2m2m -b:v 0.2M -vf scale=iw*0.25:ih*0.25 -r 10 -t 100 {downsampled_rec_name}"
+    print(f"creating downsampled version with command: {downsample_cmd}")
+    success = False
+    try:
+        output = subprocess.run(
+            downsample_cmd,
+            check=True,
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+        print(output.stdout)
+        print("Snippet created: ", downsampled_rec_name)
+        success = True
+    except subprocess.CalledProcessError as e:
+        print("-------- ERROR making snippet. ---------")
+        print("Original file: " + file)
+        print("Command: " + downsample_cmd)
+        print("Output of subprocess: \n")
+        print(e.output)
+
+    time.sleep(3)
+
+    # Upload the snippet
+    if success:
+        print(f"Attempting to upload downsampled recording: {downsampled_rec_name}")
+        cloud_handler = CloudHandler()
+        cloud_handler.upload_file_to_container(downsampled_rec_name, orchestrator_settings_dict["azure_container_name"])
+        print("Success!")
+
 def upload_sample_of_latest_recording():
     existing_completed_recordings = pd.read_csv(
         os.path.join(
@@ -20,9 +53,9 @@ def upload_sample_of_latest_recording():
             "completed_recordings_list.csv",
         )
     )["path"].to_list()
-
     snippet_name = existing_completed_recordings[-1][:-4] + "_snippet.mp4"
     snippet_cmd = f"ffmpeg -i {existing_completed_recordings[-1]} -c:v libx264 -preset medium -crf 46 -t 00:00:10 {snippet_name}"
+    print(f"creating snippet with command: {snippet_cmd}")
     success = False
     try:
         output = subprocess.run(
@@ -142,6 +175,8 @@ if __name__ == "__main__":
         cloud_handler = CloudHandler()
         cloud_handler.upload_file_to_container(args.file, orchestrator_settings_dict["azure_container_name"])
         print("Success!")
+    if args.command == "downsample_upload":
+        downsample_and_upload_recording(args.file)
     if args.command == "feed_watchdog":
         # Write to watchdog
         pd.DataFrame(
