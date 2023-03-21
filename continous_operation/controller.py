@@ -2,20 +2,20 @@ import argparse
 import datetime as dt
 import glob
 import os
-import time
-import sys
 import subprocess
+import sys
+import time
+
 sys.path.append("/home/fish-pi/code/")
 
 import pandas as pd
 import yaml
-
 from utils import CloudHandler
 
 
 def downsample_and_upload_recording(file):
     downsampled_rec_name = file[:-4] + "_downsampled.mp4"
-    downsample_cmd = f"ffmpeg -i {file} -vcodec h264_v4l2m2m -b:v 0.2M -vf scale=iw*0.25:ih*0.25 -r 10 -t 100 {downsampled_rec_name}"
+    downsample_cmd = f"ffmpeg -i {file} -c:v libx264 -preset medium -crf 30 -vf scale=iw*0.25:ih*0.25 -r 10 -t 100 {downsampled_rec_name}"
     print(f"creating downsampled version with command: {downsample_cmd}")
     success = False
     try:
@@ -43,8 +43,11 @@ def downsample_and_upload_recording(file):
     if success:
         print(f"Attempting to upload downsampled recording: {downsampled_rec_name}")
         cloud_handler = CloudHandler()
-        cloud_handler.upload_file_to_container(downsampled_rec_name, orchestrator_settings_dict["azure_container_name"])
+        cloud_handler.upload_file_to_container(
+            downsampled_rec_name, orchestrator_settings_dict["azure_container_name"]
+        )
         print("Success!")
+
 
 def upload_sample_of_latest_recording():
     existing_completed_recordings = pd.read_csv(
@@ -82,7 +85,9 @@ def upload_sample_of_latest_recording():
     if success:
         print(f"Attempting to upload snippet: {snippet_name}")
         cloud_handler = CloudHandler()
-        cloud_handler.upload_file_to_container(snippet_name, orchestrator_settings_dict["azure_container_name"])
+        cloud_handler.upload_file_to_container(
+            snippet_name, orchestrator_settings_dict["azure_container_name"]
+        )
         print("Success!")
 
 
@@ -160,24 +165,26 @@ if __name__ == "__main__":
 
     if args.command == "check_status":
         check_status()
-    if args.command == "start_recording_detection":
+    elif args.command == "start_recording_detection":
         pass
-    if args.command == "stop_all":
+    elif args.command == "stop_all":
         pass
-    if args.command == "start_recording":
+    elif args.command == "start_recording":
         pass
-    if args.command == "upload_logs":
+    elif args.command == "upload_logs":
         pass
-    if args.command == "upload_sample":
+    elif args.command == "upload_sample":
         upload_sample_of_latest_recording()
-    if args.command == "upload_file":
+    elif args.command == "upload_file":
         print(f"Attempting to upload: {args.file}")
         cloud_handler = CloudHandler()
-        cloud_handler.upload_file_to_container(args.file, orchestrator_settings_dict["azure_container_name"])
+        cloud_handler.upload_file_to_container(
+            args.file, orchestrator_settings_dict["azure_container_name"]
+        )
         print("Success!")
-    if args.command == "downsample_upload":
+    elif args.command == "downsample_upload":
         downsample_and_upload_recording(args.file)
-    if args.command == "feed_watchdog":
+    elif args.command == "feed_watchdog":
         # Write to watchdog
         pd.DataFrame(
             [dt.datetime.now(dt.timezone.utc).isoformat(timespec="milliseconds")]
