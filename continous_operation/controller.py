@@ -14,7 +14,7 @@ from utils import CloudHandler
 
 
 def downsample_and_upload_recording(file):
-    detection_uploads_dir = os.path.join(os.path.split(orchestrator_settings_dict["detections_directory"][0], "detection_uploads"))
+    detection_uploads_dir = os.path.join(os.path.split(orchestrator_settings_dict["detections_directory"][0]), "detection_uploads")
     os.makedirs(detection_uploads_dir, exist_ok=True)
     downsampled_rec_name = os.path.join(detection_uploads_dir, (os.path.split(file)[-1][:-4] + "_downsampled.mp4"))
     downsample_cmd = f"ffmpeg -y -i {file} -c:v libx264 -preset medium -crf 30 -vf scale=iw*0.25:ih*0.25 -r 10 {downsampled_rec_name}"
@@ -52,7 +52,7 @@ def downsample_and_upload_recording(file):
 
 
 def upload_sample_of_latest_recording():
-    detection_uploads_dir = os.path.join(os.path.split(orchestrator_settings_dict["detections_directory"][0], "detection_uploads"))
+    detection_uploads_dir = os.path.join(os.path.split(orchestrator_settings_dict["detections_directory"])[0], "detection_uploads")
     os.makedirs(detection_uploads_dir, exist_ok=True)
 
 
