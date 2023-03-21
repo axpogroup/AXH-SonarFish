@@ -15,7 +15,7 @@ from utils import CloudHandler
 
 def downsample_and_upload_recording(file):
     downsampled_rec_name = file[:-4] + "_downsampled.mp4"
-    downsample_cmd = f"ffmpeg -i {file} -c:v libx264 -preset medium -crf 30 -vf scale=iw*0.25:ih*0.25 -r 10 -t 100 {downsampled_rec_name}"
+    downsample_cmd = f"ffmpeg -y -i {file} -c:v libx264 -preset medium -crf 30 -vf scale=iw*0.25:ih*0.25 -r 10 -t 100 {downsampled_rec_name}"
     print(f"creating downsampled version with command: {downsample_cmd}")
     success = False
     try:
@@ -57,7 +57,7 @@ def upload_sample_of_latest_recording():
         )
     )["path"].to_list()
     snippet_name = existing_completed_recordings[-1][:-4] + "_snippet.mp4"
-    snippet_cmd = f"ffmpeg -i {existing_completed_recordings[-1]} -c:v libx264 -preset medium -crf 46 -t 00:00:10 {snippet_name}"
+    snippet_cmd = f"ffmpeg -y -i {existing_completed_recordings[-1]} -c:v libx264 -preset medium -crf 46 -t 00:00:10 {snippet_name}"
     print(f"creating snippet with command: {snippet_cmd}")
     success = False
     try:
