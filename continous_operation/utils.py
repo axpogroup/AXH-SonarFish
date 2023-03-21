@@ -80,7 +80,7 @@ class CloudHandler:
         )
 
         with open(file=filepath, mode="rb") as data:
-            blob_client.upload_blob(data, overwrite=True)
+            blob_client.upload_blob(data, overwrite=True, connection_timeout=14400)
 
     def send_message(self, color, title, text):
         self.teams_message.title(title)
