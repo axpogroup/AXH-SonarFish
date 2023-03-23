@@ -65,6 +65,7 @@ def get_visual_output(object_history, detector, processed_frame, extensive=False
             paths=True,
             fullres=True,
             association_dist=True,
+            annotate="velocities"
         )
 
     return disp
@@ -101,10 +102,10 @@ def draw_detector_output(
     object_history,
     detector,
     img,
-    classifications=False,
     paths=False,
     fullres=False,
     association_dist=False,
+    annotate=False
 ):
     for ID, obj in object_history.items():
         if (
@@ -126,38 +127,14 @@ def draw_detector_output(
             h * scale,
         )
 
-        if classifications:
-            if obj.classifications[-1] == "Fisch":
-                color = (0, 255, 0)
-            else:
-                color = (250, 150, 150)
-
-            cv.rectangle(
-                img,
-                (x - int(w / 2), y - int(h / 2)),
-                (x + int(w / 2), y + int(h / 2)),
-                color,
-                1 * scale,
-            )
-            if fullres:
-                cv.putText(
-                    img,
-                    (obj.classifications[-1]),
-                    (x, y - 10),
-                    cv.FONT_HERSHEY_SIMPLEX,
-                    0.75,
-                    color,
-                    2,
-                )
-        else:
-            color = (255, 0, 0)
-            cv.rectangle(
-                img,
-                (x - int(w / 2), y - int(h / 2)),
-                (x + int(w / 2), y + int(h / 2)),
-                color,
-                thickness=1 * scale,
-            )
+        color = (255, 200, 200)
+        cv.rectangle(
+            img,
+            (x - int(w / 2), y - int(h / 2)),
+            (x + int(w / 2), y + int(h / 2)),
+            color,
+            thickness=1 * scale,
+        )
 
         if paths:
             for point in obj.midpoints:
@@ -178,6 +155,23 @@ def draw_detector_output(
                 ),
                 (0, 0, 255),
                 1 * scale,
+            )
+
+        if annotate:
+            if annotate == "velocities":
+                pass
+                text = "{:.2f}".format(obj.velocities[-1][0]*scale) + ", " + "{:.2f}".format(obj.velocities[-1][1]*scale)
+            else:
+                text = str(annotate)
+
+            cv.putText(
+                img,
+                text,
+                (x - int(w / 2), y - int(h / 2) - 2*scale),
+                cv.FONT_HERSHEY_SIMPLEX,
+                0.7,
+                color,
+                2,
             )
 
     return img
