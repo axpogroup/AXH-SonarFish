@@ -32,7 +32,7 @@ class DetectionHandler:
         while input_output_handler.get_new_frame():
             if float(input_output_handler.frame_no) / 2 % 1 != 0:
                 continue
-            processed_frame, object_history, runtimes = self.detector.process_frame(
+            processed_frame, object_history, runtimes = self.detector.detect_objects(
                 input_output_handler.current_raw_frame, object_history
             )
             input_output_handler.handle_output(
