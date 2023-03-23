@@ -11,13 +11,12 @@ from algorithm.utils import get_elapsed_ms
 
 class InputOutputHandler:
     def __init__(self, settings_dict):
-        self.csv_file = None
-        self.csv_writer = None
         self.video_writer = None
         self.settings_dict = settings_dict
         self.video_cap = cv.VideoCapture(self.settings_dict["input_file"])
         self.input_filename = os.path.split(self.settings_dict["input_file"])[-1]
         self.output_dir_name = None
+        self.output_csv_name = None
 
         if (
             "record_output_video" in settings_dict.keys()
@@ -29,21 +28,18 @@ class InputOutputHandler:
             "record_output_csv" in settings_dict.keys()
             and self.settings_dict["record_output_csv"]
         ):
-            self.initialize_output_csv()
+            if self.output_dir_name is None:
+                self.output_dir_name = os.path.join(
+                    self.settings_dict["output_directory"],
+                    dt.datetime.now(dt.timezone.utc).isoformat(timespec="minutes")
+                    + "_" + self.settings_dict["tag"],
+                )
+                self.output_dir_name = self.output_dir_name.replace(":", "-")
+                os.makedirs(name=self.output_dir_name, exist_ok=True)
 
-        try:
-            date_fmt = "%y-%m-%d_start_%H-%M-%S.mp4"
-            self.start_datetime = dt.datetime.strptime(
-                os.path.split(settings_dict["input_file"])[-1], date_fmt
-            )
-        except ValueError:
-            self.start_datetime = dt.datetime(year=2000, month=1, day=1)
+            self.output_csv_name = os.path.join(self.output_dir_name, (self.input_filename[:-4] + ".csv"))
 
-        if "display_trackbars" in settings_dict.keys():
-            self.display_trackbars = settings_dict["display_trackbars"]
-        else:
-            self.display_trackbars = False
-        self.frame_by_frame = False
+        self.playback_paused = False
         self.usr_input = None
         self.frame_no = 0
         self.frames_total = int(self.video_cap.get(cv.CAP_PROP_FRAME_COUNT))
@@ -113,27 +109,6 @@ class InputOutputHandler:
         )
 
     def trackbars(self, detector):
-        # settings = ["short_mean_frames", "long_mean_frames"]
-        #
-        # def change(value):
-        #     for setting in settings:
-        #         val = cv.getTrackbarPos(setting, 'frame')
-        #         if (setting == "short_mean_frames") and val == 0:
-        #             val = 1
-        #         if (setting == "long_mean_frames") and val < detector.conf["short_mean_frames"]:
-        #             val = detector.conf["short_mean_frames"]
-        #         if (setting in ["dilation_kernel_m", "median_filter_kernel_m"]) and (float(val) / 2 % 1) == 0:
-        #             val = int(val) + 1
-        #
-        #         detector.conf[setting] = val
-        #
-        # # TOD0 for some reason it doesn't work if the setting is shown in text - weird
-        # for setting in settings:
-        #     name = str(detector.conf[setting])  + "_" + setting
-        #     cv.createTrackbar(
-        #         name, "frame", detector.conf[setting], int(detector.conf[setting]*2), change
-        #     )
-
         def change_current_mean_frames(value):
             if value == 0:
                 value = 1
@@ -208,20 +183,25 @@ class InputOutputHandler:
 
     def show_image(self, img, detector):
         cv.imshow("frame", img)
-        if self.display_trackbars:
+
+        if (
+            "display_trackbars" in self.settings_dict.keys()
+            and self.settings_dict["display_trackbars"]
+        ):
             self.trackbars(detector)
 
-        if not self.frame_by_frame:
+        # Wait briefly for user input unless the video is paused
+        if not self.playback_paused:
             self.usr_input = cv.waitKey(1)
 
         # If pause button was pressed, then the pause button can be used to playback frame by frame.
-        # Any other button will resume playback
+        # Any other button is pressed, playback will resume
         if self.usr_input == ord(" "):
             print("Press any key to continue playback or SPACE for next frame ... ")
             if cv.waitKey(0) == ord(" "):
-                self.frame_by_frame = True
+                self.playback_paused = True
             else:
-                self.frame_by_frame = False
+                self.playback_paused = False
             return
 
         if self.usr_input == 27:
@@ -247,9 +227,6 @@ class InputOutputHandler:
                 f"DetectTrack: {runtimes['detection_tracking']} | "
                 f"Total: {total_time_per_frame} | FPS: {'{:.1f}'.format(self.frame_no/(2*total_runtime/1000))}"
             )
-
-        if "record_output_csv" in self.settings_dict.keys():
-            self.write_csv(detector)
 
         if ("display_output_video" in self.settings_dict.keys()) or (
             "record_output_video" in self.settings_dict.keys()
@@ -280,9 +257,10 @@ class InputOutputHandler:
 
         self.output_dir_name = os.path.join(
             self.settings_dict["output_directory"],
-            dt.datetime.now().strftime("%y_%m_%d_%H-%M-%S_")
-            + self.settings_dict["tag"],
+            dt.datetime.now(dt.timezone.utc).isoformat(timespec="minutes")
+            + "_" + self.settings_dict["tag"],
         )
+        self.output_dir_name = self.output_dir_name.replace(":", "-")
         os.makedirs(name=self.output_dir_name, exist_ok=True)
         output_video_name = self.input_filename[:-4] + "_output.mp4"
 
@@ -294,56 +272,12 @@ class InputOutputHandler:
             fps,
             (frame_width, frame_height),
         )
-        return
-
-    def initialize_output_csv(self):
-        if self.output_dir_name is None:
-            self.output_dir_name = os.path.join(
-                self.settings_dict["output_directory"],
-                dt.datetime.now().strftime("%d_%m_%y_%H-%M-%S_")
-                + self.settings_dict["tag"],
-            )
-            os.makedirs(name=self.output_dir_name, exist_ok=True)
-
-        output_csv_name = self.input_filename[:-4] + "_output.csv"
-
-        self.csv_file = open(os.path.join(self.output_dir_name, output_csv_name), "w")
-        self.csv_writer = csv.writer(self.csv_file)
-        header = ["t", "frame number", "x", "y", "w", "h", "Classification", "ID"]
-        self.csv_writer.writerow(header)
-
-    def write_csv(self, detector):
-        current_timestamp = self.start_datetime + dt.timedelta(
-            seconds=float(self.frame_no) / self.fps
-        )
-        time_str = current_timestamp.strftime("%d-%m-%y_%H-%M-%S.%f")[:-3]
-
-        rows = []
-        if detector.current_objects is not None:
-            for _, object_ in detector.current_objects.items():
-                x, y, w, h = cv.boundingRect(object_.contours[-1])
-                row = [
-                    time_str,
-                    f"{self.frame_no}",
-                    f"{object_.midpoints[-1][0]}",
-                    f"{object_.midpoints[-1][1]}",
-                    str(w),
-                    str(h),
-                    f"{object_.classifications[-1]}",
-                    f"{object_.ID}",
-                ]
-                rows.append(row)
-
-        self.csv_writer.writerows(rows)
 
     def shutdown(self):
         self.video_cap.release()
         if "record_output_video" in self.settings_dict.keys():
             self.video_writer.release()
         cv.destroyAllWindows()
-
-        if "record_output_csv" in self.settings_dict.keys():
-            self.csv_file.close()
 
         if self.output_dir_name is not None:
             with open(os.path.join(self.output_dir_name, "settings.txt"), "w") as f:
@@ -358,6 +292,7 @@ class InputOutputHandler:
                 "algorithm/InputOutputHandler.py",
                 "algorithm/DetectedObject.py",
                 "algorithm/visualization_functions.py",
+                "algorithm/utils.py"
             ]
             with zipfile.ZipFile(
                 os.path.join(self.output_dir_name, "code.zip"), mode="w"
