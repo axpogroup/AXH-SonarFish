@@ -93,8 +93,6 @@ class InputOutputHandler:
                         obj.bounding_boxes[i][1],
                         obj.velocities[i][0],
                         obj.velocities[i][1],
-                        obj.velocities_rot[i][0],
-                        obj.velocities_rot[i][1],
                         obj.areas[i],
                     ]
                 )
@@ -110,8 +108,6 @@ class InputOutputHandler:
                 "height",
                 "v_x",
                 "v_y",
-                "vrotcode_x",
-                "vrotcode_y",
                 "contour_area",
             ],
         )

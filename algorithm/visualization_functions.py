@@ -124,7 +124,8 @@ def draw_detector_output(
             scale = int(100 / detector.conf["downsample"])
         else:
             scale = 1
-        x, y, w, h = cv.boundingRect(obj.contours[-1])
+        x, y = obj.midpoints[-1][0], obj.midpoints[-1][1]
+        w, h = obj.bounding_boxes[-1][0], obj.bounding_boxes[-1][1]
         x, y, w, h = (
             x * scale,
             y * scale,

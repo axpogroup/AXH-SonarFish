@@ -239,8 +239,7 @@ class FishDetector:
         detections = {}
         for contour in contours:
             new_object = DetectedObject(
-                self.get_new_id(), contour, self.frame_number, self.conf
-            )
+                self.get_new_id(), contour, self.frame_number)
             detections[new_object.ID] = new_object
 
         return detections, frame_dict
