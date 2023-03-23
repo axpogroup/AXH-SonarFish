@@ -2,6 +2,8 @@ import os
 
 import cv2 as cv
 import numpy as np
+import pandas as pd
+from math import atan, cos, sin
 
 from algorithm.DetectedObject import DetectedObject
 from algorithm.utils import get_elapsed_ms, resize_img
@@ -52,6 +54,7 @@ class FishDetector:
         frames["gray_boosted"] = enhanced_temp
         self.update_buffer(enhanced_temp)
 
+        # TOD0 Take this away if framebuffer is already full otherwise nothing seen in first 20 seconds
         if self.frame_number < self.conf["long_mean_frames"]:
             runtimes_ms["enhance"] = get_elapsed_ms(start)
             runtimes_ms["detection_tracking"] = (
@@ -75,6 +78,7 @@ class FishDetector:
             # enhanced_temp[enhanced_temp < 0] = 0
             # enhanced_temp[enhanced_temp > 255] = 255
             enhanced_temp = (abs(enhanced_temp) + 127).astype("uint8")
+            frames["difference_thresholded_abs"] = enhanced_temp
             median_filter_kernel_px = self.mm_to_px(
                 self.conf["median_filter_kernel_mm"], uneven=True
             )
@@ -99,6 +103,31 @@ class FishDetector:
             object_history = detections
             return object_history
 
+        # # Find points inside old contours first, they are
+        # object_contours = [
+        #     existing_object.contours[-1]
+        #     for _, existing_object in object_history.items()
+        #     if (
+        #             self.frame_number - existing_object.frames_observed[-1]
+        #             < 1
+        #     )
+        # ]
+        #
+        # if len(object_contours) == 0:
+        #     pass
+        # else:
+        #     object_ids = [
+        #         key
+        #         for key, existing_object in object_history.items()
+        #         if (
+        #                 self.frame_number - existing_object.frames_observed[-1]
+        #                 < self.conf["phase_out_after_x_frames"]
+        #         )
+        #     ]
+        #
+        #     for _, detection in detections.items():
+        #         if
+
         object_midpoints = [
             existing_object.midpoints[-1]
             for _, existing_object in object_history.items()
@@ -108,7 +137,6 @@ class FishDetector:
             )
         ]
 
-        # This makes for a reset object history if there hasn't been any frames in a while - fix
         if len(object_midpoints) == 0:
             for _, detection in detections.items():
                 object_history[detection.ID] = detection
@@ -125,12 +153,14 @@ class FishDetector:
 
         new_objects = []
         associations = {}
+        max_association_distance_px = self.mm_to_px(
+            self.conf["max_association_dist_mm"]
+        )
+        # Loop the detections
         for _, detection in detections.items():
+            # Find the closest existing object
             min_id, min_dist = self.closest_point(
                 detection.midpoints[-1], object_midpoints
-            )
-            max_association_distance_px = self.mm_to_px(
-                self.conf["max_association_dist_mm"]
             )
             if min_dist < max_association_distance_px:
                 if object_ids[min_id] in associations.keys():
@@ -181,15 +211,20 @@ class FishDetector:
         ret, thres = cv.threshold(
             enhanced_frame, 127 + self.conf["difference_threshold_scaler"], 255, 0
         )
+        ret, thres_raw = cv.threshold(
+            frame_dict["difference_thresholded_abs"], 127 + self.conf["difference_threshold_scaler"], 255, 0
+        )
         frame_dict["binary"] = thres
+        frame_dict["raw_binary"] = thres_raw
         # Alternative consolidation - dilate
         dilation_kernel_px = self.mm_to_px(self.conf["dilation_kernel_mm"], uneven=True)
         kernel = cv.getStructuringElement(
             cv.MORPH_ELLIPSE, (dilation_kernel_px, dilation_kernel_px)
         )
         frame_dict["dilated"] = cv.dilate(thres, kernel, iterations=1)
-        # frame_dict["closed"] = cv.morphologyEx(thres, cv.MORPH_CLOSE, kernel)
-        # frame_dict["opened"] = cv.morphologyEx(thres, cv.MORPH_OPEN, kernel)
+        frame_dict["closed"] = cv.morphologyEx(thres, cv.MORPH_CLOSE, kernel)
+        frame_dict["opened"] = cv.morphologyEx(thres, cv.MORPH_OPEN, kernel)
+        frame_dict["internal_external"] = frame_dict["dilated"] - frame_dict["raw_binary"]
         # img = self.spatial_filter(img, kernel_size=15, method='median')
 
         thres = frame_dict["dilated"]
@@ -304,3 +339,31 @@ class FishDetector:
             if (float(px) / 2 % 1) == 0:
                 px += 1
         return px
+
+    def classify_detections(self, df):
+        # Rotate the velocity vectors
+        theta = - (np.pi * 1.5 - atan(
+            self.conf["river_pixel_velocity"][0] / self.conf["river_pixel_velocity"][1]
+        ))
+        abs_vel = np.linalg.norm(self.conf["river_pixel_velocity"])
+
+        rot = np.array([[cos(theta), -sin(theta)], [sin(theta), cos(theta)]])
+        rotated = pd.DataFrame(np.dot(rot, df[["v_x", "v_y"]].T).T, columns=["v_xr", "v_yr"])
+        df = pd.concat([df, rotated], axis=1)
+
+        df.classification = ""
+        for ID in df.ID.unique():
+            obj = df.loc[df.ID == ID]
+            if obj.shape[0] < np.max([20, 10]):
+                df.loc[df.ID == ID, "classification"] = "object"
+
+            if abs(obj.v_yr).max() > self.conf["deviation_from_river_velocity"] * abs_vel:
+                df.loc[df.ID == ID, "classification"] = "fish"
+            elif abs(obj.v_xr - abs_vel).max() > self.conf["deviation_from_river_velocity"] * abs_vel:
+                df.loc[df.ID == ID, "classification"] = "fish"
+            else:
+                df.loc[df.ID == ID, "classification"] = "object"
+
+        return df
+
+

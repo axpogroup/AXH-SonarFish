@@ -87,13 +87,20 @@ class InputOutputHandler:
                     [
                         obj.ID,
                         obj.frames_observed[i],
-                        obj.midpoints[i],
+                        obj.midpoints[i][0],
+                        obj.midpoints[i][1],
+                        obj.bounding_boxes[i][0],
+                        obj.bounding_boxes[i][1],
+                        obj.velocities[i][0],
+                        obj.velocities[i][1],
+                        obj.velocities_rot[i][0],
+                        obj.velocities_rot[i][1],
                         obj.areas[i],
                     ]
                 )
 
         return pd.DataFrame(
-            rows, columns=["ID", "frames_observed", "midpoints", "areas"]
+            rows, columns=["ID", "frames_observed", "x", "y", "width", "height", "v_x", "v_y", "vrotcode_x", "vrotcode_y", "contour_area"]
         )
 
     def trackbars(self, detector):

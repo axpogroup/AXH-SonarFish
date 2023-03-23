@@ -13,10 +13,12 @@ class DetectedObject:
 
         x, y, w, h = cv.boundingRect(contour)
         self.midpoints = [(int(x + w / 2), int(y + h / 2))]
+        self.bounding_boxes = [(w, h)]
         self.areas = [cv.contourArea(contour)]
 
         self.classifications = ["Objekt"]
-        self.velocity = []
+        self.velocities = [np.array([np.NAN, np.NAN])]
+        self.velocities_rot = [np.array([np.NAN, np.NAN])]
         self.median_v = None
         self.median_v_last_10 = None
 
@@ -37,34 +39,22 @@ class DetectedObject:
         self.show.append(False)
         self.contours.append(detection.contours[-1])
         self.midpoints.append(detection.midpoints[-1])
+        self.bounding_boxes.append(detection.bounding_boxes[-1])
         self.areas.append(cv.contourArea(detection.contours[-1]))
-
         self.calculate_speed()
-        self.classify_object()
-
-    def calculate_speed_old(self):
-        frame_diff = float(self.frames_observed[-1] - self.frames_observed[-2])
-        if frame_diff == 0:
-            return
-
-        v_x = float(self.midpoints[-1][0] - self.midpoints[-2][0]) / frame_diff
-        v_y = float(self.midpoints[-1][1] - self.midpoints[-2][1]) / frame_diff
-
-        v_rot = self.rotate_vector(np.array([v_x, v_y]), theta=-self.flow_direction_rot)
-        # self.velocity.append(np.array([v_x, v_y]))
-        self.velocity.append(v_rot)
-        self.median_v = np.mean(np.asarray(self.velocity), axis=0)
-        if len(self.velocity) > 11:
-            self.median_v_last_10 = np.mean(np.asarray(self.velocity[-10:]), axis=0)
+        # self.classify_object()
 
     def calculate_speed(self):
-        # For the speed to be sensible it must me taken over a longer period of time
+        # For the speed to be sensible it must be taken over a longer period of time
         past_observation_id = -2
+        # Find a past observation that is at least 1 second ago
         while (
             float(self.frames_observed[-1] - self.frames_observed[past_observation_id])
             < 20
         ):
             if -past_observation_id + 1 > len(self.frames_observed):
+                self.velocities_rot.append(np.array([np.NAN, np.NAN]))
+                self.velocities.append(np.array([np.NAN, np.NAN]))
                 return
             past_observation_id -= 1
 
@@ -80,12 +70,10 @@ class DetectedObject:
             / frame_diff
         )
 
-        v_rot = self.rotate_vector(np.array([v_x, v_y]), theta=-self.flow_direction_rot)
-        # self.velocity.append(np.array([v_x, v_y]))
-        self.velocity.append(v_rot)
-        self.median_v = np.mean(np.asarray(self.velocity), axis=0)
-        # if len(self.velocity) > 11:
-        #     self.median_v_last_10 = np.mean(np.asarray(self.velocity[-10:]), axis=0)
+        # v_rot = self.rotate_vector(np.array([v_x, v_y]), theta=-self.flow_direction_rot)
+        self.velocities.append(np.array([v_x, v_y]))
+        self.velocities_rot.append(self.rotate_vector(np.array([v_x, v_y]), theta=-self.flow_direction_rot))
+        # self.median_v = np.mean(np.asarray(self.velocity), axis=0)
 
     def occurences_in_last_x(self, frame_number, x):
         a = np.array(self.frames_observed, dtype="int")
@@ -94,16 +82,16 @@ class DetectedObject:
     def classify_object(self):
         fish = False
         if (len(self.frames_observed) < self.min_occurences_for_fish) or (
-            len(self.velocity) < 1
+                len(self.velocities) < 1
         ):
             self.classifications.append("Objekt")
             return
 
         # Short term - if the path changes a lot it is a fish
-        if abs(self.velocity[-1][1]) > 0.4 * self.river_abs_velocity:
+        if abs(self.velocities[-1][1]) > 0.4 * self.river_abs_velocity:
             fish = True
         elif (
-            abs(self.velocity[-1][0] - self.river_abs_velocity)
+            abs(self.velocities[-1][0] - self.river_abs_velocity)
             > 0.4 * self.river_abs_velocity
         ):
             fish = True

@@ -40,7 +40,7 @@ def get_visual_output(detector, processed_frame, extensive=False):
                     detector,
                     retrieve_frame("raw_downsampled", processed_frame, puttext="Final"),
                 ),
-                retrieve_frame("opened", processed_frame, puttext="opened"),
+                retrieve_frame("internal_external", processed_frame, puttext="internal_external"),
                 draw_detector_output(
                     detector,
                     retrieve_frame("binary", processed_frame, puttext="detections"),
@@ -103,7 +103,7 @@ def draw_detector_output(
     for ID, obj in detector.current_objects.items():
         if (
             detector.frame_number - obj.frames_observed[-1]
-            > detector.conf["phase_out_after_x_frames"]
+            > detector.conf["no_more_show_after_x_frames"]
         ):
             continue
 

@@ -36,3 +36,5 @@ if __name__ == "__main__":
         )
 
     detections = input_output_handler.get_detections_pd(object_history)
+    detections = detector.classify_detections(detections)
+    detections.to_csv("etst_rot_stuff.csv", index=False)
