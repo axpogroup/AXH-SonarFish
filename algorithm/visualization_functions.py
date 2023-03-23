@@ -65,7 +65,7 @@ def get_visual_output(object_history, detector, processed_frame, extensive=False
             paths=True,
             fullres=True,
             association_dist=True,
-            annotate="velocities"
+            annotate="velocities",
         )
 
     return disp
@@ -105,7 +105,7 @@ def draw_detector_output(
     paths=False,
     fullres=False,
     association_dist=False,
-    annotate=False
+    annotate=False,
 ):
     for ID, obj in object_history.items():
         if (
@@ -160,14 +160,18 @@ def draw_detector_output(
         if annotate:
             if annotate == "velocities":
                 pass
-                text = "{:.2f}".format(obj.velocities[-1][0]*scale) + ", " + "{:.2f}".format(obj.velocities[-1][1]*scale)
+                text = (
+                    "{:.2f}".format(obj.velocities[-1][0] * scale)
+                    + ", "
+                    + "{:.2f}".format(obj.velocities[-1][1] * scale)
+                )
             else:
                 text = str(annotate)
 
             cv.putText(
                 img,
                 text,
-                (x - int(w / 2), y - int(h / 2) - 2*scale),
+                (x - int(w / 2), y - int(h / 2) - 2 * scale),
                 cv.FONT_HERSHEY_SIMPLEX,
                 0.7,
                 color,
