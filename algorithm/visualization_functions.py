@@ -36,14 +36,16 @@ def get_visual_output(object_history, detector, processed_frame, extensive=False
 
         third_row_images = np.concatenate(
             (
-                draw_detector_output(object_history,
+                draw_detector_output(
+                    object_history,
                     detector,
                     retrieve_frame("raw_downsampled", processed_frame, puttext="Final"),
                 ),
                 retrieve_frame(
                     "internal_external", processed_frame, puttext="internal_external"
                 ),
-                draw_detector_output(object_history,
+                draw_detector_output(
+                    object_history,
                     detector,
                     retrieve_frame("binary", processed_frame, puttext="detections"),
                     paths=True,
@@ -56,7 +58,8 @@ def get_visual_output(object_history, detector, processed_frame, extensive=False
         disp = np.concatenate((first_row_images, second_row_images, third_row_images))
 
     else:
-        disp = draw_detector_output(object_history,
+        disp = draw_detector_output(
+            object_history,
             detector,
             retrieve_frame("raw", processed_frame),
             paths=True,
