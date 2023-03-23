@@ -40,7 +40,9 @@ def get_visual_output(detector, processed_frame, extensive=False):
                     detector,
                     retrieve_frame("raw_downsampled", processed_frame, puttext="Final"),
                 ),
-                retrieve_frame("internal_external", processed_frame, puttext="internal_external"),
+                retrieve_frame(
+                    "internal_external", processed_frame, puttext="internal_external"
+                ),
                 draw_detector_output(
                     detector,
                     retrieve_frame("binary", processed_frame, puttext="detections"),

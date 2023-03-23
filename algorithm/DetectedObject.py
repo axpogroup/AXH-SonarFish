@@ -72,7 +72,9 @@ class DetectedObject:
 
         # v_rot = self.rotate_vector(np.array([v_x, v_y]), theta=-self.flow_direction_rot)
         self.velocities.append(np.array([v_x, v_y]))
-        self.velocities_rot.append(self.rotate_vector(np.array([v_x, v_y]), theta=-self.flow_direction_rot))
+        self.velocities_rot.append(
+            self.rotate_vector(np.array([v_x, v_y]), theta=-self.flow_direction_rot)
+        )
         # self.median_v = np.mean(np.asarray(self.velocity), axis=0)
 
     def occurences_in_last_x(self, frame_number, x):
@@ -82,7 +84,7 @@ class DetectedObject:
     def classify_object(self):
         fish = False
         if (len(self.frames_observed) < self.min_occurences_for_fish) or (
-                len(self.velocities) < 1
+            len(self.velocities) < 1
         ):
             self.classifications.append("Objekt")
             return

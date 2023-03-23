@@ -1,9 +1,9 @@
 import os
+from math import atan, cos, sin
 
 import cv2 as cv
 import numpy as np
 import pandas as pd
-from math import atan, cos, sin
 
 from algorithm.DetectedObject import DetectedObject
 from algorithm.utils import get_elapsed_ms, resize_img
@@ -212,7 +212,10 @@ class FishDetector:
             enhanced_frame, 127 + self.conf["difference_threshold_scaler"], 255, 0
         )
         ret, thres_raw = cv.threshold(
-            frame_dict["difference_thresholded_abs"], 127 + self.conf["difference_threshold_scaler"], 255, 0
+            frame_dict["difference_thresholded_abs"],
+            127 + self.conf["difference_threshold_scaler"],
+            255,
+            0,
         )
         frame_dict["binary"] = thres
         frame_dict["raw_binary"] = thres_raw
@@ -224,7 +227,9 @@ class FishDetector:
         frame_dict["dilated"] = cv.dilate(thres, kernel, iterations=1)
         frame_dict["closed"] = cv.morphologyEx(thres, cv.MORPH_CLOSE, kernel)
         frame_dict["opened"] = cv.morphologyEx(thres, cv.MORPH_OPEN, kernel)
-        frame_dict["internal_external"] = frame_dict["dilated"] - frame_dict["raw_binary"]
+        frame_dict["internal_external"] = (
+            frame_dict["dilated"] - frame_dict["raw_binary"]
+        )
         # img = self.spatial_filter(img, kernel_size=15, method='median')
 
         thres = frame_dict["dilated"]
@@ -342,13 +347,19 @@ class FishDetector:
 
     def classify_detections(self, df):
         # Rotate the velocity vectors
-        theta = - (np.pi * 1.5 - atan(
-            self.conf["river_pixel_velocity"][0] / self.conf["river_pixel_velocity"][1]
-        ))
+        theta = -(
+            np.pi * 1.5
+            - atan(
+                self.conf["river_pixel_velocity"][0]
+                / self.conf["river_pixel_velocity"][1]
+            )
+        )
         abs_vel = np.linalg.norm(self.conf["river_pixel_velocity"])
 
         rot = np.array([[cos(theta), -sin(theta)], [sin(theta), cos(theta)]])
-        rotated = pd.DataFrame(np.dot(rot, df[["v_x", "v_y"]].T).T, columns=["v_xr", "v_yr"])
+        rotated = pd.DataFrame(
+            np.dot(rot, df[["v_x", "v_y"]].T).T, columns=["v_xr", "v_yr"]
+        )
         df = pd.concat([df, rotated], axis=1)
 
         df.classification = ""
@@ -357,13 +368,17 @@ class FishDetector:
             if obj.shape[0] < np.max([20, 10]):
                 df.loc[df.ID == ID, "classification"] = "object"
 
-            if abs(obj.v_yr).max() > self.conf["deviation_from_river_velocity"] * abs_vel:
+            if (
+                abs(obj.v_yr).max()
+                > self.conf["deviation_from_river_velocity"] * abs_vel
+            ):
                 df.loc[df.ID == ID, "classification"] = "fish"
-            elif abs(obj.v_xr - abs_vel).max() > self.conf["deviation_from_river_velocity"] * abs_vel:
+            elif (
+                abs(obj.v_xr - abs_vel).max()
+                > self.conf["deviation_from_river_velocity"] * abs_vel
+            ):
                 df.loc[df.ID == ID, "classification"] = "fish"
             else:
                 df.loc[df.ID == ID, "classification"] = "object"
 
         return df
-
-

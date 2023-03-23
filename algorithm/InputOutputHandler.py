@@ -100,7 +100,20 @@ class InputOutputHandler:
                 )
 
         return pd.DataFrame(
-            rows, columns=["ID", "frames_observed", "x", "y", "width", "height", "v_x", "v_y", "vrotcode_x", "vrotcode_y", "contour_area"]
+            rows,
+            columns=[
+                "ID",
+                "frames_observed",
+                "x",
+                "y",
+                "width",
+                "height",
+                "v_x",
+                "v_y",
+                "vrotcode_x",
+                "vrotcode_y",
+                "contour_area",
+            ],
         )
 
     def trackbars(self, detector):
