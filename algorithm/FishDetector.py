@@ -40,7 +40,9 @@ class FishDetector:
 
         # Image enhancement
         if self.conf["downsample"]:
-            frame_dict["raw_downsampled"] = resize_img(raw_frame, self.conf["downsample"])
+            frame_dict["raw_downsampled"] = resize_img(
+                raw_frame, self.conf["downsample"]
+            )
             frame_dict["gray"] = self.rgb_to_gray(frame_dict["raw_downsampled"])
         else:
             frame_dict["gray"] = self.rgb_to_gray(frame_dict["raw"])
@@ -67,7 +69,9 @@ class FishDetector:
             frame_dict["long_mean"] = self.long_mean
             frame_dict["short_mean"] = self.short_mean
             frame_dict["difference"] = (enhanced_temp + 127).astype("uint8")
-            frame_dict["absolute_difference"] = (abs(enhanced_temp) + 127).astype("uint8")
+            frame_dict["absolute_difference"] = (abs(enhanced_temp) + 127).astype(
+                "uint8"
+            )
 
             adaptive_threshold = self.conf["difference_threshold_scaler"] * cv.blur(
                 self.long_mean, (10, 10)
@@ -96,7 +100,9 @@ class FishDetector:
             )
             frame_dict["binary"] = thres
             frame_dict["raw_binary"] = thres_raw
-            dilation_kernel_px = self.mm_to_px(self.conf["dilation_kernel_mm"], uneven=True)
+            dilation_kernel_px = self.mm_to_px(
+                self.conf["dilation_kernel_mm"], uneven=True
+            )
             kernel = cv.getStructuringElement(
                 cv.MORPH_ELLIPSE, (dilation_kernel_px, dilation_kernel_px)
             )
@@ -104,7 +110,7 @@ class FishDetector:
             frame_dict["closed"] = cv.morphologyEx(thres, cv.MORPH_CLOSE, kernel)
             frame_dict["opened"] = cv.morphologyEx(thres, cv.MORPH_OPEN, kernel)
             frame_dict["internal_external"] = (
-                    frame_dict["dilated"] - frame_dict["raw_binary"]
+                frame_dict["dilated"] - frame_dict["raw_binary"]
             )
 
             # Extract keypoints
@@ -113,7 +119,9 @@ class FishDetector:
             )
             detections = {}
             for contour in contours:
-                new_object = DetectedObject(self.get_new_id(), contour, self.frame_number)
+                new_object = DetectedObject(
+                    self.get_new_id(), contour, self.frame_number
+                )
                 detections[new_object.ID] = new_object
 
             runtimes_ms["detection_tracking"] = (
