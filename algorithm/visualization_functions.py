@@ -12,7 +12,7 @@ FIRST_ROW = [
 SECOND_ROW = ["difference_thresholded", "median_filter", "binary", "dilated"]
 
 
-def get_visual_output(detector, processed_frame, extensive=False):
+def get_visual_output(object_history, detector, processed_frame, extensive=False):
     if extensive:
         first_row_images = np.ndarray(shape=(270, 0, 3), dtype="uint8")
         second_row_images = np.ndarray(shape=(270, 0, 3), dtype="uint8")
@@ -36,14 +36,14 @@ def get_visual_output(detector, processed_frame, extensive=False):
 
         third_row_images = np.concatenate(
             (
-                draw_detector_output(
+                draw_detector_output(object_history,
                     detector,
                     retrieve_frame("raw_downsampled", processed_frame, puttext="Final"),
                 ),
                 retrieve_frame(
                     "internal_external", processed_frame, puttext="internal_external"
                 ),
-                draw_detector_output(
+                draw_detector_output(object_history,
                     detector,
                     retrieve_frame("binary", processed_frame, puttext="detections"),
                     paths=True,
@@ -56,7 +56,7 @@ def get_visual_output(detector, processed_frame, extensive=False):
         disp = np.concatenate((first_row_images, second_row_images, third_row_images))
 
     else:
-        disp = draw_detector_output(
+        disp = draw_detector_output(object_history,
             detector,
             retrieve_frame("raw", processed_frame),
             paths=True,
@@ -95,6 +95,7 @@ def retrieve_frame(frame, frame_dict, puttext=None):
 
 
 def draw_detector_output(
+    object_history,
     detector,
     img,
     classifications=False,
@@ -102,23 +103,12 @@ def draw_detector_output(
     fullres=False,
     association_dist=False,
 ):
-    for ID, obj in detector.current_objects.items():
+    for ID, obj in object_history.items():
         if (
             detector.frame_number - obj.frames_observed[-1]
             > detector.conf["no_more_show_after_x_frames"]
         ):
             continue
-
-        # if len(obj.frames_observed) < 50:
-        #     continue
-
-        # if (
-        #         obj.occurences_in_last_x(
-        #             detector.frame_number, detector.conf["min_occurences_in_last_x_frames"][1]
-        #         )
-        #         <= detector.conf["min_occurences_in_last_x_frames"][0]
-        # ):
-        #     continue
 
         if fullres:
             scale = int(100 / detector.conf["downsample"])

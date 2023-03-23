@@ -259,7 +259,7 @@ class InputOutputHandler:
                 if "display_mode_extensive" not in self.settings_dict.keys()
                 else self.settings_dict["display_mode_extensive"]
             )
-            disp = visualization_functions.get_visual_output(
+            disp = visualization_functions.get_visual_output(object_history,
                 detector, processed_frame, extensive=extensive
             )
 

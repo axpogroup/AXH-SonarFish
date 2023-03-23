@@ -14,7 +14,6 @@ class FishDetector:
         self.conf = settings_dict
         self.frame_number = 0
         self.latest_obj_index = 0
-        self.current_objects = {}
 
         # Masks
         self.non_object_space_mask = cv.imread(
@@ -37,7 +36,6 @@ class FishDetector:
         start = cv.getTickCount()
         runtimes_ms = {}
         frames = {}
-        self.current_objects = object_history
         frames["raw"] = raw_frame
 
         # Image enhancement
