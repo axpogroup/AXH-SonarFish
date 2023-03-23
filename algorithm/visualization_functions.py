@@ -132,7 +132,13 @@ def draw_detector_output(
             else:
                 color = (250, 150, 150)
 
-            cv.rectangle(img, (x-int(w/2), y-int(h/2)), (x + int(w/2), y + int(h/2)), color, 1 * scale)
+            cv.rectangle(
+                img,
+                (x - int(w / 2), y - int(h / 2)),
+                (x + int(w / 2), y + int(h / 2)),
+                color,
+                1 * scale,
+            )
             if fullres:
                 cv.putText(
                     img,
@@ -145,7 +151,13 @@ def draw_detector_output(
                 )
         else:
             color = (255, 0, 0)
-            cv.rectangle(img, (x-int(w/2), y-int(h/2)), (x + int(w/2), y + int(h/2)), color, thickness=1 * scale)
+            cv.rectangle(
+                img,
+                (x - int(w / 2), y - int(h / 2)),
+                (x + int(w / 2), y + int(h / 2)),
+                color,
+                thickness=1 * scale,
+            )
 
         if paths:
             for point in obj.midpoints:

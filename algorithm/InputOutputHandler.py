@@ -32,12 +32,15 @@ class InputOutputHandler:
                 self.output_dir_name = os.path.join(
                     self.settings_dict["output_directory"],
                     dt.datetime.now(dt.timezone.utc).isoformat(timespec="minutes")
-                    + "_" + self.settings_dict["tag"],
+                    + "_"
+                    + self.settings_dict["tag"],
                 )
                 self.output_dir_name = self.output_dir_name.replace(":", "-")
                 os.makedirs(name=self.output_dir_name, exist_ok=True)
 
-            self.output_csv_name = os.path.join(self.output_dir_name, (self.input_filename[:-4] + ".csv"))
+            self.output_csv_name = os.path.join(
+                self.output_dir_name, (self.input_filename[:-4] + ".csv")
+            )
 
         self.playback_paused = False
         self.usr_input = None
@@ -258,7 +261,8 @@ class InputOutputHandler:
         self.output_dir_name = os.path.join(
             self.settings_dict["output_directory"],
             dt.datetime.now(dt.timezone.utc).isoformat(timespec="minutes")
-            + "_" + self.settings_dict["tag"],
+            + "_"
+            + self.settings_dict["tag"],
         )
         self.output_dir_name = self.output_dir_name.replace(":", "-")
         os.makedirs(name=self.output_dir_name, exist_ok=True)
@@ -292,7 +296,7 @@ class InputOutputHandler:
                 "algorithm/InputOutputHandler.py",
                 "algorithm/DetectedObject.py",
                 "algorithm/visualization_functions.py",
-                "algorithm/utils.py"
+                "algorithm/utils.py",
             ]
             with zipfile.ZipFile(
                 os.path.join(self.output_dir_name, "code.zip"), mode="w"
