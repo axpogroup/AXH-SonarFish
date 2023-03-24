@@ -82,8 +82,11 @@ class FishDetector:
             enhanced_temp = (abs(enhanced_temp) + 127).astype("uint8")
             frame_dict["difference_thresholded_abs"] = enhanced_temp
             median_filter_kernel_px = self.mm_to_px(
-                self.conf["median_filter_kernel_mm"])
-            enhanced_temp = cv.medianBlur(enhanced_temp, self.ceil_to_odd_int(median_filter_kernel_px))
+                self.conf["median_filter_kernel_mm"]
+            )
+            enhanced_temp = cv.medianBlur(
+                enhanced_temp, self.ceil_to_odd_int(median_filter_kernel_px)
+            )
             frame_dict["median_filter"] = enhanced_temp
             runtimes_ms["enhance"] = get_elapsed_ms(start)
 
@@ -99,11 +102,13 @@ class FishDetector:
             )
             frame_dict["binary"] = thres
             frame_dict["raw_binary"] = thres_raw
-            dilation_kernel_px = self.mm_to_px(
-                self.conf["dilation_kernel_mm"]
-            )
+            dilation_kernel_px = self.mm_to_px(self.conf["dilation_kernel_mm"])
             kernel = cv.getStructuringElement(
-                cv.MORPH_ELLIPSE, (self.ceil_to_odd_int(dilation_kernel_px), self.ceil_to_odd_int(dilation_kernel_px))
+                cv.MORPH_ELLIPSE,
+                (
+                    self.ceil_to_odd_int(dilation_kernel_px),
+                    self.ceil_to_odd_int(dilation_kernel_px),
+                ),
             )
             frame_dict["dilated"] = cv.dilate(thres, kernel, iterations=1)
             frame_dict["closed"] = cv.morphologyEx(thres, cv.MORPH_CLOSE, kernel)
@@ -349,6 +354,4 @@ class FishDetector:
         )
 
         rot = np.array([[cos(theta), -sin(theta)], [sin(theta), cos(theta)]])
-        return pd.DataFrame(
-            np.dot(rot, velocities_df.T).T, columns=["v_xr", "v_yr"]
-        )
+        return pd.DataFrame(np.dot(rot, velocities_df.T).T, columns=["v_xr", "v_yr"])
