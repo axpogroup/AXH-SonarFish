@@ -12,7 +12,7 @@ FIRST_ROW = [
 SECOND_ROW = ["difference_thresholded", "median_filter", "binary", "dilated"]
 
 
-def get_visual_output(detector, processed_frame, extensive=False):
+def get_visual_output(object_history, detector, processed_frame, extensive=False):
     if extensive:
         first_row_images = np.ndarray(shape=(270, 0, 3), dtype="uint8")
         second_row_images = np.ndarray(shape=(270, 0, 3), dtype="uint8")
@@ -37,11 +37,15 @@ def get_visual_output(detector, processed_frame, extensive=False):
         third_row_images = np.concatenate(
             (
                 draw_detector_output(
+                    object_history,
                     detector,
                     retrieve_frame("raw_downsampled", processed_frame, puttext="Final"),
                 ),
-                retrieve_frame("opened", processed_frame, puttext="opened"),
+                retrieve_frame(
+                    "internal_external", processed_frame, puttext="internal_external"
+                ),
                 draw_detector_output(
+                    object_history,
                     detector,
                     retrieve_frame("binary", processed_frame, puttext="detections"),
                     paths=True,
@@ -55,11 +59,13 @@ def get_visual_output(detector, processed_frame, extensive=False):
 
     else:
         disp = draw_detector_output(
+            object_history,
             detector,
             retrieve_frame("raw", processed_frame),
             paths=True,
             fullres=True,
             association_dist=True,
+            annotate="velocities",
         )
 
     return disp
@@ -93,36 +99,27 @@ def retrieve_frame(frame, frame_dict, puttext=None):
 
 
 def draw_detector_output(
+    object_history,
     detector,
     img,
-    classifications=False,
     paths=False,
     fullres=False,
     association_dist=False,
+    annotate=False,
 ):
-    for ID, obj in detector.current_objects.items():
+    for ID, obj in object_history.items():
         if (
             detector.frame_number - obj.frames_observed[-1]
-            > detector.conf["phase_out_after_x_frames"]
+            > detector.conf["no_more_show_after_x_frames"]
         ):
             continue
-
-        # if len(obj.frames_observed) < 50:
-        #     continue
-
-        # if (
-        #         obj.occurences_in_last_x(
-        #             detector.frame_number, detector.conf["min_occurences_in_last_x_frames"][1]
-        #         )
-        #         <= detector.conf["min_occurences_in_last_x_frames"][0]
-        # ):
-        #     continue
 
         if fullres:
             scale = int(100 / detector.conf["downsample"])
         else:
             scale = 1
-        x, y, w, h = cv.boundingRect(obj.contours[-1])
+        x, y = obj.midpoints[-1][0], obj.midpoints[-1][1]
+        w, h = obj.bounding_boxes[-1][0], obj.bounding_boxes[-1][1]
         x, y, w, h = (
             x * scale,
             y * scale,
@@ -130,26 +127,14 @@ def draw_detector_output(
             h * scale,
         )
 
-        if classifications:
-            if obj.classifications[-1] == "Fisch":
-                color = (0, 255, 0)
-            else:
-                color = (250, 150, 150)
-
-            cv.rectangle(img, (x, y), (x + w, y + h), color, 1 * scale)
-            if fullres:
-                cv.putText(
-                    img,
-                    (obj.classifications[-1]),
-                    (x, y - 10),
-                    cv.FONT_HERSHEY_SIMPLEX,
-                    0.75,
-                    color,
-                    2,
-                )
-        else:
-            color = (255, 0, 0)
-            cv.rectangle(img, (x, y), (x + w, y + h), color, thickness=1 * scale)
+        color = (255, 200, 200)
+        cv.rectangle(
+            img,
+            (x - int(w / 2), y - int(h / 2)),
+            (x + int(w / 2), y + int(h / 2)),
+            color,
+            thickness=1 * scale,
+        )
 
         if paths:
             for point in obj.midpoints:
@@ -170,6 +155,27 @@ def draw_detector_output(
                 ),
                 (0, 0, 255),
                 1 * scale,
+            )
+
+        if annotate:
+            if annotate == "velocities":
+                pass
+                text = (
+                    "{:.2f}".format(obj.velocities[-1][0] * scale)
+                    + ", "
+                    + "{:.2f}".format(obj.velocities[-1][1] * scale)
+                )
+            else:
+                text = str(annotate)
+
+            cv.putText(
+                img,
+                text,
+                (x - int(w / 2), y - int(h / 2) - 2 * scale),
+                cv.FONT_HERSHEY_SIMPLEX,
+                0.7,
+                color,
+                2,
             )
 
     return img
