@@ -3,12 +3,12 @@ input_file:  "analysis/1_productionalization/validation_HTU_v1/recordings/22-11-
 mask_directory: "analysis/1_productionalization/validation_HTU_v1/recordings/masks"
 output_directory: "analysis/1_productionalization/runtime_improvement/output"
 
-tag: "hyperfast_v2_long_mean_threshold"
-#record_output_video: True
+tag: "refactoring"
+#record_output_video: True # Only works for full resolution output
 #record_output_csv: True
 
 display_output_video: True
-#display_mode_extensive: True
+display_mode_extensive: True
 display_trackbars: True
 
 # Size
@@ -18,16 +18,21 @@ input_pixels_per_mm: 0.0838
 downsample: 25
 contrast: 2
 brightness: 30
-long_mean_frames: 200
+long_mean_frames: 1200
 short_mean_frames: 10
 difference_threshold_scaler: 0.3
 dilation_kernel_mm: 770
 median_filter_kernel_mm: 340
 
-# Detection and Tracking
+# Tracking
 max_association_dist_mm: 600
 phase_out_after_x_frames: 10
-min_occurences_in_last_x_frames: [30, 40]
 
+# Classification
 river_pixel_velocity: [2.35, -0.9] # At full resolution
-min_occurences_for_fish: 20
+min_occurences_for_fish: 20 # should be at least 20 for sensible calculation of velocity
+deviation_from_river_velocity: 0.5
+
+# Visualization
+min_occurences_in_last_x_frames: [30, 40]
+no_more_show_after_x_frames: 1
