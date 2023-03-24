@@ -82,9 +82,11 @@ class FishDetector:
             enhanced_temp = (abs(enhanced_temp) + 127).astype("uint8")
             frame_dict["difference_thresholded_abs"] = enhanced_temp
             median_filter_kernel_px = self.mm_to_px(
-                self.conf["median_filter_kernel_mm"], uneven=True
+                self.conf["median_filter_kernel_mm"]
             )
-            enhanced_temp = cv.medianBlur(enhanced_temp, median_filter_kernel_px)
+            enhanced_temp = cv.medianBlur(
+                enhanced_temp, self.ceil_to_odd_int(median_filter_kernel_px)
+            )
             frame_dict["median_filter"] = enhanced_temp
             runtimes_ms["enhance"] = get_elapsed_ms(start)
 
@@ -100,11 +102,13 @@ class FishDetector:
             )
             frame_dict["binary"] = thres
             frame_dict["raw_binary"] = thres_raw
-            dilation_kernel_px = self.mm_to_px(
-                self.conf["dilation_kernel_mm"], uneven=True
-            )
+            dilation_kernel_px = self.mm_to_px(self.conf["dilation_kernel_mm"])
             kernel = cv.getStructuringElement(
-                cv.MORPH_ELLIPSE, (dilation_kernel_px, dilation_kernel_px)
+                cv.MORPH_ELLIPSE,
+                (
+                    self.ceil_to_odd_int(dilation_kernel_px),
+                    self.ceil_to_odd_int(dilation_kernel_px),
+                ),
             )
             frame_dict["dilated"] = cv.dilate(thres, kernel, iterations=1)
             frame_dict["closed"] = cv.morphologyEx(thres, cv.MORPH_CLOSE, kernel)
@@ -299,36 +303,25 @@ class FishDetector:
         self.latest_obj_index += 1
         return self.latest_obj_index
 
-    def mm_to_px(self, millimeters, uneven=False):
+    @staticmethod
+    def ceil_to_odd_int(number):
+        number = int(np.ceil(number))
+        return number + 1 if number % 2 == 0 else number
+
+    def mm_to_px(self, millimeters):
         px = (
             millimeters
             * self.conf["input_pixels_per_mm"]
             * self.conf["downsample"]
             / 100
         )
-        if uneven:
-            px = int(px)
-            if (float(px) / 2 % 1) == 0:
-                px += 1
         return px
 
     def classify_detections(self, df):
-        # Rotate the velocity vectors
-        theta = -(
-            np.pi * 1.5
-            - atan(
-                self.conf["river_pixel_velocity"][0]
-                / self.conf["river_pixel_velocity"][1]
-            )
-        )
+        rotated_velocities = self.rotate_velocity_vectors(df[["v_x", "v_y"]])
+        df = pd.concat([df, rotated_velocities], axis=1)
+
         abs_vel = np.linalg.norm(self.conf["river_pixel_velocity"])
-
-        rot = np.array([[cos(theta), -sin(theta)], [sin(theta), cos(theta)]])
-        rotated = pd.DataFrame(
-            np.dot(rot, df[["v_x", "v_y"]].T).T, columns=["v_xr", "v_yr"]
-        )
-        df = pd.concat([df, rotated], axis=1)
-
         df.classification = ""
         for ID in df.ID.unique():
             obj = df.loc[df.ID == ID]
@@ -349,3 +342,16 @@ class FishDetector:
                 df.loc[df.ID == ID, "classification"] = "object"
 
         return df
+
+    def rotate_velocity_vectors(self, velocities_df):
+        # Rotate the velocity vectors
+        theta = -(
+            np.pi * 1.5
+            - atan(
+                self.conf["river_pixel_velocity"][0]
+                / self.conf["river_pixel_velocity"][1]
+            )
+        )
+
+        rot = np.array([[cos(theta), -sin(theta)], [sin(theta), cos(theta)]])
+        return pd.DataFrame(np.dot(rot, velocities_df.T).T, columns=["v_xr", "v_yr"])

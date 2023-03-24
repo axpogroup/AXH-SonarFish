@@ -5,7 +5,7 @@ output_directory: "analysis/1_productionalization/runtime_improvement/output"
 
 tag: "refactoring"
 #record_output_video: True # Only works for full resolution output
-#record_output_csv: True
+record_output_csv: True
 
 display_output_video: True
 display_mode_extensive: True
