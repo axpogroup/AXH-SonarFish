@@ -188,7 +188,11 @@ if __name__ == "__main__":
         description="Various controls for the continous fish detection system."
     )
 
-    argParser.add_argument("-command", "--command", help="run 'control help' to get a list of possible commands.")
+    argParser.add_argument(
+        "-command",
+        "--command",
+        help="run 'control help' to get a list of possible commands.",
+    )
     argParser.add_argument("-file", "--file", help="path to the file")
     options = [
         "check_status:                  checks the current status of the recording and prints the latest log output.",
@@ -229,6 +233,9 @@ if __name__ == "__main__":
         upload_sample_of_latest_recording()
 
     elif args.command == "upload_file":
+        if args.file is None:
+            print("ERROR: please specify a filepath using '-f'.")
+            exit()
         print(f"Attempting to upload: {args.file}")
         cloud_handler = CloudHandler()
         cloud_handler.upload_file_to_container(
@@ -236,6 +243,9 @@ if __name__ == "__main__":
         )
         print("Success!")
     elif args.command == "downsample_and_upload_file":
+        if args.file is None:
+            print("ERROR: please specify a filepath using '-f'.")
+            exit()
         downsample_and_upload_recording(args.file)
 
     elif args.command == "feed_watchdog":
