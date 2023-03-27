@@ -215,6 +215,7 @@ if __name__ == "__main__":
             rec_logs = rec_logs[-5]
         upload = orc_logs + rec_logs
         for file in upload:
+            print(file)
             cloud_handler.upload_file_to_container(
                 file, orchestrator_settings_dict["azure_container_name"]
             )
