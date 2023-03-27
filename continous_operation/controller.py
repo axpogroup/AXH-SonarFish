@@ -161,11 +161,12 @@ def check_status():
     try:
         check_recordings()
         print("\n")
-        print("RECORDING RUNNING")
+        print("Recording running, all good.")
         print("\n")
     except Exception as e:
         print("\n")
-        print("Recording not running: ", str(e))
+        print("RECORDING NOT RUNNING: ", str(e))
+        print("\n")
 
     print("Getting latest log output...")
     orc, rec = get_latest_logs()
@@ -187,8 +188,16 @@ if __name__ == "__main__":
         description="Various controls for the continous fish detection system."
     )
 
-    argParser.add_argument("-command", "--command", help="path to the input video file")
-    argParser.add_argument("-file", "--file", help="path to the input video file")
+    argParser.add_argument("-command", "--command", help="run 'control help' to get a list of possible commands.")
+    argParser.add_argument("-file", "--file", help="path to the file")
+    options = [
+        "check_status:                  checks the current status of the recording and prints the latest log output.",
+        "upload_logs:                   uploads the last 5 logs for the orchestrator and the recording handler.",
+        "upload_sample:                 uploads the first 10 seconds of the latest completed recording.",
+        "upload_file:                   uploads the file specified after '-f' (must be specified)",
+        "downsample_and_upload_file:    downsamples and uploads the file specified after '-f' (must be specified)",
+        "feed_watchdog:                 feeds the watchdog to prevent a reboot every 30 minutes.",
+    ]
 
     args = argParser.parse_args()
 
@@ -235,17 +244,13 @@ if __name__ == "__main__":
         ).to_csv(orchestrator_settings_dict["watchdog_food_file"])
         print("Fed watchdog.")
 
-    elif len(args.command) == 0:
+    elif args.command in ["help", "h", "man"]:
         print("Use one of the following commands:")
-        options = [
-            "check_status",
-            "upload_logs",
-            "upload_sample",
-            "upload_file",
-            "downsample_and_upload_file",
-            "feed_watchdog",
-        ]
         for option in options:
             print(option)
+
     else:
         print(f"Command {args.command} not known.")
+        print("Use one of the following commands:")
+        for option in options:
+            print(option)
