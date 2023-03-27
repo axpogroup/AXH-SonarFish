@@ -198,12 +198,7 @@ if __name__ == "__main__":
 
     if args.command == "check_status":
         check_status()
-    # elif args.command == "start_recording_detection":
-    #     pass
-    # elif args.command == "stop_all":
-    #     pass
-    # elif args.command == "start_recording":
-    #     pass
+
     elif args.command == "upload_logs":
         print("Getting latest logs ...")
         orc_logs, rec_logs = get_latest_logs()
@@ -223,6 +218,7 @@ if __name__ == "__main__":
 
     elif args.command == "upload_sample":
         upload_sample_of_latest_recording()
+
     elif args.command == "upload_file":
         print(f"Attempting to upload: {args.file}")
         cloud_handler = CloudHandler()
@@ -230,13 +226,15 @@ if __name__ == "__main__":
             args.file, orchestrator_settings_dict["azure_container_name"]
         )
         print("Success!")
-    elif args.command == "downsample_upload":
+    elif args.command == "downsample_and_upload_file":
         downsample_and_upload_recording(args.file)
+
     elif args.command == "feed_watchdog":
         pd.DataFrame(
             [dt.datetime.now(dt.timezone.utc).isoformat(timespec="milliseconds")]
         ).to_csv(orchestrator_settings_dict["watchdog_food_file"])
         print("Fed watchdog.")
+
     elif len(args.command) == 0:
         print("Use one of the following commands:")
         options = [
@@ -244,7 +242,7 @@ if __name__ == "__main__":
             "upload_logs",
             "upload_sample",
             "upload_file",
-            "downsample_upload",
+            "downsample_and_upload_file",
             "feed_watchdog",
         ]
         for option in options:

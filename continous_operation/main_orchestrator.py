@@ -100,35 +100,35 @@ def detect_on_new_files():
         if (rec not in processed_recordings)
     ]
 
-    # Limit amount of recordings to process per loop to 2 files
-    if len(to_process) > 2:
-        to_process = to_process[:2]
+    # Only process the latest file, otherwise watchdog might bite
+    to_process = sorted(to_process, key=os.path.getmtime)
+    recording = to_process[-1]
 
-    for recording in to_process:
-        logger.info("Detecting fish in recording: " + recording + " ...")
-        detections = detection_handler.detect_from_file(recording)
-        name = os.path.split(recording)[-1][:-4] + ".csv"
-        name = os.path.join(orchestrator_settings_dict["detections_directory"], name)
-        detections.to_csv(name, index=False)
-        detection_files.append(name)
-        pd.DataFrame(detection_files, columns=["path"]).to_csv(
-            os.path.join(
-                orchestrator_settings_dict["file_list_directory"],
-                "detection_files_list.csv",
-            ),
-            index=False,
-        )
+    logger.info("Detecting fish in recording: " + recording + " ...")
+    detections = detection_handler.detect_from_file(recording)
+    name = os.path.split(recording)[-1][:-4] + ".csv"
+    name = os.path.join(orchestrator_settings_dict["detections_directory"], name)
+    detections.to_csv(name, index=False)
+    detection_files.append(name)
+    pd.DataFrame(detection_files, columns=["path"]).to_csv(
+        os.path.join(
+            orchestrator_settings_dict["file_list_directory"],
+            "detection_files_list.csv",
+        ),
+        index=False,
+    )
 
-        logger.info("Success.")
-        processed_recordings.append(recording)
-        pd.DataFrame(processed_recordings, columns=["path"]).to_csv(
-            os.path.join(
-                orchestrator_settings_dict["file_list_directory"],
-                "processed_recordings_list.csv",
-            ),
-            index=False,
-        )
-    return to_process
+    logger.info("Success.")
+    processed_recordings.append(recording)
+    pd.DataFrame(processed_recordings, columns=["path"]).to_csv(
+        os.path.join(
+            orchestrator_settings_dict["file_list_directory"],
+            "processed_recordings_list.csv",
+        ),
+        index=False,
+    )
+
+    return recording
 
 
 def upload_new_files():
@@ -224,8 +224,8 @@ if __name__ == "__main__":
             logger.info("Checking recording status and new files to detect fish.")
             new_files = check_recordings()
             logger.info(f"Recording running. Found {len(new_files)} new files.")
-            new_detections = detect_on_new_files()
-            logger.info(f"Detected fish on {len(new_detections)} recordings.")
+            new_detection = detect_on_new_files()
+            logger.info(f"Detected fish on {new_detection} recordings.")
 
             # Cloud stuff
             if orchestrator_settings_dict["use_cloud"]:
