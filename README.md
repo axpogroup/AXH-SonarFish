@@ -1,21 +1,35 @@
 # Introduction 
 This is the codebase for the fish sonar project. The goal of this project is to provide a continuous 
 sonar based fish detection solution for HTU. To that end a sonar sensor is placed in the water and connected to a 
-raspberry pi via a HDMI capture device. In the future, the raspberry pi shall receive the stream of sonar images, run 
-the fish detection algorithm on the data and store the output as well as record the stream of sonar images. To 
-facilitate continuous operation the raspberry pi shall send regular heartbeats to a hardware- and possibly a 
-cloud-based watchdog. If an issue occurs specific users should be informed. 
+Raspberry Pi via a HDMI capture device. The Raspberry Pi receives the stream of sonar images, runs 
+the fish detection algorithm on the data and stores the output and records the stream of sonar images. To 
+facilitate continuous operation the Raspberry Pi sends regular heartbeats to a hardware watchdog. At a later stage a 
+Grafana dashboard will act as cloud-based watchdog and alert users if the system is not running as expected.
 
 # Stucture
 The codebase is structured into the following sections:
 - **algorithm**: the fish detection algorithm, taking a video file as an input and giving .csv / visual / video 
-  output. This part of the code shall be open-sourced at a later stage of the project. This code is ready for a review.
-- **analysis**: all code related to applications of the algorithm for development, production or special 
-  projects. This section stores the input, output files and tools - it does not need reviews at this stage.
-- **hardware**: all code pertaining to the initialization and continous operation of the raspberry pi. This code is 
-  still at a prototyping stage and must not be reviewed yet.
+  output. This part of the code shall be open-sourced at a later stage of the project and can function independently 
+  of the rest of the continuous operation setup.
+- **analysis**: all code related to applications of the algorithm for development or special 
+  projects. This section stores input files, output files and tools.
+- **continous_operation**: all code pertaining to the setup, initialization and continuous operation of the 
+  Raspberry Pi.
 
-# Running the algorithm
+# Continuous operation
+This is a high-level overview of the steps needed to run the continous operation.
+1. Assemble the hardware as described in TOD0 MINGLE LINK
+2. Follow the instructions in continous_operation/raspberry_pi_setup_instructions.md to prepare the Raspberry Pi 
+   software. This includes installing Ubuntu, git, getting the repo, installing the requirements and setting up 
+   autostart on reboot and the watchdog TOD0 Watchdog bit.
+3. Specify the desired output directory, detector setup and other settings in continous_operation/settings. When 
+   establishing a new location or sonar settings be sure to adapt the settings and masks of the algorithm on a 
+   single file using the algorithms interactive visual output.
+4. Reboot the system and the recording should start after 2 minutes. 
+5. Monitor the recording and the outputs using the commands in continous_operation/src/controller.py. They should be 
+   accessible via an alias, e.g., "control check_status". 
+
+# Running the algorithm on an individual file
 This is a short guide to run the fish detection algorithm on a sample video.
 1.	Install the requirements specified in requirements_mac.txt
 2.	Download the sample sonar video from here: [demo_sample_sonar_recording.mp4 - Azure link valid until 31.03](https://axh4lab4appl4sonar4sa.blob.core.windows.net/sonar-recording-sample/demo_sample_sonar_recording.mp4?sp=r&st=2023-02-02T12:37:44Z&se=2023-03-31T19:37:44Z&spr=https&sv=2021-06-08&sr=b&sig=gw5GanJeONyhg9bcVtagfeAXa2tn7YDHj67GjvlAA8U%3D) 
@@ -23,6 +37,7 @@ This is a short guide to run the fish detection algorithm on a sample video.
 4. Specify the desired settings for the algorithm and the output in _"analysis/demo/demo_settings.yaml"_
 5. Run the algorithm using _"algorithm/run_algorithm.py"_. E.g.: _"python3 algorithm/run_algorithm.py -yf 
    analysis/demo/demo_settings.yaml"_
+6. TOD0 How to tune interactively
 
 # Comments
 Tested with Python 3.10, 
