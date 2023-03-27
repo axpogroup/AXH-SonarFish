@@ -32,14 +32,17 @@ class DetectionHandler:
         while input_output_handler.get_new_frame():
             if float(input_output_handler.frame_no) / 2 % 1 != 0:
                 continue
-            processed_frame, object_history, runtimes = self.detector.detect_objects(
-                input_output_handler.current_raw_frame, object_history
+            detections, processed_frame_dict, runtimes = self.detector.detect_objects(
+                input_output_handler.current_raw_frame
             )
+            object_history = self.detector.associate_detections(detections, object_history)
             input_output_handler.handle_output(
-                processed_frame, object_history, runtimes, detector=self.detector
+                processed_frame_dict, object_history, runtimes, detector=self.detector
             )
 
-        return input_output_handler.get_detections_pd(object_history)
+        detections = input_output_handler.get_detections_pd(object_history)
+        detections = self.detector.classify_detections(detections)
+        return detections
 
 
 def get_logger(log_directory, nametag):

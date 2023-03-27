@@ -123,8 +123,9 @@ class FishDetector:
             )
             detections = {}
             for contour in contours:
+                self.latest_obj_index += 1
                 new_object = DetectedObject(
-                    self.get_new_id(), contour, self.frame_number
+                    self.latest_obj_index, contour, self.frame_number
                 )
                 detections[new_object.ID] = new_object
 
@@ -296,12 +297,6 @@ class FishDetector:
     @staticmethod
     def rgb_to_gray(img):
         return cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-
-    def get_new_id(self):
-        if self.latest_obj_index > 300000:
-            self.latest_obj_index = 0
-        self.latest_obj_index += 1
-        return self.latest_obj_index
 
     @staticmethod
     def ceil_to_odd_int(number):
