@@ -61,14 +61,14 @@ def downsample_and_upload_recording(file):
 
 def upload_sample_of_latest_recording():
     recording_uploads_dir = os.path.join(
-        orchestrator_settings_dict["output_directory"],
-        "recording_uploads"
+        orchestrator_settings_dict["output_directory"], "recording_uploads"
     )
     os.makedirs(recording_uploads_dir, exist_ok=True)
 
     existing_completed_recordings = pd.read_csv(
         os.path.join(
-            orchestrator_settings_dict["output_directory"], "file_lists",
+            orchestrator_settings_dict["output_directory"],
+            "file_lists",
             "completed_recordings_list.csv",
         )
     )["path"].to_list()
@@ -125,7 +125,9 @@ def modified_in_past_x_minutes(filepath, x):
 
 def get_latest_logs():
     log_files = glob.glob(
-        os.path.join(orchestrator_settings_dict["output_directory"], "log", "**/*.log*"),
+        os.path.join(
+            orchestrator_settings_dict["output_directory"], "log", "**/*.log*"
+        ),
         recursive=True,
     )
 
@@ -145,7 +147,9 @@ def get_latest_logs():
 def check_status():
     def check_recordings():
         all_recordings = glob.glob(
-            os.path.join(orchestrator_settings_dict["output_directory"], "recordings", "**/*.mp4")
+            os.path.join(
+                orchestrator_settings_dict["output_directory"], "recordings", "**/*.mp4"
+            )
         )
         if len(all_recordings) == 0:
             raise Exception("No recordings found.")
