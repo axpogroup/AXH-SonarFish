@@ -214,6 +214,7 @@ if __name__ == "__main__":
         if len(rec_logs) > 5:
             rec_logs = rec_logs[-5]
         upload = orc_logs + rec_logs
+        print(upload)
         for file in upload:
             print(file)
             cloud_handler.upload_file_to_container(
