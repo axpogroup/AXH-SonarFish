@@ -9,7 +9,7 @@ import time
 import pandas as pd
 import yaml
 
-from continous_operation import utils
+from continous_operation.src import utils
 
 
 def modified_in_past_x_minutes(filepath, x):
@@ -217,9 +217,9 @@ if __name__ == "__main__":
 
     cwd = "/home/fish-pi/code/continous_operation/"
     # cwd = "/Users/leivandresen/Documents/Hydro_code/AXH-SonarFish/continous_operation"
-    with open(os.path.join(cwd, "orchestrator_settings.yaml")) as f:
+    with open(os.path.join(cwd, "../settings/orchestrator_settings.yaml")) as f:
         orchestrator_settings_dict = yaml.load(f, Loader=yaml.SafeLoader)
-    with open(os.path.join(cwd, "detector_settings_continous_operation_v0.yaml")) as f:
+    with open(os.path.join(cwd, "../settings/detector_settings_continous_operation_v0.yaml")) as f:
         detector_settings_dict = yaml.load(f, Loader=yaml.SafeLoader)
     instance_start_dt = dt.datetime.now(dt.timezone.utc)
 

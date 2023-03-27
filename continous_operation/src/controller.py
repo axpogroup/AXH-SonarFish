@@ -10,7 +10,7 @@ sys.path.append("/home/fish-pi/code/")
 
 import pandas as pd
 import yaml
-from utils import CloudHandler
+from continous_operation.src.utils import CloudHandler
 
 
 def downsample_and_upload_recording(file):
@@ -126,14 +126,14 @@ def modified_in_past_x_minutes(filepath, x):
 def get_latest_logs():
     log_files = glob.glob(
         os.path.join(
-            orchestrator_settings_dict["output_directory"], "log", "**/*.log*"
+            orchestrator_settings_dict["output_directory"], "logs", "**/*.log*"
         ),
         recursive=True,
     )
 
     if len(log_files) == 0:
         raise Exception(
-            f"No log files found in {os.path.join(orchestrator_settings_dict['output_directory'], 'log', '**/*.log*')}"
+            f"No log files found in {os.path.join(orchestrator_settings_dict['output_directory'], 'logs', '**/*.log*')}"
         )
 
     orchestrator_logs = [log for log in log_files if "orchestrator" in log]
@@ -210,7 +210,7 @@ if __name__ == "__main__":
     args = argParser.parse_args()
 
     cwd = "/home/fish-pi/code/continous_operation/"
-    with open(os.path.join(cwd, "orchestrator_settings.yaml")) as f:
+    with open(os.path.join(cwd, "../settings/orchestrator_settings.yaml")) as f:
         orchestrator_settings_dict = yaml.load(f, Loader=yaml.SafeLoader)
 
     if args.command == "check_status":
