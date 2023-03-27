@@ -5,6 +5,7 @@ from matplotlib.colors import LinearSegmentedColormap
 
 # This code was copied from a forum and can be used to convert a jet colormap value to grayscale. However it is extremely slow.
 
+
 def initialize_model():
     cm = LinearSegmentedColormap("jet", _jet_data, N=2**8)
     # cm = colormaps['turbo'] swap with jet if you use turbo colormap instead
