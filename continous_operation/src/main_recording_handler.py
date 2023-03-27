@@ -47,7 +47,7 @@ if __name__ == "__main__":
     logger.info("Starting recording...")
     while True:
         savedir = os.path.join(
-            recording_directory, {dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d")}
+            recording_directory, dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d")
         )
         os.makedirs(name=savedir, exist_ok=True)
         savepath = os.path.join(
@@ -60,6 +60,7 @@ if __name__ == "__main__":
         )
         savepath = savepath.replace(":", "-")
         recording_command = record_cmd_prefix + " " + savepath
+        logger.info(f"Starting recording command: {recording_command}")
         try:
             output = subprocess.run(
                 recording_command,
