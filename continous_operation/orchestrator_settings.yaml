@@ -1,11 +1,11 @@
-recording_directory: "/media/fish-pi/PortableSSD/test_rpi/recordings"
-log_directory: "/media/fish-pi/PortableSSD/test_rpi/logs"
-detections_directory: "/media/fish-pi/PortableSSD/test_rpi/detections"
-file_list_directory: "/media/fish-pi/PortableSSD/test_rpi/file_lists"
+recording_directory: "/media/fish-pi/PortableSSD1/ongoing/recordings"
+log_directory: "/media/fish-pi/PortableSSD1/ongoing/logs"
+detections_directory: "/media/fish-pi/PortableSSD1/ongoing/detections"
+file_list_directory: "/media/fish-pi/PortableSSD1/ongoing/file_lists"
 
 watchdog_food_file: "/home/fish-pi/code/continous_operation/watchdog_food.csv"
 
-recording_interval_minutes: 1
+recording_interval_minutes: 10
 sleep_interval_minutes: 0.5
 error_after_no_file_modification_minutes: 2
 
