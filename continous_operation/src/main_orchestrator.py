@@ -107,6 +107,9 @@ def detect_on_new_files():
         if (rec not in processed_recordings)
     ]
 
+    if len(to_process) == 0:
+        return []
+
     # Only process the latest file, otherwise watchdog might bite
     to_process = sorted(to_process, key=os.path.getmtime)
     recording = to_process[-1]
