@@ -12,7 +12,7 @@ from continous_operation.src import utils
 
 if __name__ == "__main__":
     cwd = "/home/fish-pi/code/continous_operation/"
-    with open(os.path.join(cwd, "../settings/orchestrator_settings.yaml")) as f:
+    with open(os.path.join(cwd, "settings/orchestrator_settings.yaml")) as f:
         orchestrator_settings_dict = yaml.load(f, Loader=yaml.SafeLoader)
 
     logger = utils.get_logger(

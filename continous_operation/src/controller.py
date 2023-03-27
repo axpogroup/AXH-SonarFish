@@ -10,6 +10,7 @@ sys.path.append("/home/fish-pi/code/")
 
 import pandas as pd
 import yaml
+
 from continous_operation.src.utils import CloudHandler
 
 
@@ -210,7 +211,7 @@ if __name__ == "__main__":
     args = argParser.parse_args()
 
     cwd = "/home/fish-pi/code/continous_operation/"
-    with open(os.path.join(cwd, "../settings/orchestrator_settings.yaml")) as f:
+    with open(os.path.join(cwd, "settings/orchestrator_settings.yaml")) as f:
         orchestrator_settings_dict = yaml.load(f, Loader=yaml.SafeLoader)
 
     if args.command == "check_status":
