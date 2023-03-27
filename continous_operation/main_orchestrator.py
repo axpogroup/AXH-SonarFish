@@ -105,6 +105,7 @@ def detect_on_new_files():
         to_process = to_process[:2]
 
     for recording in to_process:
+        logger.info("Detecting fish in recording: " + recording + " ...")
         detections = detection_handler.detect_from_file(recording)
         name = os.path.split(recording)[-1][:-4] + ".csv"
         name = os.path.join(orchestrator_settings_dict["detections_directory"], name)
@@ -118,7 +119,7 @@ def detect_on_new_files():
             index=False,
         )
 
-        logger.info("Detected fish in recording: " + recording)
+        logger.info("Success.")
         processed_recordings.append(recording)
         pd.DataFrame(processed_recordings, columns=["path"]).to_csv(
             os.path.join(
