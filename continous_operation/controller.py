@@ -125,7 +125,8 @@ def modified_in_past_x_minutes(filepath, x):
 
 def get_latest_logs():
     log_files = glob.glob(
-        os.path.join(orchestrator_settings_dict["log_directory"], "**/*.log*"), recursive=True
+        os.path.join(orchestrator_settings_dict["log_directory"], "**/*.log*"),
+        recursive=True,
     )
 
     if len(log_files) == 0:
@@ -196,7 +197,7 @@ if __name__ == "__main__":
         orchestrator_settings_dict = yaml.load(f, Loader=yaml.SafeLoader)
 
     if args.command == "check_status":
-        check_status(orchestrator_settings_dict)
+        check_status()
     # elif args.command == "start_recording_detection":
     #     pass
     # elif args.command == "stop_all":
@@ -208,8 +209,10 @@ if __name__ == "__main__":
         orc_logs, rec_logs = get_latest_logs()
         cloud_handler = CloudHandler()
         print("Uploading latest 5 orchestrator and recording logs...")
-        if len(orc_logs) > 5: orc_logs = orc_logs[-5]
-        if len(rec_logs) > 5: rec_logs = rec_logs[-5]
+        if len(orc_logs) > 5:
+            orc_logs = orc_logs[-5]
+        if len(rec_logs) > 5:
+            rec_logs = rec_logs[-5]
         upload = orc_logs + rec_logs
         for file in upload:
             cloud_handler.upload_file_to_container(
@@ -241,7 +244,7 @@ if __name__ == "__main__":
             "upload_sample",
             "upload_file",
             "downsample_upload",
-            "feed_watchdog"
+            "feed_watchdog",
         ]
         for option in options:
             print(option)
