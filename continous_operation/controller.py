@@ -210,13 +210,12 @@ if __name__ == "__main__":
         cloud_handler = CloudHandler()
         print("Uploading latest 5 orchestrator and recording logs...")
         if len(orc_logs) > 5:
-            orc_logs = orc_logs[-5]
+            orc_logs = orc_logs[-5:]
         if len(rec_logs) > 5:
-            rec_logs = rec_logs[-5]
+            rec_logs = rec_logs[-5:]
         upload = orc_logs + rec_logs
-        print(upload)
         for file in upload:
-            print(file)
+            print(f"Uploading {file}")
             cloud_handler.upload_file_to_container(
                 file, orchestrator_settings_dict["azure_container_name"]
             )
