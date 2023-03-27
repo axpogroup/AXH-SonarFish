@@ -3,7 +3,8 @@ import numpy as np
 from matplotlib._cm import _jet_data
 from matplotlib.colors import LinearSegmentedColormap
 
-# This code was copied from a forum and can be used to convert a jet colormap value to grayscale. However it is extremely slow.
+# This code was copied from a forum and can be used to convert a jet colormap value to grayscale.
+# However, it is extremely slow.
 
 
 def initialize_model():
