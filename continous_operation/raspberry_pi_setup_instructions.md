@@ -33,11 +33,12 @@ pre-commit install --hook-type pre-push
 # Have jobs run at reboot with crontab
 crontab -e
 # add the following lines
-@reboot sleep 120 && XDG_RUNTIME_DIR="/run/user/1000" code/AXH-Sound/venv/bin/python3.10  
-code/AXH-Sound/acoustic_monitoring/recording_handler.py
-@reboot sleep 120 && XDG_RUNTIME_DIR="/run/user/1000" code/AXH-Sound/venv/bin/python3.10  
-code/AXH-Sound/acoustic_monitoring/orchestrator.py
-
+@reboot sleep 120 && XDG_RUNTIME_DIR="/run/user/1000" /home/fish-pi/code/venv/bin/python3.10 
+/home/fish-pi/code/continous_operation/main_recording_handler.py
+@reboot sleep 120 && XDG_RUNTIME_DIR="/run/user/1000" /home/fish-pi/code/venv/bin/python3.10 
+/home/fish-pi/code/continous_operation/main_orchestrator.py
+# weekly reboot on Sunday 0:00, not used since only thing it would catch is a broken dataplicity and it might mess with the mounting. If the internet fails it will not reach azure and trigger a reboot anyway.
+# 0 0 * * 0 /sbin/shutdown -r now
 
 # ---- SONAR FISH ----
 sudo apt install ffmpeg
@@ -68,3 +69,4 @@ https://github.com/wimpysworld/argon1-ubuntu
 
 # Aliases # Add to ~/.bashrc
 alias gcm='git commit -m'
+

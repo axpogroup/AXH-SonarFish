@@ -4,26 +4,35 @@ mask_directory: "analysis/demo/masks"
 output_directory: "analysis/demo/output"
 
 tag: "demo"
-record_output_video: True
+record_output_video: True # Only works for full resolution output
 record_output_csv: True
 
 display_output_video: True
-display_mode_rich: False
+display_mode_extensive: False
+display_trackbars: True
+
+# Size
+input_pixels_per_mm: 0.0838
 
 # Enhancement
 downsample: 25
-long_mean_frames: 120
-current_mean_frames: 10
-std_dev_threshold: 2
-median_filter_kernel: 3
+contrast: 2
+brightness: 30
+long_mean_frames: 200
+short_mean_frames: 10
+difference_threshold_scaler: 0.3
+dilation_kernel_mm: 770
+median_filter_kernel_mm: 340
 
-# Detection and Tracking
-blur_filter_kernel: 11
-threshold_contours: 127
-max_association_dist: 60
-phase_out_after_x_frames: 5
-min_occurences_in_last_x_frames: [13, 15]
+# Tracking
+max_association_dist_mm: 600
+phase_out_after_x_frames: 10
 
 # Classification
-river_pixel_velocity: [-1.91, -0.85] # At full resolution
-min_occurences_for_fish: 20
+river_pixel_velocity: [2.35, -0.9] # At full resolution
+min_occurences_for_fish: 20 # should be at least 20 for sensible calculation of velocity
+deviation_from_river_velocity: 0.5
+
+# Visualization
+min_occurences_in_last_x_frames: [30, 40]
+no_more_show_after_x_frames: 1

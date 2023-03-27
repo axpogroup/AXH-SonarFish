@@ -71,10 +71,7 @@ def upload_sample_of_latest_recording():
     )["path"].to_list()
     snippet_name = os.path.join(
         recording_uploads_dir,
-        (
-            os.path.split(existing_completed_recordings[-1])[-1][:-4]
-            + "_snippet.mp4"
-        ),
+        (os.path.split(existing_completed_recordings[-1])[-1][:-4] + "_snippet.mp4"),
     )
     snippet_cmd = f"ffmpeg -y -i {existing_completed_recordings[-1]} -c:v libx264 -preset medium -crf 46 -t 00:00:10 {snippet_name}"
     print(f"creating snippet with command: {snippet_cmd}")
@@ -113,8 +110,8 @@ def upload_sample_of_latest_recording():
 def check_status(settings_dict):
     def modified_in_past_x_minutes(filepath, x):
         if (
-                dt.datetime.now(dt.timezone.utc)
-                - dt.datetime.fromtimestamp(os.path.getmtime(filepath), tz=dt.timezone.utc)
+            dt.datetime.now(dt.timezone.utc)
+            - dt.datetime.fromtimestamp(os.path.getmtime(filepath), tz=dt.timezone.utc)
         ) < dt.timedelta(minutes=x):
             return True
         else:
