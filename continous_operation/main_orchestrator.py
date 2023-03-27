@@ -24,7 +24,7 @@ def modified_in_past_x_minutes(filepath, x):
 
 def check_recordings():
     all_recordings = glob.glob(
-        os.path.join(orchestrator_settings_dict["recording_directory"], "*.mp4")
+        os.path.join(orchestrator_settings_dict["output_directory"], "recordings", "**/*.mp4")
     )
     if len(all_recordings) == 0:
         raise Exception("No recordings found.")
@@ -36,7 +36,7 @@ def check_recordings():
     try:
         existing_completed_recordings = pd.read_csv(
             os.path.join(
-                orchestrator_settings_dict["file_list_directory"],
+                orchestrator_settings_dict["output_directory"], "file_lists",
                 "completed_recordings_list.csv",
             )
         )["path"].to_list()
@@ -55,7 +55,7 @@ def check_recordings():
     )
     pd.DataFrame(existing_completed_recordings, columns=["path"]).to_csv(
         os.path.join(
-            orchestrator_settings_dict["file_list_directory"],
+            orchestrator_settings_dict["output_directory"], "file_lists",
             "completed_recordings_list.csv",
         ),
         index=False,
@@ -67,7 +67,7 @@ def detect_on_new_files():
     try:
         processed_recordings = pd.read_csv(
             os.path.join(
-                orchestrator_settings_dict["file_list_directory"],
+                orchestrator_settings_dict["output_directory"], "file_lists",
                 "processed_recordings_list.csv",
             )
         )["path"].to_list()
@@ -77,7 +77,7 @@ def detect_on_new_files():
     try:
         existing_completed_recordings = pd.read_csv(
             os.path.join(
-                orchestrator_settings_dict["file_list_directory"],
+                orchestrator_settings_dict["output_directory"], "file_lists",
                 "completed_recordings_list.csv",
             )
         )["path"].to_list()
@@ -87,7 +87,7 @@ def detect_on_new_files():
     try:
         detection_files = pd.read_csv(
             os.path.join(
-                orchestrator_settings_dict["file_list_directory"],
+                orchestrator_settings_dict["output_directory"], "file_lists",
                 "detection_files_list.csv",
             )
         )["path"].to_list()
@@ -106,13 +106,18 @@ def detect_on_new_files():
 
     logger.info("Detecting fish in recording: " + recording + " ...")
     detections = detection_handler.detect_from_file(recording)
+
+    date_dir = os.path.split(os.path.split(recording)[0])[-1]
+    savedir = os.path.join(orchestrator_settings_dict["output_directory"], "detections", date_dir)
+    os.makedirs(name=savedir, exist_ok=True)
     name = os.path.split(recording)[-1][:-4] + ".csv"
-    name = os.path.join(orchestrator_settings_dict["detections_directory"], name)
+    name = os.path.join(savedir, name)
+
     detections.to_csv(name, index=False)
     detection_files.append(name)
     pd.DataFrame(detection_files, columns=["path"]).to_csv(
         os.path.join(
-            orchestrator_settings_dict["file_list_directory"],
+            orchestrator_settings_dict["output_directory"], "file_lists",
             "detection_files_list.csv",
         ),
         index=False,
@@ -122,7 +127,7 @@ def detect_on_new_files():
     processed_recordings.append(recording)
     pd.DataFrame(processed_recordings, columns=["path"]).to_csv(
         os.path.join(
-            orchestrator_settings_dict["file_list_directory"],
+            orchestrator_settings_dict["output_directory"], "file_lists",
             "processed_recordings_list.csv",
         ),
         index=False,
@@ -135,7 +140,7 @@ def upload_new_files():
     try:
         uploaded_detections = pd.read_csv(
             os.path.join(
-                orchestrator_settings_dict["file_list_directory"],
+                orchestrator_settings_dict["output_directory"], "file_lists",
                 "uploaded_detections_list.csv",
             )
         )["path"].to_list()
@@ -145,7 +150,7 @@ def upload_new_files():
     try:
         existing_detections = pd.read_csv(
             os.path.join(
-                orchestrator_settings_dict["file_list_directory"],
+                orchestrator_settings_dict["output_directory"], "file_lists",
                 "detection_files_list.csv",
             )
         )["path"].to_list()
@@ -166,7 +171,7 @@ def upload_new_files():
         uploaded_detections.append(detection)
         pd.DataFrame(uploaded_detections, columns=["path"]).to_csv(
             os.path.join(
-                orchestrator_settings_dict["file_list_directory"],
+                orchestrator_settings_dict["output_directory"], "file_lists",
                 "uploaded_detections_list.csv",
             ),
             index=False,
@@ -175,12 +180,12 @@ def upload_new_files():
 
 def upload_logs_of_past_hour():
     log_files = glob.glob(
-        os.path.join(orchestrator_settings_dict["log_directory"], "**/*.log*"),
+        os.path.join(orchestrator_settings_dict["output_directory"], "logs", "**/*.log*"),
         recursive=True,
     )
     if len(log_files) == 0:
         raise Exception(
-            f"No log files found in {os.path.join(orchestrator_settings_dict['log_directory'], '**/*.log*')}"
+            f"No log files found in {os.path.join(orchestrator_settings_dict['output_directory'], 'logs', '**/*.log*')}"
         )
 
     logs = [log for log in log_files if modified_in_past_x_minutes(log, 60)]
@@ -203,14 +208,14 @@ if __name__ == "__main__":
     instance_start_dt = dt.datetime.now(dt.timezone.utc)
 
     logger = utils.get_logger(
-        orchestrator_settings_dict["log_directory"], "orchestrator"
+        os.path.join(orchestrator_settings_dict["output_directory"], "logs"), "orchestrator"
     )
     logger.info(
         f"Starting new instance with the following settings: \n{orchestrator_settings_dict}"
     )
     detection_handler = utils.DetectionHandler(detector_settings_dict)
-    os.makedirs(orchestrator_settings_dict["detections_directory"], exist_ok=True)
-    os.makedirs(orchestrator_settings_dict["file_list_directory"], exist_ok=True)
+    os.makedirs(os.path.join(orchestrator_settings_dict["output_directory"], "detections"), exist_ok=True)
+    os.makedirs(os.path.join(orchestrator_settings_dict["output_directory"], "file_lists"), exist_ok=True)
 
     no_mod_thres = orchestrator_settings_dict[
         "error_after_no_file_modification_minutes"

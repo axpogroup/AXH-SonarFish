@@ -11,10 +11,11 @@ import yaml
 if __name__ == "__main__":
     cwd = "/home/fish-pi/code/continous_operation/"
     with open(os.path.join(cwd, "orchestrator_settings.yaml")) as f:
-        settings_dict = yaml.load(f, Loader=yaml.SafeLoader)
+        orchestrator_settings_dict = yaml.load(f, Loader=yaml.SafeLoader)
 
-    logger = utils.get_logger(settings_dict["log_directory"], "recording")
-    os.makedirs(name=settings_dict["recording_directory"], exist_ok=True)
+    logger = utils.get_logger(os.path.join(orchestrator_settings_dict["output_directory"], "logs"), "recording")
+    recording_directory = os.path.join(orchestrator_settings_dict["output_directory"], "recordings")
+    os.makedirs(name=recording_directory, exist_ok=True)
     
     capture_initialization_command = "sh /home/fish-pi/code/continous_operation/initialize_capture/initialize_capture.sh"
     logger.info("Initializing capture device ...")
@@ -35,19 +36,18 @@ if __name__ == "__main__":
 
     time.sleep(5)
 
-    duration = int(settings_dict["recording_interval_minutes"] * 60)
+    duration = int(orchestrator_settings_dict["recording_interval_minutes"] * 60)
     record_cmd_prefix = f"ffmpeg -framerate 25 -pixel_format uyvy422 -i /dev/video0 -vcodec h264_v4l2m2m -b:v 6M -r 20 -t {duration}"
 
     logger.info("Starting recording...")
     while True:
-        savepath = os.path.join(
-            settings_dict["recording_directory"],
-            (
-                "start_"
+        savedir = os.path.join(recording_directory, {dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d")})
+        os.makedirs(name=savedir, exist_ok=True)
+        savepath = os.path.join(savedir,
+                                ("start_"
                 + dt.datetime.now(dt.timezone.utc).isoformat(timespec="milliseconds")
-                + ".mp4"
-            ),
-        )
+                + ".mp4")
+            )
         savepath = savepath.replace(":", "-")
         recording_command = record_cmd_prefix + " " + savepath
         try:

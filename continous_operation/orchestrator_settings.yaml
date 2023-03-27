@@ -1,8 +1,4 @@
-recording_directory: "/media/fish-pi/PortableSSD1/ongoing/recordings"
-log_directory: "/media/fish-pi/PortableSSD1/ongoing/logs"
-detections_directory: "/media/fish-pi/PortableSSD1/ongoing/detections"
-file_list_directory: "/media/fish-pi/PortableSSD1/ongoing/file_lists"
-
+output_directory: "/media/fish-pi/PortableSSD1/ongoing_v2"
 watchdog_food_file: "/home/fish-pi/code/continous_operation/watchdog_food.csv"
 
 recording_interval_minutes: 10

@@ -15,7 +15,7 @@ from utils import CloudHandler
 
 def downsample_and_upload_recording(file):
     recording_uploads_dir = os.path.join(
-        os.path.split(orchestrator_settings_dict["detections_directory"])[0],
+        orchestrator_settings_dict["output_directory"],
         "recording_uploads",
     )
     os.makedirs(recording_uploads_dir, exist_ok=True)
@@ -61,14 +61,14 @@ def downsample_and_upload_recording(file):
 
 def upload_sample_of_latest_recording():
     recording_uploads_dir = os.path.join(
-        os.path.split(orchestrator_settings_dict["detections_directory"])[0],
-        "recording_uploads",
+        orchestrator_settings_dict["output_directory"],
+        "recording_uploads"
     )
     os.makedirs(recording_uploads_dir, exist_ok=True)
 
     existing_completed_recordings = pd.read_csv(
         os.path.join(
-            orchestrator_settings_dict["file_list_directory"],
+            orchestrator_settings_dict["output_directory"], "file_lists",
             "completed_recordings_list.csv",
         )
     )["path"].to_list()
@@ -125,13 +125,13 @@ def modified_in_past_x_minutes(filepath, x):
 
 def get_latest_logs():
     log_files = glob.glob(
-        os.path.join(orchestrator_settings_dict["log_directory"], "**/*.log*"),
+        os.path.join(orchestrator_settings_dict["output_directory"], "log", "**/*.log*"),
         recursive=True,
     )
 
     if len(log_files) == 0:
         raise Exception(
-            f"No log files found in {os.path.join(orchestrator_settings_dict['log_directory'], '**/*.log*')}"
+            f"No log files found in {os.path.join(orchestrator_settings_dict['output_directory'], 'log', '**/*.log*')}"
         )
 
     orchestrator_logs = [log for log in log_files if "orchestrator" in log]
@@ -145,7 +145,7 @@ def get_latest_logs():
 def check_status():
     def check_recordings():
         all_recordings = glob.glob(
-            os.path.join(orchestrator_settings_dict["recording_directory"], "*.mp4")
+            os.path.join(orchestrator_settings_dict["output_directory"], "recordings", "**/*.mp4")
         )
         if len(all_recordings) == 0:
             raise Exception("No recordings found.")
@@ -161,7 +161,7 @@ def check_status():
     try:
         check_recordings()
         print("\n")
-        print("Recording running, all good.")
+        print("Recording running.")
         print("\n")
     except Exception as e:
         print("\n")
