@@ -110,43 +110,51 @@ def upload_sample_of_latest_recording():
         print("Success!")
 
 
-def modified_in_past_x_minutes(filepath, x):
-    if (
-        dt.datetime.now(dt.timezone.utc)
-        - dt.datetime.fromtimestamp(os.path.getmtime(filepath), tz=dt.timezone.utc)
-    ) < dt.timedelta(minutes=x):
-        return True
-    else:
-        return False
+def check_status(settings_dict):
+    def modified_in_past_x_minutes(filepath, x):
+        if (
+                dt.datetime.now(dt.timezone.utc)
+                - dt.datetime.fromtimestamp(os.path.getmtime(filepath), tz=dt.timezone.utc)
+        ) < dt.timedelta(minutes=x):
+            return True
+        else:
+            return False
 
+    def check_recordings():
+        all_recordings = glob.glob(
+            os.path.join(settings_dict["recording_directory"], "*.mp4")
+        )
+        if len(all_recordings) == 0:
+            raise Exception("No recordings found.")
 
-def get_latest_logs():
-    log_files = glob.glob(
-        os.path.join(orchestrator_settings_dict["log_directory"], "**/*.log*"),
-        recursive=True,
-    )
+        sorted(all_recordings, key=os.path.getmtime)
+        if not modified_in_past_x_minutes(all_recordings[-1], no_mod_thres):
+            raise Exception(f"No file modification in the past {no_mod_thres} minutes.")
 
-    if len(log_files) == 0:
-        raise Exception(
-            f"No log files found in {os.path.join(orchestrator_settings_dict['log_directory'], '**/*.log*')}"
+    def get_latest_logs():
+        log_files = glob.glob(
+            os.path.join(settings_dict["log_directory"], "**/*.log*"), recursive=True
         )
 
-    orchestrator_logs = [log for log in log_files if "orchestrator" in log]
-    recording_logs = [log for log in log_files if "recording" in log]
-    orchestrator_logs = sorted(orchestrator_logs, key=os.path.getmtime)
-    recording_logs = sorted(recording_logs, key=os.path.getmtime)
-    if len(recording_logs) == 0:
-        print("no recording logs!")
-        return orchestrator_logs[-1], None
+        if len(log_files) == 0:
+            raise Exception(
+                f"No log files found in {os.path.join(settings_dict['log_directory'], '**/*.log*')}"
+            )
 
-    if len(orchestrator_logs) == 0:
-        print("no orchestrator logs!")
-        return None, recording_logs[-1]
+        orchestrator_logs = [log for log in log_files if "orchestrator" in log]
+        recording_logs = [log for log in log_files if "recording" in log]
+        orchestrator_logs = sorted(orchestrator_logs, key=os.path.getmtime)
+        recording_logs = sorted(recording_logs, key=os.path.getmtime)
+        if len(recording_logs) == 0:
+            print("no recording logs!")
+            return orchestrator_logs[-1], None
 
-    return orchestrator_logs[-1], recording_logs[-1]
+        if len(orchestrator_logs) == 0:
+            print("no orchestrator logs!")
+            return None, recording_logs[-1]
 
+        return orchestrator_logs[-1], recording_logs[-1]
 
-def check_status():
     no_mod_thres = orchestrator_settings_dict[
         "error_after_no_file_modification_minutes"
     ]
@@ -183,7 +191,7 @@ if __name__ == "__main__":
         orchestrator_settings_dict = yaml.load(f, Loader=yaml.SafeLoader)
 
     if args.command == "check_status":
-        check_status()
+        check_status(orchestrator_settings_dict)
     elif args.command == "start_recording_detection":
         pass
     elif args.command == "stop_all":
