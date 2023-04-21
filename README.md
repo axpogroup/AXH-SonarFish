@@ -32,7 +32,7 @@ This is a high-level overview of the steps needed to run the continous operation
 # Running the algorithm on an individual file
 This is a short guide to run the fish detection algorithm on a sample video.
 1.	Install the requirements specified in requirements_mac.txt
-2.	Download the sample sonar video from here: [demo_sample_sonar_recording.mp4 - Mingle](https://mingle.axpo.com/display/HTD/Fish+detection+algorithm?preview=%2F191596778%2F234039560%2Fdemo_sample_sonar_recording.mp4) 
+2.	Download the sample sonar video from here: [demo_sample_sonar_recording.mp4 - Sharepoint](https://axpogrp.sharepoint.com/:v:/s/DEPTHTD-A/ESdKpDEWDEBDqYR6KVFZ0D8BJrxKcDi6F8JaenjD0YhWWw?e=5jNCLF) 
 3.	Place the video in the following folder: _"analysis/demo/"_
 4. Specify the desired settings for the algorithm and the output in _"analysis/demo/demo_settings.yaml"_
 5. Run the algorithm using _"algorithm/run_algorithm.py"_. E.g.: _"python3 algorithm/run_algorithm.py -yf 
