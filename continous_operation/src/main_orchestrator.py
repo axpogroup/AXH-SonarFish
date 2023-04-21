@@ -223,7 +223,7 @@ if __name__ == "__main__":
     with open(os.path.join(cwd, "settings/orchestrator_settings.yaml")) as f:
         orchestrator_settings_dict = yaml.load(f, Loader=yaml.SafeLoader)
     with open(
-        os.path.join(cwd, "settings/detector_settings_continous_operation_v0.yaml")
+        os.path.join(cwd, "settings/detector_settings_continous_operation.yaml")
     ) as f:
         detector_settings_dict = yaml.load(f, Loader=yaml.SafeLoader)
     instance_start_dt = dt.datetime.now(dt.timezone.utc)
