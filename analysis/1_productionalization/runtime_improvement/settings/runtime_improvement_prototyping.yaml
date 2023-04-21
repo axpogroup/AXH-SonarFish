@@ -34,5 +34,4 @@ min_occurences_for_fish: 20 # should be at least 20 for sensible calculation of 
 deviation_from_river_velocity: 0.5
 
 # Visualization
-min_occurences_in_last_x_frames: [30, 40]
 no_more_show_after_x_frames: 1
