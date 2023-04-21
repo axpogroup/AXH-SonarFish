@@ -40,7 +40,6 @@ if __name__ == "__main__":
             processed_frame_dict, object_history, runtimes, detector=detector
         )
 
-    # TOD0 Take out
     if input_output_handler.output_csv_name is not None:
         detections = input_output_handler.get_detections_pd(object_history)
         detections = detector.classify_detections(detections)
