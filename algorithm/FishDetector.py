@@ -29,8 +29,8 @@ class FishDetector:
         self.framebuffer = None
         self.mean_buffer = None
         self.mean_buffer_counter = None
-        self.short_mean = None
-        self.long_mean = None
+        self.short_mean_float = None
+        self.long_mean_float = None
 
     def detect_objects(self, raw_frame):
         start = cv.getTickCount()
@@ -54,7 +54,7 @@ class FishDetector:
         self.update_buffers_calculate_means(enhanced_temp)
         frame_dict["gray_boosted"] = enhanced_temp
 
-        if self.long_mean is None:
+        if self.long_mean_float is None:
             runtimes_ms["enhance"] = get_elapsed_ms(start)
             runtimes_ms["detection_tracking"] = (
                 get_elapsed_ms(start) - runtimes_ms["enhance"]
@@ -63,16 +63,18 @@ class FishDetector:
             self.frame_number += 1
             return {}, frame_dict, runtimes_ms
         else:
-            enhanced_temp = self.short_mean.astype("int16") - self.long_mean.astype("int16")
-            frame_dict["long_mean"] = self.long_mean
-            frame_dict["short_mean"] = self.short_mean
+            enhanced_temp = (self.short_mean_float - self.long_mean_float).astype(
+                "int16"
+            )
+            frame_dict["long_mean"] = self.long_mean_float.astype("uint8")
+            frame_dict["short_mean"] = self.short_mean_float.astype("uint8")
             frame_dict["difference"] = (enhanced_temp + 127).astype("uint8")
             frame_dict["absolute_difference"] = (abs(enhanced_temp) + 127).astype(
                 "uint8"
             )
 
             adaptive_threshold = self.conf["difference_threshold_scaler"] * cv.blur(
-                self.long_mean, (10, 10)
+                self.long_mean_float.astype("uint8"), (10, 10)
             )
             enhanced_temp[abs(enhanced_temp) < adaptive_threshold] = 0
             frame_dict["difference_thresholded"] = (enhanced_temp + 127).astype("uint8")
@@ -225,36 +227,43 @@ class FishDetector:
 
         # Once the buffer is full+1, delete the last frame and calculate the means
         if self.framebuffer.shape[2] > self.conf["short_mean_frames"]:
+            if self.short_mean_float is None:
+                self.short_mean_float = np.mean(
+                    self.framebuffer[:, :, : self.conf["short_mean_frames"]], axis=2
+                ).astype("float64")
+            else:
+                short_mean_change = 1.0/self.conf["short_mean_frames"]*(self.framebuffer[:, :, 0].astype("float64") -
+                                                                  self.framebuffer[:, :, self.conf["short_mean_frames"]].astype("float64"))
+                self.short_mean_float = self.short_mean_float + short_mean_change
             self.framebuffer = self.framebuffer[:, :, : self.conf["short_mean_frames"]]
-            self.short_mean = np.mean(
-                self.framebuffer[:, :, : self.conf["short_mean_frames"]], axis=2
-            ).astype("uint8")
 
             # If there is no current mean_buffer, initialize it with the current mean
             if self.mean_buffer is None:
-                self.mean_buffer = self.short_mean[:, :, np.newaxis]
+                self.mean_buffer = self.short_mean_float.astype("uint8")[:, :, np.newaxis]
                 self.mean_buffer_counter = 1
 
             # else if another conf["short_mean_frames"] number of frames have passed, add the current_mean
             elif self.mean_buffer_counter % self.conf["short_mean_frames"] == 0:
                 self.mean_buffer = np.concatenate(
-                    (self.short_mean[..., np.newaxis], self.mean_buffer), axis=2
+                    (self.short_mean_float.astype("uint8")[..., np.newaxis], self.mean_buffer), axis=2
                 )
+
                 # once the long mean buffer is full+1, take the end off, and calculate the new long_mean
-                if self.mean_buffer.shape[2] > int(
-                        self.conf["long_mean_frames"] / self.conf["short_mean_frames"]
-                ):
+                mean_buffer_length = int(self.conf["long_mean_frames"] / self.conf["short_mean_frames"])
+                if self.mean_buffer.shape[2] > mean_buffer_length:
+                    if self.long_mean_float is None:
+                        self.long_mean_float = np.mean(self.mean_buffer[:, :, : mean_buffer_length], axis=2).astype("float64")
+                    else:
+                        long_mean_change = 1.0/mean_buffer_length*(self.mean_buffer[:, :, 0].astype("float64") -
+                                                                          self.mean_buffer[:, :, mean_buffer_length].astype("float64"))
+                        self.long_mean_float = self.long_mean_float + long_mean_change
+
+                    # Delete the oldest mean in the buffer
                     self.mean_buffer = self.mean_buffer[
                                        :,
                                        :,
-                                       : int(
-                                           self.conf["long_mean_frames"] / self.conf["short_mean_frames"]
-                                       ),
+                                       : mean_buffer_length,
                                        ]
-
-                    # Calculate the long mean only if the conf["long_mean_frames"] have passed
-                    self.long_mean = np.mean(self.mean_buffer, axis=2).astype("uint8")
-
                 self.mean_buffer_counter = 1
 
             else:
