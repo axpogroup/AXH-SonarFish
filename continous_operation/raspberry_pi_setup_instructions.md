@@ -32,10 +32,6 @@
 * add the following lines
   * `@reboot sleep 120 && XDG_RUNTIME_DIR="/run/user/1000" /home/fish-pi/code/venv/bin/python3.10/home/fish-pi/code/continous_operation/src/main_recording_handler.py`
   * `@reboot sleep 120 && XDG_RUNTIME_DIR="/run/user/1000" /home/fish-pi/code/venv/bin/python3.10/home/fish-pi/code/continous_operation/src/main_orchestrator.py`
-* NOT USED weekly reboot on Sunday 0:00, not used since only thing it would catch is a broken dataplicity and it might 
-  mess 
-  with the mounting. If the internet fails it will not reach azure and trigger a reboot anyway.
-  * `0 0 * * 0 /sbin/shutdown -r now`
 
 ### Add an alias for the controller.py script
 * Aliases: add to the bottom of "~/.bashrc"

@@ -2,7 +2,7 @@ output_directory: "/media/fish-pi/PortableSSD1/ongoing_v3"
 watchdog_food_file: "/home/fish-pi/code/continous_operation/watchdog_food.csv"
 
 recording_interval_minutes: 10
-sleep_interval_minutes: 0.2
+sleep_interval_minutes: 0.1
 error_after_no_file_modification_minutes: 2
 
 use_cloud: True

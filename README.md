@@ -4,7 +4,7 @@ sonar based fish detection solution for HTU. To that end a sonar sensor is place
 Raspberry Pi via a HDMI capture device. The Raspberry Pi receives the stream of sonar images, runs 
 the fish detection algorithm on the data and stores the output and records the stream of sonar images. To 
 facilitate continuous operation the Raspberry Pi sends regular heartbeats to a hardware watchdog. At a later stage a 
-Grafana dashboard will act as cloud-based watchdog and alert users if the system is not running as expected.
+Grafana dashboard could act as cloud-based watchdog and alert users if the system is not running as expected.
 
 # Stucture
 The codebase is structured into the following sections:
@@ -18,13 +18,13 @@ The codebase is structured into the following sections:
 
 # Continuous operation
 This is a high-level overview of the steps needed to run the continous operation.
-1. Assemble the hardware as described in TOD0 MINGLE LINK
+1. Assemble the hardware as described in [Mingle](https://mingle.axpo.com/display/HTD/System+Overview) 
 2. Follow the instructions in continous_operation/raspberry_pi_setup_instructions.md to prepare the Raspberry Pi 
    software. This includes installing Ubuntu, git, getting the repo, installing the requirements and setting up 
-   autostart on reboot and the watchdog TOD0 Watchdog bit.
+   autostart on reboot and the watchdog.
 3. Specify the desired output directory, detector setup and other settings in continous_operation/settings. When 
    establishing a new location or sonar settings be sure to adapt the settings and masks of the algorithm on a 
-   single file using the algorithms interactive visual output.
+   sample recording file using the algorithms interactive visual output.
 4. Reboot the system and the recording should start after 2 minutes. 
 5. Monitor the recording and the outputs using the commands in continous_operation/src/controller.py. They should be 
    accessible via an alias, e.g., "control check_status". 
@@ -32,13 +32,14 @@ This is a high-level overview of the steps needed to run the continous operation
 # Running the algorithm on an individual file
 This is a short guide to run the fish detection algorithm on a sample video.
 1.	Install the requirements specified in requirements_mac.txt
-2.	Download the sample sonar video from here: [demo_sample_sonar_recording.mp4 - Azure link valid until 31.03](https://axh4lab4appl4sonar4sa.blob.core.windows.net/sonar-recording-sample/demo_sample_sonar_recording.mp4?sp=r&st=2023-02-02T12:37:44Z&se=2023-03-31T19:37:44Z&spr=https&sv=2021-06-08&sr=b&sig=gw5GanJeONyhg9bcVtagfeAXa2tn7YDHj67GjvlAA8U%3D) 
+2.	Download the sample sonar video from here: [demo_sample_sonar_recording.mp4 - Mingle](https://mingle.axpo.com/display/HTD/Fish+detection+algorithm?preview=%2F191596778%2F234039560%2Fdemo_sample_sonar_recording.mp4) 
 3.	Place the video in the following folder: _"analysis/demo/"_
 4. Specify the desired settings for the algorithm and the output in _"analysis/demo/demo_settings.yaml"_
 5. Run the algorithm using _"algorithm/run_algorithm.py"_. E.g.: _"python3 algorithm/run_algorithm.py -yf 
    analysis/demo/demo_settings.yaml"_
-6. TOD0 How to tune interactively
+6. Use the settings "display_output_video: True" and "display_mode_extensive: True" to tune the settings in an 
+   interactive window and "display_mode_extensive: False" to read the velocity of the river.
 
 # Comments
 Tested with Python 3.10, 
-direct feedback to Leiv Andresen, leiv.andresen@axpo.com 
+direct questions to the Axpo HTD-A team 

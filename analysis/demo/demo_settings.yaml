@@ -18,7 +18,7 @@ input_pixels_per_mm: 0.0838
 downsample: 25
 contrast: 2
 brightness: 30
-long_mean_frames: 200
+long_mean_frames: 400
 short_mean_frames: 10
 difference_threshold_scaler: 0.3
 dilation_kernel_mm: 770

@@ -160,7 +160,7 @@ def draw_detector_output(
         if annotate:
             if annotate == "velocities":
                 pass
-                text = (
+                text = ( "v [px/frame]: " +
                     "{:.2f}".format(obj.velocities[-1][0] * scale)
                     + ", "
                     + "{:.2f}".format(obj.velocities[-1][1] * scale)
