@@ -232,38 +232,64 @@ class FishDetector:
                     self.framebuffer[:, :, : self.conf["short_mean_frames"]], axis=2
                 ).astype("float64")
             else:
-                short_mean_change = 1.0/self.conf["short_mean_frames"]*(self.framebuffer[:, :, 0].astype("float64") -
-                                                                  self.framebuffer[:, :, self.conf["short_mean_frames"]].astype("float64"))
+                short_mean_change = (
+                    1.0
+                    / self.conf["short_mean_frames"]
+                    * (
+                        self.framebuffer[:, :, 0].astype("float64")
+                        - self.framebuffer[:, :, self.conf["short_mean_frames"]].astype(
+                            "float64"
+                        )
+                    )
+                )
                 self.short_mean_float = self.short_mean_float + short_mean_change
             self.framebuffer = self.framebuffer[:, :, : self.conf["short_mean_frames"]]
 
             # If there is no current mean_buffer, initialize it with the current mean
             if self.mean_buffer is None:
-                self.mean_buffer = self.short_mean_float.astype("uint8")[:, :, np.newaxis]
+                self.mean_buffer = self.short_mean_float.astype("uint8")[
+                    :, :, np.newaxis
+                ]
                 self.mean_buffer_counter = 1
 
             # else if another conf["short_mean_frames"] number of frames have passed, add the current_mean
             elif self.mean_buffer_counter % self.conf["short_mean_frames"] == 0:
                 self.mean_buffer = np.concatenate(
-                    (self.short_mean_float.astype("uint8")[..., np.newaxis], self.mean_buffer), axis=2
+                    (
+                        self.short_mean_float.astype("uint8")[..., np.newaxis],
+                        self.mean_buffer,
+                    ),
+                    axis=2,
                 )
 
                 # once the long mean buffer is full+1, take the end off, and calculate the new long_mean
-                mean_buffer_length = int(self.conf["long_mean_frames"] / self.conf["short_mean_frames"])
+                mean_buffer_length = int(
+                    self.conf["long_mean_frames"] / self.conf["short_mean_frames"]
+                )
                 if self.mean_buffer.shape[2] > mean_buffer_length:
                     if self.long_mean_float is None:
-                        self.long_mean_float = np.mean(self.mean_buffer[:, :, : mean_buffer_length], axis=2).astype("float64")
+                        self.long_mean_float = np.mean(
+                            self.mean_buffer[:, :, :mean_buffer_length], axis=2
+                        ).astype("float64")
                     else:
-                        long_mean_change = 1.0/mean_buffer_length*(self.mean_buffer[:, :, 0].astype("float64") -
-                                                                          self.mean_buffer[:, :, mean_buffer_length].astype("float64"))
+                        long_mean_change = (
+                            1.0
+                            / mean_buffer_length
+                            * (
+                                self.mean_buffer[:, :, 0].astype("float64")
+                                - self.mean_buffer[:, :, mean_buffer_length].astype(
+                                    "float64"
+                                )
+                            )
+                        )
                         self.long_mean_float = self.long_mean_float + long_mean_change
 
                     # Delete the oldest mean in the buffer
                     self.mean_buffer = self.mean_buffer[
-                                       :,
-                                       :,
-                                       : mean_buffer_length,
-                                       ]
+                        :,
+                        :,
+                        :mean_buffer_length,
+                    ]
                 self.mean_buffer_counter = 1
 
             else:
