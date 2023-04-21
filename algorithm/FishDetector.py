@@ -101,7 +101,7 @@ class FishDetector:
                 0,
             )
             frame_dict["binary"] = thres
-            frame_dict["raw_binary"] = thres_raw
+            # frame_dict["raw_binary"] = thres_raw
             dilation_kernel_px = self.mm_to_px(self.conf["dilation_kernel_mm"])
             kernel = cv.getStructuringElement(
                 cv.MORPH_ELLIPSE,
@@ -111,11 +111,11 @@ class FishDetector:
                 ),
             )
             frame_dict["dilated"] = cv.dilate(thres, kernel, iterations=1)
-            frame_dict["closed"] = cv.morphologyEx(thres, cv.MORPH_CLOSE, kernel)
-            frame_dict["opened"] = cv.morphologyEx(thres, cv.MORPH_OPEN, kernel)
-            frame_dict["internal_external"] = (
-                frame_dict["dilated"] - frame_dict["raw_binary"]
-            )
+            # frame_dict["closed"] = cv.morphologyEx(thres, cv.MORPH_CLOSE, kernel)
+            # frame_dict["opened"] = cv.morphologyEx(thres, cv.MORPH_OPEN, kernel)
+            # frame_dict["internal_external"] = (
+            #     frame_dict["dilated"] - frame_dict["raw_binary"]
+            # )
 
             # Extract keypoints
             contours, hier = cv.findContours(
