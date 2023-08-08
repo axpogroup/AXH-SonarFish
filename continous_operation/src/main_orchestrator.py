@@ -319,8 +319,8 @@ if __name__ == "__main__":
                 "red",
                 "ERROR",
                 f"UTC Time: "
-                f"{dt.datetime.now(dt.timezone.utc).isoformat(timespec='milliseconds')}:"
-                f" {"".join(traceback.format_exception(orchestrating_error))}",
+                f"{dt.datetime.now(dt.timezone.utc).isoformat(timespec='milliseconds')}:" +
+                "".join(traceback.format_exception(orchestrating_error))}
             )
         except Exception as e:
             logger.error("Error sending Message to MS Teams. \n" + "".join(traceback.format_exception(e)))
