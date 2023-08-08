@@ -79,8 +79,11 @@ def detect_on_new_files():
         )["path"].to_list()
     except Exception as e:
         print(e)
+        print(e == EmptyDataError)
+        if e == "No columns to parse from file":
+
         #FileNotFoundError or pd.errors.EmptyDataError:
-        processed_recordings = []
+            processed_recordings = []
 
     try:
         existing_completed_recordings = pd.read_csv(
