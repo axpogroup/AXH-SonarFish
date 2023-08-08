@@ -78,7 +78,7 @@ def detect_on_new_files():
             )
         )["path"].to_list()
     except Exception as e:
-        if e == "No columns to parse from file" or e == FileNotFoundError:
+        if (e == "No columns to parse from file") or (e == FileNotFoundError):
             processed_recordings = []
 
     try:
@@ -90,7 +90,7 @@ def detect_on_new_files():
             )
         )["path"].to_list()
     except Exception as e:
-        if e == "No columns to parse from file" or e == FileNotFoundError:
+        if (e == "No columns to parse from file") or (e == FileNotFoundError):
             existing_completed_recordings = []
 
     try:
@@ -102,7 +102,7 @@ def detect_on_new_files():
             )
         )["path"].to_list()
     except Exception as e:
-        if e == "No columns to parse from file" or e == FileNotFoundError:
+        if (e == "No columns to parse from file") or (e == FileNotFoundError):
             detection_files = []
 
     to_process = [
@@ -164,7 +164,7 @@ def upload_new_files():
             )
         )["path"].to_list()
     except Exception as e:
-        if e == "No columns to parse from file" or e == FileNotFoundError:
+        if (e == "No columns to parse from file") or (e == FileNotFoundError):
             uploaded_detections = []
 
     try:
@@ -176,7 +176,7 @@ def upload_new_files():
             )
         )["path"].to_list()
     except Exception as e:
-        if e == "No columns to parse from file" or e == FileNotFoundError:
+        if (e == "No columns to parse from file") or (e == FileNotFoundError):
             existing_detections = []
 
     to_upload = [rec for rec in existing_detections if (rec not in uploaded_detections)]
