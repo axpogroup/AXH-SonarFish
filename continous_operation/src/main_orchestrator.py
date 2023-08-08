@@ -78,11 +78,7 @@ def detect_on_new_files():
             )
         )["path"].to_list()
     except Exception as e:
-        print(e)
-        print(e == pd.errors.EmptyDataError)
-        if e == "No columns to parse from file":
-
-        #FileNotFoundError or pd.errors.EmptyDataError:
+        if e == "No columns to parse from file" or e == FileNotFoundError:
             processed_recordings = []
 
     try:
@@ -93,8 +89,9 @@ def detect_on_new_files():
                 "completed_recordings_list.csv",
             )
         )["path"].to_list()
-    except FileNotFoundError or pd.errors.EmptyDataError:
-        existing_completed_recordings = []
+    except Exception as e:
+        if e == "No columns to parse from file" or e == FileNotFoundError:
+            existing_completed_recordings = []
 
     try:
         detection_files = pd.read_csv(
@@ -104,8 +101,9 @@ def detect_on_new_files():
                 "detection_files_list.csv",
             )
         )["path"].to_list()
-    except FileNotFoundError or pd.errors.EmptyDataError:
-        detection_files = []
+    except Exception as e:
+        if e == "No columns to parse from file" or e == FileNotFoundError:
+            detection_files = []
 
     to_process = [
         rec
@@ -165,8 +163,9 @@ def upload_new_files():
                 "uploaded_detections_list.csv",
             )
         )["path"].to_list()
-    except FileNotFoundError or pd.errors.EmptyDataError:
-        uploaded_detections = []
+    except Exception as e:
+        if e == "No columns to parse from file" or e == FileNotFoundError:
+            uploaded_detections = []
 
     try:
         existing_detections = pd.read_csv(
@@ -176,8 +175,9 @@ def upload_new_files():
                 "detection_files_list.csv",
             )
         )["path"].to_list()
-    except FileNotFoundError or pd.errors.EmptyDataError:
-        existing_detections = []
+    except Exception as e:
+        if e == "No columns to parse from file" or e == FileNotFoundError:
+            existing_detections = []
 
     to_upload = [rec for rec in existing_detections if (rec not in uploaded_detections)]
 
