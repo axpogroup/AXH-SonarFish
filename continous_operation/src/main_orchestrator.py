@@ -2,6 +2,7 @@ import datetime as dt
 import glob
 import os
 import sys
+import traceback
 
 sys.path.append("/home/fish-pi/code/")
 import time
@@ -299,6 +300,7 @@ if __name__ == "__main__":
         except Exception as e:
             orchestrating_error = e
             logger.error("An exception occured while orchestrating! \n" + str(e))
+            traceback.print_tb(e.__traceback__)
             break
 
     logger.info(
