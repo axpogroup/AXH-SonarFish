@@ -299,14 +299,9 @@ if __name__ == "__main__":
 
         except Exception as e:
             orchestrating_error = e
-            logger.error("An exception occured while orchestrating! \n" + str(e))
-            logger.error("Exception type:", e.__class__)
-            logger.error("Exception arguments:", e.args)
-            logger.error("Exception description:", str(e))
-            logger.error("Cause:", e.__cause__)
-            logger.error("Context:", e.__context__)
-            logger.error("Traceback:")
-            # logger.error(traceback.print_tb(e.__traceback__))
+            logger.error("An exception occured while orchestrating!)
+            print(traceback.format_exception(e))
+            logger.error(traceback.format_exception(e))
             break
 
     logger.info(
