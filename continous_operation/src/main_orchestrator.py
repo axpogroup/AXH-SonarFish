@@ -299,7 +299,7 @@ if __name__ == "__main__":
 
         except Exception as e:
             orchestrating_error = e
-            logger.error("An exception occured while orchestrating!)
+            logger.error("An exception occured while orchestrating!")
             print(traceback.format_exception(e))
             logger.error(traceback.format_exception(e))
             break
