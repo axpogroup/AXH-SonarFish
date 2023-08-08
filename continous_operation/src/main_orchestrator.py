@@ -79,7 +79,7 @@ def detect_on_new_files():
         )["path"].to_list()
     except Exception as e:
         print(e)
-        print(e == EmptyDataError)
+        print(e == pd.errors.EmptyDataError)
         if e == "No columns to parse from file":
 
         #FileNotFoundError or pd.errors.EmptyDataError:
