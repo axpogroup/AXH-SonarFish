@@ -77,7 +77,7 @@ def detect_on_new_files():
                 "processed_recordings_list.csv",
             )
         )["path"].to_list()
-    except FileNotFoundError:
+    except FileNotFoundError: # or pandas.errors.EmptyDataError:
         processed_recordings = []
 
     try:
@@ -88,7 +88,7 @@ def detect_on_new_files():
                 "completed_recordings_list.csv",
             )
         )["path"].to_list()
-    except FileNotFoundError:
+    except FileNotFoundError or pandas.errors.EmptyDataError:
         existing_completed_recordings = []
 
     try:
@@ -99,7 +99,7 @@ def detect_on_new_files():
                 "detection_files_list.csv",
             )
         )["path"].to_list()
-    except FileNotFoundError:
+    except FileNotFoundError or pandas.errors.EmptyDataError:
         detection_files = []
 
     to_process = [
@@ -160,7 +160,7 @@ def upload_new_files():
                 "uploaded_detections_list.csv",
             )
         )["path"].to_list()
-    except FileNotFoundError:
+    except FileNotFoundError or pandas.errors.EmptyDataError:
         uploaded_detections = []
 
     try:
@@ -171,7 +171,7 @@ def upload_new_files():
                 "detection_files_list.csv",
             )
         )["path"].to_list()
-    except FileNotFoundError:
+    except FileNotFoundError or pandas.errors.EmptyDataError:
         existing_detections = []
 
     to_upload = [rec for rec in existing_detections if (rec not in uploaded_detections)]
@@ -279,12 +279,15 @@ if __name__ == "__main__":
                         initial_teams_message_sent = True
                 except Exception as file_upload_exception:
                     if orchestrator_settings_dict["raise_exception_on_cloud_error"]:
+                        logger.error(
+                            "Issue with the cloud."
+                        )
                         raise Exception(
-                            "Issue with the cloud. \n" + str(file_upload_exception)
+                            file_upload_exception
                         )
                     else:
                         logger.warning(
-                            "Issue with the cloud. \n" + str(file_upload_exception)
+                            "Issue with the cloud. \n" + "".join(traceback.format_exception(file_upload_exception))
                         )
 
             # Write to watchdog
@@ -317,13 +320,13 @@ if __name__ == "__main__":
                 "ERROR",
                 f"UTC Time: "
                 f"{dt.datetime.now(dt.timezone.utc).isoformat(timespec='milliseconds')}:"
-                f" {str(orchestrating_error)})",
+                f" {"".join(traceback.format_exception(orchestrating_error))}",
             )
         except Exception as e:
-            logger.error("Error sending Message to MS Teams. \n" + str(e))
+            logger.error("Error sending Message to MS Teams. \n" + "".join(traceback.format_exception(e)))
         try:
             cloud_handler = utils.CloudHandler()
             logger.info("Attempting to upload logs.")
             upload_logs_of_past_hour()
         except Exception as e:
-            logger.error("Error sending uploading logs. \n" + str(e))
+            logger.error("Error sending uploading logs. \n" + "".join(traceback.format_exception(e)))
