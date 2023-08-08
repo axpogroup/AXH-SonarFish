@@ -77,7 +77,9 @@ def detect_on_new_files():
                 "processed_recordings_list.csv",
             )
         )["path"].to_list()
-    except FileNotFoundError or pd.errors.EmptyDataError:
+    except Exception as e:
+        print(e)
+        #FileNotFoundError or pd.errors.EmptyDataError:
         processed_recordings = []
 
     try:
