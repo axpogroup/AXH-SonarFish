@@ -83,28 +83,30 @@ def detect_on_new_files():
         processed_recordings = []
 
     try:
-        existing_completed_recordings = pd.read_csv(
-            os.path.join(
+        path = os.path.join(
                 orchestrator_settings_dict["output_directory"],
                 "file_lists",
                 "completed_recordings_list.csv",
             )
-        )["path"].to_list()
-    except Exception as e:
-        if (e == "No columns to parse from file") or (e == FileNotFoundError):
+        if os.stat(path).st_size == 0:
             existing_completed_recordings = []
+        else:
+            existing_completed_recordings = pd.read_csv(path)["path"].to_list()
+    except FileNotFoundError:
+        existing_completed_recordings = []
 
     try:
-        detection_files = pd.read_csv(
-            os.path.join(
+        path = os.path.join(
                 orchestrator_settings_dict["output_directory"],
                 "file_lists",
                 "detection_files_list.csv",
             )
-        )["path"].to_list()
-    except Exception as e:
-        if (e == "No columns to parse from file") or (e == FileNotFoundError):
+        if os.stat(path).st_size == 0:
             detection_files = []
+        else:
+            detection_files = pd.read_csv(path)["path"].to_list()
+    except FileNotFoundError:
+        detection_files = []
 
     to_process = [
         rec
@@ -157,28 +159,30 @@ def detect_on_new_files():
 
 def upload_new_files():
     try:
-        uploaded_detections = pd.read_csv(
-            os.path.join(
+        path = os.path.join(
                 orchestrator_settings_dict["output_directory"],
                 "file_lists",
                 "uploaded_detections_list.csv",
             )
-        )["path"].to_list()
-    except Exception as e:
-        if (e == "No columns to parse from file") or (e == FileNotFoundError):
+        if os.stat(path).st_size == 0:
             uploaded_detections = []
+        else:
+            uploaded_detections = pd.read_csv(path)["path"].to_list()
+    except FileNotFoundError:
+        uploaded_detections = []
 
     try:
-        existing_detections = pd.read_csv(
-            os.path.join(
+        path = os.path.join(
                 orchestrator_settings_dict["output_directory"],
                 "file_lists",
                 "detection_files_list.csv",
             )
-        )["path"].to_list()
-    except Exception as e:
-        if (e == "No columns to parse from file") or (e == FileNotFoundError):
+        if os.stat(path).st_size == 0:
             existing_detections = []
+        else:
+            existing_detections = pd.read_csv(path)["path"].to_list()
+    except FileNotFoundError:
+        existing_detections = []
 
     to_upload = [rec for rec in existing_detections if (rec not in uploaded_detections)]
 
