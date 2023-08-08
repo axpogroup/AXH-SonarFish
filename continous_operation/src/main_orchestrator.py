@@ -70,18 +70,17 @@ def check_recordings():
 
 def detect_on_new_files():
     try:
-        processed_recordings = pd.read_csv(
-            os.path.join(
+        path = os.path.join(
                 orchestrator_settings_dict["output_directory"],
                 "file_lists",
                 "processed_recordings_list.csv",
             )
-        )["path"].to_list()
-    except Exception as e:
-        if (e == "No columns to parse from file") or (e == FileNotFoundError):
+        if os.stat(path).st_size == 0:
             processed_recordings = []
         else:
-            raise e
+            processed_recordings = pd.read_csv(path)["path"].to_list()
+    except FileNotFoundError:
+        processed_recordings = []
 
     try:
         existing_completed_recordings = pd.read_csv(
