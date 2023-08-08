@@ -77,7 +77,7 @@ def detect_on_new_files():
                 "processed_recordings_list.csv",
             )
         )["path"].to_list()
-    except FileNotFoundError or pandas.errors.EmptyDataError:
+    except FileNotFoundError or pd.errors.EmptyDataError:
         processed_recordings = []
 
     try:
@@ -88,7 +88,7 @@ def detect_on_new_files():
                 "completed_recordings_list.csv",
             )
         )["path"].to_list()
-    except FileNotFoundError or pandas.errors.EmptyDataError:
+    except FileNotFoundError or pd.errors.EmptyDataError:
         existing_completed_recordings = []
 
     try:
@@ -99,7 +99,7 @@ def detect_on_new_files():
                 "detection_files_list.csv",
             )
         )["path"].to_list()
-    except FileNotFoundError or pandas.errors.EmptyDataError:
+    except FileNotFoundError or pd.errors.EmptyDataError:
         detection_files = []
 
     to_process = [
@@ -160,7 +160,7 @@ def upload_new_files():
                 "uploaded_detections_list.csv",
             )
         )["path"].to_list()
-    except FileNotFoundError or pandas.errors.EmptyDataError:
+    except FileNotFoundError or pd.errors.EmptyDataError:
         uploaded_detections = []
 
     try:
@@ -171,7 +171,7 @@ def upload_new_files():
                 "detection_files_list.csv",
             )
         )["path"].to_list()
-    except FileNotFoundError or pandas.errors.EmptyDataError:
+    except FileNotFoundError or pd.errors.EmptyDataError:
         existing_detections = []
 
     to_upload = [rec for rec in existing_detections if (rec not in uploaded_detections)]
