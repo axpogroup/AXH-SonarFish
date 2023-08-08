@@ -77,7 +77,7 @@ def detect_on_new_files():
                 "processed_recordings_list.csv",
             )
         )["path"].to_list()
-    except FileNotFoundError: # or pandas.errors.EmptyDataError:
+    except FileNotFoundError or pandas.errors.EmptyDataError:
         processed_recordings = []
 
     try:
@@ -282,9 +282,7 @@ if __name__ == "__main__":
                         logger.error(
                             "Issue with the cloud."
                         )
-                        raise Exception(
-                            file_upload_exception
-                        )
+                        raise file_upload_exception
                     else:
                         logger.warning(
                             "Issue with the cloud. \n" + "".join(traceback.format_exception(file_upload_exception))
@@ -302,9 +300,7 @@ if __name__ == "__main__":
 
         except Exception as e:
             orchestrating_error = e
-            logger.error("An exception occured while orchestrating!")
-            print("".join(traceback.format_exception(e)))
-            logger.error("".join(traceback.format_exception(e)))
+            logger.error("An exception occured while orchestrating! \n" + "".join(traceback.format_exception(e)))
             break
 
     logger.info(
