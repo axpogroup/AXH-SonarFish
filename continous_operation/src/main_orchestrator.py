@@ -80,6 +80,8 @@ def detect_on_new_files():
     except Exception as e:
         if (e == "No columns to parse from file") or (e == FileNotFoundError):
             processed_recordings = []
+        else:
+            raise e
 
     try:
         existing_completed_recordings = pd.read_csv(
