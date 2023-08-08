@@ -305,7 +305,7 @@ if __name__ == "__main__":
             logger.error("Exception description:", str(e))
             logger.error("Cause:", e.__cause__)
             logger.error("Context:", e.__context__)
-            logger.error("Traceback:"))
+            logger.error("Traceback:")
             logger.error(traceback.print_tb(e.__traceback__))
             break
 
