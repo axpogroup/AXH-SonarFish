@@ -56,3 +56,11 @@
 ### Setup remote access with Dataplicity
 * Follow the installation procedure outlined on https://docs.dataplicity.com/docs#installation-procedure
 * Once the setup is done and you have opened the shell in your browser use `su fish-pi` to log in
+
+### Automounting setup
+* In order to automount the SSD, add the following line to /etc/fstab (sudo nano /etc/fstab):
+* Note that the output folder specified in continous_operation/settings/orchestrator_settings.yaml must correspond to the mounting point specified below:
+`/dev/sda1 /media/fish-pi/PortableSSD1 exfat defaults,uid=1000 0 0`
+* In the past there was issues with the permissions of the HDMI capture device after automounting, to solve them run these commands:
+`sudo adduser username video`
+`sudo usermod -a -G video username`
