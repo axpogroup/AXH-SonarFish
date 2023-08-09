@@ -59,6 +59,7 @@
 
 ### Automounting setup
 * In order to automount the SSD, add the following line to /etc/fstab (sudo nano /etc/fstab):
+* Note that this command will automount the first disk that is connected (sda1), since it is not clear how this is determined it is best to only connect one disk at a time
 * Note that the output folder specified in continous_operation/settings/orchestrator_settings.yaml must correspond to the mounting point specified below:
 `/dev/sda1 /media/fish-pi/PortableSSD1 exfat defaults,uid=1000 0 0`
 * In the past there was issues with the permissions of the HDMI capture device after automounting, to solve them run these commands:
