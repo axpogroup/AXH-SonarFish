@@ -128,7 +128,8 @@ def detect_on_new_files():
     savedir = os.path.join(
         orchestrator_settings_dict["output_directory"], "detections", date_dir
     )
-    os.makedirs(name=savedir, exist_ok=True)
+    if not os.path.exists(savedir):
+        os.makedirs(name=savedir, exist_ok=True)
     name = os.path.split(recording)[-1][:-4] + ".csv"
     name = os.path.join(savedir, name)
 
