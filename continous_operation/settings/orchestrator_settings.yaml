@@ -1,4 +1,4 @@
-output_directory: "/media/fish-pi/PortableSSD1/second_setup"
+output_directory: "/media/fish-pi/PortableSSD1/second_setup" # the directory must be located in the folder specified in the automounting command in /etc/fstab, consult continous_operation/raspberry_pi_setup_instructions.md for further information
 watchdog_food_file: "/home/fish-pi/code/continous_operation/watchdog_food.csv"
 
 recording_interval_minutes: 10
