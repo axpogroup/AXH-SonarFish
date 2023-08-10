@@ -37,13 +37,15 @@ def check_recordings():
         raise Exception(f"No file modification in the past {no_mod_thres} minutes.")
 
     try:
-        existing_completed_recordings = pd.read_csv(
-            os.path.join(
+        path = os.path.join(
                 orchestrator_settings_dict["output_directory"],
                 "file_lists",
                 "completed_recordings_list.csv",
             )
-        )["path"].to_list()
+        if os.stat(path).st_size == 0:
+            existing_completed_recordings = []
+        else:
+            existing_completed_recordings = pd.read_csv(path)["path"].to_list()
     except FileNotFoundError:
         existing_completed_recordings = []
 
