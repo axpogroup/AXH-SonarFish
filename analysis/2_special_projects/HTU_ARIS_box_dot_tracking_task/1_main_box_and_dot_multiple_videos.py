@@ -8,7 +8,7 @@ import os
 import cv2 as cv
 import numpy as np
 import yaml
-from BoxAndDotDetector import BoxAndDotDetector
+from BoxDetector import BoxDetector
 from dateutil.relativedelta import relativedelta
 
 # import code
@@ -120,7 +120,7 @@ if __name__ == "__main__":
             print("Creating new csv...")
 
         video_cap = cv.VideoCapture(file)
-        detector = BoxAndDotDetector(settings_dict, latest_persistent_object_id)
+        detector = BoxDetector(settings_dict, latest_persistent_object_id)
 
         if "output_video_dir" in settings_dict.keys():
             video_writer = initialize_output_recording(

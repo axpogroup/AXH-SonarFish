@@ -12,7 +12,7 @@ fish_area_mask = None
 full_area_mask = None
 
 
-class BoxAndDotDetector:
+class BoxDetector:
     def __init__(self, settings_dict, latest_persistent_object_id):
         self.settings_dict = settings_dict
         self.frame_number = 0  # TOD Must not overflow - recycle
@@ -138,9 +138,6 @@ class BoxAndDotDetector:
         self.detect_and_track(self.current_green, color="green")
         self.detect_and_track(self.current_red, color="red")
 
-        self.detect_and_track_dots(self.current_green, color="green dot")
-        self.detect_and_track_dots(self.current_red, color="red dot")
-
         self.detection_tracking_time_ms = (
             int((cv.getTickCount() - start) / cv.getTickFrequency() * 1000)
             - self.enhance_time_ms
@@ -185,43 +182,11 @@ class BoxAndDotDetector:
     def detect_and_track(self, enhanced_frame, color=None):
         self.detections = self.find_points_of_interest(enhanced_frame, mode="contour")
 
-        dot_detection_keys = []
         for key, detection in self.detections.items():
             detection.classifications = [color]
 
-            # Filter dots, possibly ADJUST
-            if detection.area[-1] < 800:
-                dot_detection_keys.append(key)
-
-        for key in dot_detection_keys:
-            self.detections.pop(key)
-
         self.current_objects = self.associate_detections(self.detections, color=color)
 
-        self.current_objects = self.filter_objects(self.current_objects, color=color)
-        return
-
-    def detect_and_track_dots(self, enhanced_frame, color=None):
-        self.detections = self.find_points_of_interest(enhanced_frame, mode="contour")
-
-        dot_detection_keys = []
-        for key, detection in self.detections.items():
-            # check if there was an issue with the detection
-            x, y, w, h = cv.boundingRect(detection.contours[-1])
-            if abs(float(w) / h - 1) > 0.2:
-                self.issue = True
-
-            detection.classifications = [color]
-
-            # Filter boxes, possibly ADJUST
-            if detection.area[-1] > 800:
-                dot_detection_keys.append(key)
-                # detection.classifications = ['dot ' + color]
-
-        for key in dot_detection_keys:
-            self.detections.pop(key)
-
-        self.current_objects = self.associate_detections(self.detections, color=color)
         self.current_objects = self.filter_objects(self.current_objects, color=color)
         return
 
@@ -343,8 +308,7 @@ class BoxAndDotDetector:
                 self.frame_number - obj.frames_observed[-1]
                 >= self.phase_out_after_x_frames
             ):
-                if "dot" not in color:
-                    to_delete.append(ID)
+                to_delete.append(ID)
                 continue
 
             # Show if x occurences in the last y frames
@@ -399,8 +363,6 @@ class BoxAndDotDetector:
                     detection.midpoints[-1], object_midpoints
                 )
                 max_association_dist = self.max_association_dist
-                if color in ["green dot", "red dot"]:
-                    max_association_dist = 5
                 if min_dist < max_association_dist:
                     self.associations.append(
                         {
@@ -575,14 +537,14 @@ class BoxAndDotDetector:
 
     @staticmethod
     def mask_regions(img, area="fish"):
+        # this code is currently unused....
         if area == "fish":
             if img.shape[:1] != fish_area_mask.shape[:1]:
                 percent_difference = img.shape[0] / fish_area_mask.shape[0] * 100
 
                 np.place(
                     img,
-                    BoxAndDotDetector.resize_img(fish_area_mask, percent_difference)
-                    < 100,
+                    BoxDetector.resize_img(fish_area_mask, percent_difference) < 100,
                     0,
                 )
             else:
@@ -593,8 +555,7 @@ class BoxAndDotDetector:
 
                 np.place(
                     img,
-                    BoxAndDotDetector.resize_img(full_area_mask, percent_difference)
-                    < 100,
+                    BoxDetector.resize_img(full_area_mask, percent_difference) < 100,
                     0,
                 )
             else:
@@ -685,9 +646,6 @@ class BoxAndDotDetector:
         rows = []
         if self.current_objects is not None:
             for _, object_ in self.current_objects.items():
-                if object_.classifications[-1] in ["green dot", "red dot"]:
-                    if len(object_.frames_observed) > 1:
-                        continue
 
                 # area = cv.contourArea(object_.contours[-1])
                 x, y, w, h = cv.boundingRect(object_.contours[-1])
