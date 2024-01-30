@@ -2,13 +2,14 @@ import datetime as dt
 import glob
 import os
 import sys
-import traceback
-
-sys.path.append("/home/fish-pi/code/")
 import time
+import traceback
 
 import pandas as pd
 import yaml
+
+sys.path.append("/home/fish-pi/code/")
+
 
 from continous_operation.src import utils
 
@@ -38,10 +39,10 @@ def check_recordings():
 
     try:
         path = os.path.join(
-                orchestrator_settings_dict["output_directory"],
-                "file_lists",
-                "completed_recordings_list.csv",
-            )
+            orchestrator_settings_dict["output_directory"],
+            "file_lists",
+            "completed_recordings_list.csv",
+        )
         if os.stat(path).st_size == 0:
             existing_completed_recordings = []
         else:
@@ -73,10 +74,10 @@ def check_recordings():
 def detect_on_new_files():
     try:
         path = os.path.join(
-                orchestrator_settings_dict["output_directory"],
-                "file_lists",
-                "processed_recordings_list.csv",
-            )
+            orchestrator_settings_dict["output_directory"],
+            "file_lists",
+            "processed_recordings_list.csv",
+        )
         if os.stat(path).st_size == 0:
             processed_recordings = []
         else:
@@ -86,10 +87,10 @@ def detect_on_new_files():
 
     try:
         path = os.path.join(
-                orchestrator_settings_dict["output_directory"],
-                "file_lists",
-                "completed_recordings_list.csv",
-            )
+            orchestrator_settings_dict["output_directory"],
+            "file_lists",
+            "completed_recordings_list.csv",
+        )
         if os.stat(path).st_size == 0:
             existing_completed_recordings = []
         else:
@@ -99,10 +100,10 @@ def detect_on_new_files():
 
     try:
         path = os.path.join(
-                orchestrator_settings_dict["output_directory"],
-                "file_lists",
-                "detection_files_list.csv",
-            )
+            orchestrator_settings_dict["output_directory"],
+            "file_lists",
+            "detection_files_list.csv",
+        )
         if os.stat(path).st_size == 0:
             detection_files = []
         else:
@@ -163,10 +164,10 @@ def detect_on_new_files():
 def upload_new_files():
     try:
         path = os.path.join(
-                orchestrator_settings_dict["output_directory"],
-                "file_lists",
-                "uploaded_detections_list.csv",
-            )
+            orchestrator_settings_dict["output_directory"],
+            "file_lists",
+            "uploaded_detections_list.csv",
+        )
         if os.stat(path).st_size == 0:
             uploaded_detections = []
         else:
@@ -176,10 +177,10 @@ def upload_new_files():
 
     try:
         path = os.path.join(
-                orchestrator_settings_dict["output_directory"],
-                "file_lists",
-                "detection_files_list.csv",
-            )
+            orchestrator_settings_dict["output_directory"],
+            "file_lists",
+            "detection_files_list.csv",
+        )
         if os.stat(path).st_size == 0:
             existing_detections = []
         else:
@@ -292,13 +293,12 @@ if __name__ == "__main__":
                         initial_teams_message_sent = True
                 except Exception as file_upload_exception:
                     if orchestrator_settings_dict["raise_exception_on_cloud_error"]:
-                        logger.error(
-                            "Issue with the cloud."
-                        )
+                        logger.error("Issue with the cloud.")
                         raise file_upload_exception
                     else:
                         logger.warning(
-                            "Issue with the cloud. \n" + "".join(traceback.format_exception(file_upload_exception))
+                            "Issue with the cloud. \n"
+                            + "".join(traceback.format_exception(file_upload_exception))
                         )
 
             # Write to watchdog
@@ -313,7 +313,10 @@ if __name__ == "__main__":
 
         except Exception as e:
             orchestrating_error = e
-            logger.error("An exception occured while orchestrating! \n" + "".join(traceback.format_exception(e)))
+            logger.error(
+                "An exception occured while orchestrating! \n"
+                + "".join(traceback.format_exception(e))
+            )
             break
 
     logger.info(
@@ -328,14 +331,20 @@ if __name__ == "__main__":
                 "red",
                 "ERROR",
                 f"UTC Time: "
-                f"{dt.datetime.now(dt.timezone.utc).isoformat(timespec='milliseconds')}:" +
-                "".join(traceback.format_exception(orchestrating_error))
+                f"{dt.datetime.now(dt.timezone.utc).isoformat(timespec='milliseconds')}:"
+                + "".join(traceback.format_exception(orchestrating_error)),
             )
         except Exception as e:
-            logger.error("Error sending Message to MS Teams. \n" + "".join(traceback.format_exception(e)))
+            logger.error(
+                "Error sending Message to MS Teams. \n"
+                + "".join(traceback.format_exception(e))
+            )
         try:
             cloud_handler = utils.CloudHandler()
             logger.info("Attempting to upload logs.")
             upload_logs_of_past_hour()
         except Exception as e:
-            logger.error("Error sending uploading logs. \n" + "".join(traceback.format_exception(e)))
+            logger.error(
+                "Error sending uploading logs. \n"
+                + "".join(traceback.format_exception(e))
+            )

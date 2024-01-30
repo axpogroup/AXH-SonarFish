@@ -1,12 +1,13 @@
 import datetime as dt
 import os
-import sys
-
-sys.path.append("/home/fish-pi/code/")
 import subprocess
+import sys
 import time
 
 import yaml
+
+sys.path.append("/home/fish-pi/code/")
+
 
 from continous_operation.src import utils
 
@@ -24,11 +25,11 @@ if __name__ == "__main__":
     )
     os.makedirs(name=recording_directory, exist_ok=True)
 
-    capture_initialization_command = "sh /home/fish-pi/code/continous_operation/initialize_capture/initialize_capture.sh"
+    capture_initialization_cmd = "sh /home/fish-pi/code/continous_operation/initialize_capture/initialize_capture.sh"
     logger.info("Initializing capture device ...")
     try:
         output = subprocess.run(
-            capture_initialization_command,
+            capture_initialization_cmd,
             check=True,
             shell=True,
             stdout=subprocess.PIPE,
@@ -42,7 +43,15 @@ if __name__ == "__main__":
     time.sleep(5)
 
     duration = int(orchestrator_settings_dict["recording_interval_minutes"] * 60)
-    record_cmd_prefix = f"ffmpeg -framerate 25 -pixel_format uyvy422 -i /dev/video0 -vcodec h264_v4l2m2m -b:v 6M -r 20 -t {duration}"
+    record_cmd_prefix = (
+        f"ffmpeg -framerate 25 "
+        f"-pixel_format uyvy422 "
+        f"-i /dev/video0 "
+        f"-vcodec h264_v4l2m2m "
+        f"-b:v 6M "
+        f"-r 20 "
+        f"-t {duration}"
+    )
 
     logger.info("Starting recording...")
     while True:

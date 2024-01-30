@@ -6,10 +6,11 @@ import subprocess
 import sys
 import time
 
-sys.path.append("/home/fish-pi/code/")
-
 import pandas as pd
 import yaml
+
+sys.path.append("/home/fish-pi/code/")
+
 
 from continous_operation.src.utils import CloudHandler
 

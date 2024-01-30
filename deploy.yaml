@@ -1,0 +1,30 @@
+pool:
+  vmImage: 'ubuntu-latest'
+
+
+stages:
+
+- stage: Static_Tests
+  dependsOn: [ ]
+  displayName: Static Tests
+  jobs:
+  - job:
+    displayName: Black, Isort, Flake 8
+    steps:
+      - task: UsePythonVersion@0
+        displayName: Use Python 3.10
+        inputs:
+          versionSpec: 3.10
+      - bash: |
+          pip install black==24.1.1 flake8==7.0.0 isort==5.13.2
+        displayName: Install linting tools
+      - script: |
+          black . --check
+        displayName: run black
+      - script: |
+          isort . --check-only --profile black
+        displayName: run isort
+      - script: |
+          flake8 .
+        displayName: flake8
+
