@@ -1,10 +1,11 @@
 import argparse
 import sys
 
+import yaml
+
 # TOD0 get rid of this stuff
 sys.path.append("/Users/leivandresen/Documents/Hydro_code/AXH-SonarFish/")
 
-import yaml
 from FishDetector import FishDetector
 from InputOutputHandler import InputOutputHandler
 
