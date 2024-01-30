@@ -1,6 +1,7 @@
 # Code written by Leiv Andresen, HTD-A, leiv.andresen@axpo.com
 
 import csv
+import datetime
 import datetime as dt
 import glob
 import os
@@ -31,6 +32,7 @@ def parse_filename(filename):
     # "Video 12 2022-05-27_051500_771_2141 ZU BESPRECHEN passage am Schluss.mp4"
     # "8_2021-11-02_051500_2219_4196 Rechenpass_FischROT"
     # "2022-05-27_214500_window#001 Rechenkontakte zu besprechen_Fisch"
+    return datetime.datetime.utcnow(), "Nick", "wat"
     fps = 8
     if "Video 11_2022-06-16_230000_2437-3635 Abtast" in filename:
         filename_t = list(filename)
@@ -73,11 +75,7 @@ if __name__ == "__main__":
     os.makedirs(name=settings_dict["output_video_dir"], exist_ok=True)
 
     # Specify the input folders, possibly ADJUST
-    filenames_2021 = glob.glob("ARIS_videos/2021_processed/*.mp4")
-    filenames_2021.sort()
-    filenames_2022 = glob.glob("ARIS_videos/2022_processed/*.mp4")
-    filenames_2022.sort()
-    filenames = filenames_2021 + filenames_2022
+    filenames = glob.glob("labeled_videos/*.mp4")
 
     # filenames = glob.glob("ARIS_videos/2022_reexport/*.mp4")
     # filenames.sort()
@@ -105,19 +103,6 @@ if __name__ == "__main__":
             video_dt_csv_files[prefix] = current_csv_file
             csv_f = open(current_csv_file, "w")
             csv_writer = csv.writer(csv_f)
-            header = [
-                "Zeit",
-                "Framenummer",
-                "x - Koordinate",
-                "y - Koordinate",
-                "w - Breite",
-                "h - Hoehe",
-                "Klassifikation",
-                "ID",
-                "Dateiname",
-            ]
-            csv_writer.writerow(header)
-            print("Creating new csv...")
 
         video_cap = cv.VideoCapture(file)
         detector = BoxDetector(settings_dict, latest_persistent_object_id)
