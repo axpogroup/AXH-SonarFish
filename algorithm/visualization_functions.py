@@ -12,7 +12,7 @@ FIRST_ROW = [
 SECOND_ROW = ["difference_thresholded", "median_filter", "binary", "dilated"]
 
 
-def get_visual_output(object_history, detector, processed_frame, extensive=False):
+def get_visual_output(object_history, detector, processed_frame, extensive=False, save_frame: str = 'raw', draw_detections: bool = True):
     if extensive:
         first_row_images = np.ndarray(shape=(270, 0, 3), dtype="uint8")
         second_row_images = np.ndarray(shape=(270, 0, 3), dtype="uint8")
@@ -58,15 +58,19 @@ def get_visual_output(object_history, detector, processed_frame, extensive=False
         disp = np.concatenate((first_row_images, second_row_images, third_row_images))
 
     else:
-        disp = draw_detector_output(
-            object_history,
-            detector,
-            retrieve_frame("raw", processed_frame),
-            paths=True,
-            fullres=True,
-            association_dist=True,
-            annotate="velocities",
-        )
+        img = retrieve_frame(save_frame, processed_frame)
+        if draw_detections:
+            disp = draw_detector_output(
+                object_history,
+                detector,
+                img,
+                paths=True,
+                fullres=True,
+                association_dist=True,
+                annotate="velocities",
+            )
+        else:
+            disp = img
 
     return disp
 

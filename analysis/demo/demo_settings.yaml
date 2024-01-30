@@ -1,15 +1,17 @@
 # Input / Output
-input_file:  "analysis/demo/demo_sample_sonar_recording.mp4"
+input_file:  "analysis/labeling/start_2023-11-18T18-23-01.832+00-00/original.mp4"
 mask_directory: "analysis/demo/masks"
-output_directory: "analysis/demo/output"
+output_directory: "analysis/labeling/start_2023-11-18T18-23-01.832+00-00"
 
-tag: "demo"
+tag: "label"
 record_output_video: True # Only works for full resolution output
 record_output_csv: True
+record_processing_frame: "binary" # one of ['raw', 'raw_downsampled', 'gray', 'gray_boosted', 'long_mean', 'short_mean', 'difference', 'absolute_difference', 'difference_thresholded', 'difference_thresholded_abs', 'median_filter', 'binary', 'dilated']
+draw_detections_on_saved_video: False
 
-display_output_video: True
+display_output_video: False
 display_mode_extensive: False
-display_trackbars: True
+display_trackbars: False
 
 # Size
 input_pixels_per_mm: 0.0838
@@ -22,7 +24,7 @@ long_mean_frames: 400
 short_mean_frames: 10
 difference_threshold_scaler: 0.3
 dilation_kernel_mm: 770
-median_filter_kernel_mm: 340
+median_filter_kernel_mm: 85
 
 # Tracking
 max_association_dist_mm: 600

@@ -18,12 +18,6 @@ class InputOutputHandler:
         self.output_csv_name = None
 
         if (
-            "record_output_video" in settings_dict.keys()
-            and self.settings_dict["record_output_video"]
-        ):
-            self.initialize_output_recording()
-
-        if (
             "record_output_csv" in settings_dict.keys()
             and self.settings_dict["record_output_csv"]
         ):
@@ -211,7 +205,7 @@ class InputOutputHandler:
             self.shutdown()
             return
 
-    def handle_output(self, processed_frame, object_history, runtimes, detector):
+    def handle_output(self, processed_frame, object_history, runtimes, detector):       
         # Total runtime
         if self.last_output_time is not None:
             total_time_per_frame = get_elapsed_ms(self.last_output_time)
@@ -230,19 +224,27 @@ class InputOutputHandler:
                 f"Total: {total_time_per_frame} | FPS: {'{:.1f}'.format(self.frame_no/(2*total_runtime/1000))}"
             )
 
-        if ("display_output_video" in self.settings_dict.keys()) or (
-            "record_output_video" in self.settings_dict.keys()
-        ):
-            extensive = (
-                False
-                if "display_mode_extensive" not in self.settings_dict.keys()
-                else self.settings_dict["display_mode_extensive"]
-            )
+        if ("display_output_video" in self.settings_dict.keys()) or \
+            ("record_output_video" in self.settings_dict.keys()):
+            if "display_mode_extensive" not in self.settings_dict.keys():
+                extensive = False
+            else: 
+                extensive = self.settings_dict["display_mode_extensive"]
             disp = visualization_functions.get_visual_output(
-                object_history, detector, processed_frame, extensive=extensive
+                object_history, 
+                detector, 
+                processed_frame, 
+                extensive=extensive, 
+                save_frame=self.settings_dict["record_processing_frame"],
+                draw_detections=self.settings_dict["draw_detections_on_saved_video"],
             )
 
             if "record_output_video" in self.settings_dict.keys():
+                if self.settings_dict["record_output_video"] and not self.video_writer:
+                    self.initialize_output_recording(
+                        frame_width=disp.shape[1], 
+                        frame_height=disp.shape[0],
+                    )
                 self.video_writer.write(disp)
 
             if (
@@ -251,11 +253,19 @@ class InputOutputHandler:
             ):
                 self.show_image(disp, detector)
 
-    def initialize_output_recording(self):
+    def initialize_output_recording(
+            self, 
+            frame_width: int = None, 
+            frame_height: int = None,
+        ):
         # grab the width, height, fps and length of the video stream.
-        frame_width = int(self.video_cap.get(cv.CAP_PROP_FRAME_WIDTH))
-        frame_height = int(self.video_cap.get(cv.CAP_PROP_FRAME_HEIGHT))
+        frame_width = int(self.video_cap.get(cv.CAP_PROP_FRAME_WIDTH))  \
+            if frame_width is None else frame_width
+        frame_height = int(self.video_cap.get(cv.CAP_PROP_FRAME_HEIGHT)) \
+            if frame_height is None else frame_height
         fps = int(self.video_cap.get(cv.CAP_PROP_FPS))
+        if self.settings_dict['record_processing_frame'] != 'raw':
+            fps = fps // 2
 
         self.output_dir_name = os.path.join(
             self.settings_dict["output_directory"],
@@ -265,7 +275,7 @@ class InputOutputHandler:
         )
         self.output_dir_name = self.output_dir_name.replace(":", "-")
         os.makedirs(name=self.output_dir_name, exist_ok=True)
-        output_video_name = self.input_filename[:-4] + "_output.mp4"
+        output_video_name = f"{self.input_filename[:-4]}_{self.settings_dict['record_processing_frame']}_output.mp4"
 
         # initialize the FourCC and a video writer object
         fourcc = cv.VideoWriter_fourcc("m", "p", "4", "v")
