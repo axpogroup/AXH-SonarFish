@@ -1,15 +1,13 @@
-import cv2 as cv
 import numpy as np
 
 
 class DetectedObject:
-    def __init__(self, identifier, contour, frame_number):
+    def __init__(self, identifier, frame_number, x, y, w, h, area):
         self.ID = identifier
         self.frames_observed = [frame_number]
-        x, y, w, h = cv.boundingRect(contour)
         self.midpoints = [(int(x + w / 2), int(y + h / 2))]
         self.bounding_boxes = [(w, h)]
-        self.areas = [cv.contourArea(contour)]
+        self.areas = [area]
         self.velocities = [np.array([np.NAN, np.NAN])]
 
     def update_object(self, detection):

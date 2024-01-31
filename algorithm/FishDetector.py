@@ -124,8 +124,16 @@ class FishDetector:
             detections = {}
             for contour in contours:
                 self.latest_obj_index += 1
+                x, y, w, h = cv.boundingRect(contour)
+                area = cv.contourArea(contour)
                 new_object = DetectedObject(
-                    self.latest_obj_index, contour, self.frame_number
+                    identifier=self.latest_obj_index,
+                    frame_number=self.frame_number,
+                    x=x,
+                    y=y,
+                    w=w,
+                    h=h,
+                    area=area,
                 )
                 detections[new_object.ID] = new_object
 
