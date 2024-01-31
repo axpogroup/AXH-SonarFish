@@ -43,13 +43,15 @@ if __name__ == "__main__":
     time.sleep(5)
 
     duration = int(orchestrator_settings_dict["recording_interval_minutes"] * 60)
-    record_cmd_prefix = (f"ffmpeg -framerate 25 "
-                         f"-pixel_format uyvy422 "
-                         f"-i /dev/video0 "
-                         f"-vcodec h264_v4l2m2m "
-                         f"-b:v 6M "
-                         f"-r 20 "
-                         f"-t {duration}")
+    record_cmd_prefix = (
+        f"ffmpeg -framerate 25 "
+        f"-pixel_format uyvy422 "
+        f"-i /dev/video0 "
+        f"-vcodec h264_v4l2m2m "
+        f"-b:v 6M "
+        f"-r 20 "
+        f"-t {duration}"
+    )
 
     logger.info("Starting recording...")
     while True:
