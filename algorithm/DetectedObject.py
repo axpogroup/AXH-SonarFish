@@ -7,6 +7,8 @@ class DetectedObject:
         self.ID = identifier
         self.frames_observed = [frame_number]
         x, y, w, h = cv.boundingRect(contour)
+        self.top_lefts_x = [x]
+        self.top_lefts_y = [y]
         self.midpoints = [(int(x + w / 2), int(y + h / 2))]
         self.bounding_boxes = [(w, h)]
         self.areas = [cv.contourArea(contour)]
@@ -15,6 +17,8 @@ class DetectedObject:
     def update_object(self, detection):
         self.frames_observed.append(detection.frames_observed[-1])
         self.midpoints.append(detection.midpoints[-1])
+        self.top_lefts_x.append(detection.top_lefts_x[-1])
+        self.top_lefts_y.append(detection.top_lefts_y[-1])
         self.bounding_boxes.append(detection.bounding_boxes[-1])
         self.areas.append(detection.areas[-1])
         self.calculate_speed()

@@ -21,8 +21,8 @@ brightness: 30
 long_mean_frames: 400
 short_mean_frames: 10
 difference_threshold_scaler: 0.3
-dilation_kernel_mm: 770
-median_filter_kernel_mm: 340
+dilation_kernel_mm: 350
+median_filter_kernel_mm: 85
 
 # Tracking
 max_association_dist_mm: 600

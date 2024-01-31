@@ -85,8 +85,8 @@ class InputOutputHandler:
                     [
                         obj.ID,
                         obj.frames_observed[i],
-                        obj.midpoints[i][0],
-                        obj.midpoints[i][1],
+                        obj.top_lefts_x[i],
+                        obj.top_lefts_y[i],
                         obj.bounding_boxes[i][0],
                         obj.bounding_boxes[i][1],
                         obj.velocities[i][0],
@@ -243,7 +243,8 @@ class InputOutputHandler:
             )
 
             if "record_output_video" in self.settings_dict.keys():
-                self.video_writer.write(disp)
+                if self.video_writer:
+                    self.video_writer.write(disp)
 
             if (
                 "display_output_video" in self.settings_dict.keys()
