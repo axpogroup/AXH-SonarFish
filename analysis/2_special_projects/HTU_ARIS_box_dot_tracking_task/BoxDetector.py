@@ -6,6 +6,8 @@ import cv2 as cv
 import numpy as np
 from Object_box_and_dot import Object
 
+from algorithm.utils import resize_img
+
 # fish_area_mask = cv.imread("masks/fish.png", cv.IMREAD_GRAYSCALE)
 # full_area_mask = cv.imread("masks/full.png", cv.IMREAD_GRAYSCALE)
 fish_area_mask = None
@@ -122,7 +124,7 @@ class BoxDetector:
         # if downsample:
         #     raw_frame = self.resize_img(raw_frame, self.downsample)
 
-        self.current_raw = raw_frame
+        self.current_raw = resize_img(raw_frame, 25)
         # self.current_enhanced = self.enhance_frame(self.current_raw)
         (
             self.current_green,

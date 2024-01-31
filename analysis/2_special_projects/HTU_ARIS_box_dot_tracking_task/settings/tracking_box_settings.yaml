@@ -13,9 +13,9 @@ median_filter_kernel: 5  # 3
 
 # Detection and Tracking
 blur_filter_kernel: 11
-threshold_contours: 200  # 139
+threshold_contours: 15  # 139
 
-max_association_dist: 120
+max_association_dist: 10
 phase_out_after_x_frames: 9
 min_occurences_in_last_x_frames: [5, 10   ]
 
