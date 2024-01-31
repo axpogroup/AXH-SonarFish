@@ -13,10 +13,15 @@ from FishDetector import FishDetector
 from InputOutputHandler import InputOutputHandler
 
 
-def extract_ground_truth_history():
-    ground_truth = pd.read_csv("algorithm/demo_sample_sonar_recording.csv")
-    ground_truth_object_history = {}
-    for _, row in ground_truth.iterrows():
+def read_ground_truth_into_dataframe():
+    return pd.read_csv("algorithm/Nick.csv")
+
+
+def extract_ground_truth_history(
+    ground_truth_object_history, ground_truth, current_frame: int
+):
+    current_frame_df = ground_truth[ground_truth["frames_observed"] == current_frame]
+    for _, row in current_frame_df.iterrows():
         truth_detected = DetectedObject(
             identifier=row["ID"],
             frame_number=row["frames_observed"],
@@ -50,10 +55,12 @@ if __name__ == "__main__":
             print("replacing input file.")
             settings_dict["input_file"] = args.input_file
 
+    ground_truth_df = read_ground_truth_into_dataframe()
+
     input_output_handler = InputOutputHandler(settings_dict)
     detector = FishDetector(settings_dict)
     object_history = {}
-    truth_history = extract_ground_truth_history()
+    truth_history = {}
 
     while input_output_handler.get_new_frame():
         if float(input_output_handler.frame_no) / 2 % 1 != 0:
@@ -62,6 +69,9 @@ if __name__ == "__main__":
             input_output_handler.current_raw_frame
         )
         object_history = detector.associate_detections(detections, object_history)
+        truth_history = extract_ground_truth_history(
+            truth_history, ground_truth_df, detector.frame_number
+        )
         input_output_handler.handle_output(
             processed_frame_dict, truth_history, runtimes, detector=detector
         )
