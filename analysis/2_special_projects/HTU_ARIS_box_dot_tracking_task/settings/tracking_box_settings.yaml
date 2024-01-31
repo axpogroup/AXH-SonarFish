@@ -9,13 +9,13 @@ downsample: 100
 long_mean_frames: 120
 current_mean_frames: 10
 std_dev_threshold: 2
-median_filter_kernel: 5  # 3
+median_filter_kernel: 3  # 3
 
 # Detection and Tracking
-blur_filter_kernel: 11
-threshold_contours: 15  # 139
+blur_filter_kernel: 9
+threshold_contours: 35  # 139
 
-max_association_dist: 10
+max_association_dist: 35
 phase_out_after_x_frames: 9
 min_occurences_in_last_x_frames: [5, 10   ]
 
