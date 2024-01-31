@@ -650,15 +650,16 @@ class BoxDetector:
                 # area = cv.contourArea(object_.contours[-1])
                 x, y, w, h = cv.boundingRect(object_.contours[-1])
                 row = [
-                    timestr,
                     f"{self.frame_number}",
-                    f"{object_.midpoints[-1][0]}",
-                    f"{object_.midpoints[-1][1]}",
+                    f"{object_.persistent_id}",
+                    f"{x}",
+                    f"{y}",
                     str(w),
                     str(h),
-                    f"{object_.classifications[-1]}",
-                    f"{object_.persistent_id}",
-                    f"{file}",
+                    "-1",
+                    "-1",
+                    "-1",
+                    "-1",
                 ]
                 rows.append(row)
         return rows
