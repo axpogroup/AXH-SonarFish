@@ -1,13 +1,37 @@
 import argparse
 import sys
 
+import pandas as pd
 import yaml
+
+from algorithm.DetectedObject import DetectedObject
 
 # TOD0 get rid of this stuff
 sys.path.append("/Users/leivandresen/Documents/Hydro_code/AXH-SonarFish/")
 
 from FishDetector import FishDetector
 from InputOutputHandler import InputOutputHandler
+
+
+def extract_ground_truth_history():
+    ground_truth = pd.read_csv("algorithm/demo_sample_sonar_recording.csv")
+    ground_truth_object_history = {}
+    for _, row in ground_truth.iterrows():
+        truth_detected = DetectedObject(
+            identifier=row["ID"],
+            frame_number=row["frames_observed"],
+            x=row["x"],
+            y=row["y"],
+            w=row["width"],
+            h=row["height"],
+            area=None,
+        )
+        if row["ID"] not in ground_truth_object_history:
+            ground_truth_object_history[row["ID"]] = truth_detected
+        else:
+            ground_truth_object_history[row["ID"]].update_object(truth_detected)
+    return ground_truth_object_history
+
 
 if __name__ == "__main__":
     argParser = argparse.ArgumentParser(
@@ -29,6 +53,7 @@ if __name__ == "__main__":
     input_output_handler = InputOutputHandler(settings_dict)
     detector = FishDetector(settings_dict)
     object_history = {}
+    truth_history = extract_ground_truth_history()
 
     while input_output_handler.get_new_frame():
         if float(input_output_handler.frame_no) / 2 % 1 != 0:
@@ -38,7 +63,7 @@ if __name__ == "__main__":
         )
         object_history = detector.associate_detections(detections, object_history)
         input_output_handler.handle_output(
-            processed_frame_dict, object_history, runtimes, detector=detector
+            processed_frame_dict, truth_history, runtimes, detector=detector
         )
 
     if input_output_handler.output_csv_name is not None:
