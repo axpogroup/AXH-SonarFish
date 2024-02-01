@@ -63,17 +63,19 @@ if __name__ == "__main__":
     truth_history = {}
 
     while input_output_handler.get_new_frame():
-        if float(input_output_handler.frame_no) / 2 % 1 != 0:
-            continue
         detections, processed_frame_dict, runtimes = detector.detect_objects(
             input_output_handler.current_raw_frame
         )
         object_history = detector.associate_detections(detections, object_history)
         truth_history = extract_ground_truth_history(
-            truth_history, ground_truth_df, detector.frame_number
+            truth_history, ground_truth_df, input_output_handler.frame_no
         )
         input_output_handler.handle_output(
-            processed_frame_dict, truth_history, runtimes, detector=detector
+            processed_frame=processed_frame_dict,
+            object_history=object_history,
+            truth_history=truth_history,
+            runtimes=runtimes,
+            detector=detector,
         )
 
     if input_output_handler.output_csv_name is not None:

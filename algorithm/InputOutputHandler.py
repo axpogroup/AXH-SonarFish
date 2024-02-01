@@ -211,7 +211,9 @@ class InputOutputHandler:
             self.shutdown()
             return
 
-    def handle_output(self, processed_frame, object_history, runtimes, detector):
+    def handle_output(
+        self, processed_frame, object_history, runtimes, detector, truth_history=None
+    ):
         # Total runtime
         if self.last_output_time is not None:
             total_time_per_frame = get_elapsed_ms(self.last_output_time)
@@ -250,6 +252,29 @@ class InputOutputHandler:
                 and self.settings_dict["display_output_video"]
             ):
                 self.show_image(disp, detector)
+
+            if truth_history:
+                extensive = (
+                    False
+                    if "display_mode_extensive" not in self.settings_dict.keys()
+                    else self.settings_dict["display_mode_extensive"]
+                )
+                disp_truth = visualization_functions.get_visual_output(
+                    truth_history,
+                    detector,
+                    processed_frame,
+                    extensive=extensive,
+                    color=(57, 255, 20),
+                )
+
+                if "record_output_video" in self.settings_dict.keys():
+                    self.video_writer.write(disp_truth)
+
+                if (
+                    "display_output_video" in self.settings_dict.keys()
+                    and self.settings_dict["display_output_video"]
+                ):
+                    self.show_image(disp_truth, detector)
 
     def initialize_output_recording(self):
         # grab the width, height, fps and length of the video stream.

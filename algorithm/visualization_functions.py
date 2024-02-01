@@ -12,7 +12,9 @@ FIRST_ROW = [
 SECOND_ROW = ["difference_thresholded", "median_filter", "binary", "dilated"]
 
 
-def get_visual_output(object_history, detector, processed_frame, extensive=False):
+def get_visual_output(
+    object_history, detector, processed_frame, extensive=False, color=(255, 200, 200)
+):
     if extensive:
         first_row_images = np.ndarray(shape=(270, 0, 3), dtype="uint8")
         second_row_images = np.ndarray(shape=(270, 0, 3), dtype="uint8")
@@ -40,6 +42,7 @@ def get_visual_output(object_history, detector, processed_frame, extensive=False
                     object_history,
                     detector,
                     retrieve_frame("raw_downsampled", processed_frame, puttext="Final"),
+                    color=color,
                 ),
                 retrieve_frame(
                     "internal_external", processed_frame, puttext="internal_external"
@@ -50,6 +53,7 @@ def get_visual_output(object_history, detector, processed_frame, extensive=False
                     retrieve_frame("binary", processed_frame, puttext="detections"),
                     paths=True,
                     association_dist=True,
+                    color=color,
                 ),
                 retrieve_frame("closed", processed_frame, puttext="closed"),
             ),
@@ -66,6 +70,7 @@ def get_visual_output(object_history, detector, processed_frame, extensive=False
             fullres=True,
             association_dist=True,
             annotate="velocities",
+            color=color,
         )
 
     return disp
@@ -106,6 +111,7 @@ def draw_detector_output(
     fullres=False,
     association_dist=False,
     annotate=False,
+    color=(255, 200, 200),
 ):
     for ID, obj in object_history.items():
         if (
