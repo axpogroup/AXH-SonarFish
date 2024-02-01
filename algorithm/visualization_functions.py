@@ -42,25 +42,45 @@ def get_visual_output(
                 axis=1,
             )
 
+        third_row_raw = draw_detector_output(
+            object_history,
+            detector,
+            retrieve_frame("raw_downsampled", processed_frame, puttext="Final"),
+            color=color,
+        )
+
+        third_row_binary = draw_detector_output(
+            object_history,
+            detector,
+            retrieve_frame("binary", processed_frame, puttext="detections"),
+            paths=True,
+            association_dist=True,
+            color=color,
+        )
+
+        if truth_history is not None:
+            third_row_raw = draw_detector_output(
+                truth_history,
+                detector,
+                third_row_raw,
+                color=truth_color,
+            )
+            third_row_binary = draw_detector_output(
+                truth_history,
+                detector,
+                third_row_binary,
+                paths=True,
+                association_dist=True,
+                color=truth_color,
+            )
+
         third_row_images = np.concatenate(
             (
-                draw_detector_output(
-                    object_history,
-                    detector,
-                    retrieve_frame("raw_downsampled", processed_frame, puttext="Final"),
-                    color=color,
-                ),
+                third_row_raw,
                 retrieve_frame(
                     "internal_external", processed_frame, puttext="internal_external"
                 ),
-                draw_detector_output(
-                    object_history,
-                    detector,
-                    retrieve_frame("binary", processed_frame, puttext="detections"),
-                    paths=True,
-                    association_dist=True,
-                    color=color,
-                ),
+                third_row_binary,
                 retrieve_frame("closed", processed_frame, puttext="closed"),
             ),
             axis=1,
