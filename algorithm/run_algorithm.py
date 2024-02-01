@@ -14,27 +14,27 @@ from InputOutputHandler import InputOutputHandler
 
 
 def read_ground_truth_into_dataframe():
-    return pd.read_csv("algorithm/Nick.csv")
+    return pd.read_csv("algorithm/Validation/labels/hand_labeled.csv")
 
 
 def extract_ground_truth_history(
     ground_truth_object_history, ground_truth, current_frame: int
 ):
-    current_frame_df = ground_truth[ground_truth["frames_observed"] == current_frame]
+    current_frame_df = ground_truth[ground_truth["frame"] == current_frame]
     for _, row in current_frame_df.iterrows():
         truth_detected = DetectedObject(
-            identifier=row["ID"],
-            frame_number=row["frames_observed"],
+            identifier=row["id"],
+            frame_number=row["frame"],
             x=row["x"],
             y=row["y"],
-            w=row["width"],
-            h=row["height"],
+            w=row["w"],
+            h=row["h"],
             area=None,
         )
-        if row["ID"] not in ground_truth_object_history:
-            ground_truth_object_history[row["ID"]] = truth_detected
+        if row["id"] not in ground_truth_object_history:
+            ground_truth_object_history[row["id"]] = truth_detected
         else:
-            ground_truth_object_history[row["ID"]].update_object(truth_detected)
+            ground_truth_object_history[row["id"]].update_object(truth_detected)
     return ground_truth_object_history
 
 

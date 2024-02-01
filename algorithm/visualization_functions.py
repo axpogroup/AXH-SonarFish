@@ -133,7 +133,7 @@ def draw_detector_output(
             h * scale,
         )
 
-        color = (255, 200, 200)
+        #color = (255, 200, 200)
         cv.rectangle(
             img,
             (x - int(w / 2), y - int(h / 2)),
