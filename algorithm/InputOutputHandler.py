@@ -241,7 +241,11 @@ class InputOutputHandler:
                 else self.settings_dict["display_mode_extensive"]
             )
             disp = visualization_functions.get_visual_output(
-                object_history, detector, processed_frame, extensive=extensive
+                object_history=object_history,
+                truth_history=truth_history,
+                detector=detector,
+                processed_frame=processed_frame,
+                extensive=extensive,
             )
 
             if "record_output_video" in self.settings_dict.keys():
@@ -253,29 +257,6 @@ class InputOutputHandler:
                 and self.settings_dict["display_output_video"]
             ):
                 self.show_image(disp, detector)
-
-            if truth_history:
-                extensive = (
-                    False
-                    if "display_mode_extensive" not in self.settings_dict.keys()
-                    else self.settings_dict["display_mode_extensive"]
-                )
-                disp_truth = visualization_functions.get_visual_output(
-                    truth_history,
-                    detector,
-                    processed_frame,
-                    extensive=extensive,
-                    color=(57, 255, 20),
-                )
-
-                if "record_output_video" in self.settings_dict.keys():
-                    self.video_writer.write(disp_truth)
-
-                if (
-                    "display_output_video" in self.settings_dict.keys()
-                    and self.settings_dict["display_output_video"]
-                ):
-                    self.show_image(disp_truth, detector)
 
     def initialize_output_recording(self):
         # grab the width, height, fps and length of the video stream.

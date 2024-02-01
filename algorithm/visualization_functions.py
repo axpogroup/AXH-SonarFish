@@ -13,7 +13,13 @@ SECOND_ROW = ["difference_thresholded", "median_filter", "binary", "dilated"]
 
 
 def get_visual_output(
-    object_history, detector, processed_frame, extensive=False, color=(255, 200, 200)
+    object_history,
+    truth_history,
+    detector,
+    processed_frame,
+    extensive=False,
+    color=(255, 200, 200),
+    truth_color=(57, 255, 20),
 ):
     if extensive:
         first_row_images = np.ndarray(shape=(270, 0, 3), dtype="uint8")
@@ -72,6 +78,17 @@ def get_visual_output(
             annotate="velocities",
             color=color,
         )
+        if truth_history is not None:
+            disp = draw_detector_output(
+                truth_history,
+                detector,
+                disp,
+                paths=True,
+                fullres=True,
+                association_dist=True,
+                annotate="velocities",
+                color=truth_color,
+            )
 
     return disp
 
@@ -133,7 +150,7 @@ def draw_detector_output(
             h * scale,
         )
 
-        #color = (255, 200, 200)
+        # color = (255, 200, 200)
         cv.rectangle(
             img,
             (x - int(w / 2), y - int(h / 2)),
