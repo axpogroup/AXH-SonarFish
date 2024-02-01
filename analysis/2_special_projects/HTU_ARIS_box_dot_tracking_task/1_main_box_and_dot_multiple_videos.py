@@ -80,10 +80,10 @@ if __name__ == "__main__":
     # filenames = glob.glob("ARIS_videos/2022_reexport/*.mp4")
     # filenames.sort()
     print("Found the following files: \n")
-    for file in filenames:
-        current_file_dt, prefix, suffix = parse_filename(os.path.split(file)[-1])
-        print(current_file_dt, prefix, suffix)
-    print("\n")
+    # for file in filenames:
+    #     current_file_dt, prefix, suffix = parse_filename(os.path.split(file)[-1])
+    #     print(current_file_dt, prefix, suffix)
+    # print("\n")
 
     issues = []
 
@@ -92,18 +92,23 @@ if __name__ == "__main__":
 
     for file in filenames:
         print(f"\nProcessing  {file}")
-        current_file_dt, prefix, suffix = parse_filename(os.path.split(file)[-1])
-        if prefix in video_dt_csv_files.keys():
-            current_csv_file = video_dt_csv_files[prefix]
-            csv_f = open(current_csv_file, "a")
-            csv_writer = csv.writer(csv_f)
-            print("Opening existing csv...")
-        else:
-            current_csv_file = settings_dict["csv_output_directory"] + prefix + ".csv"
-            video_dt_csv_files[prefix] = current_csv_file
-            csv_f = open(current_csv_file, "w")
-            csv_writer = csv.writer(csv_f)
-
+        # current_file_dt, prefix, suffix = parse_filename(os.path.split(file)[-1])
+        # if prefix in video_dt_csv_files.keys():
+        #     current_csv_file = video_dt_csv_files[prefix]
+        #     csv_f = open(current_csv_file, "a")
+        #     csv_writer = csv.writer(csv_f)
+        #     print("Opening existing csv...")
+        # else:
+        #     current_csv_file = settings_dict["csv_output_directory"] + prefix + ".csv"
+        #     video_dt_csv_files[prefix] = current_csv_file
+        #     csv_f = open(current_csv_file, "w")
+        #     csv_writer = csv.writer(csv_f)
+        path_parts = file.split("/")
+        file_name = path_parts[-1].split(".mp4")[0]
+        csv_file = open(
+            settings_dict["csv_output_directory"] + file_name + "_ground_truth.csv", "w"
+        )
+        csv_writer = csv.writer(csv_file)
         video_cap = cv.VideoCapture(file)
         detector = BoxDetector(settings_dict, latest_persistent_object_id)
 
@@ -127,7 +132,7 @@ if __name__ == "__main__":
             detector.process_frame(raw_frame, downsample=True)
 
             # Output
-            current_timestamp = current_file_dt + dt.timedelta(
+            current_timestamp = datetime.datetime.utcnow() + dt.timedelta(
                 seconds=float(frame_no) / fps
             )
             csv_writer.writerows(
@@ -222,7 +227,7 @@ if __name__ == "__main__":
         if "output_video_dir" in settings_dict.keys():
             video_writer.release()
         if "csv_output_directory" in settings_dict.keys():
-            csv_f.close()
+            csv_file.close()
         cv.destroyAllWindows()
 
         latest_persistent_object_id = detector.latest_persistent_object_id
