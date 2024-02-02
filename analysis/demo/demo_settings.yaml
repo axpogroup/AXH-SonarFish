@@ -1,7 +1,10 @@
 # Input / Output
-input_file:  "analysis/demo/demo_sample_sonar_recording.mp4"
+file_name: "start_2023-11-21T17-37-01.696+00-00.mp4"
+input_file:  "analysis/demo/raw_videos/start_2023-11-21T17-37-01.696+00-00.mp4"
+algorithm_output_directory: "analysis/demo/algorithm_output"
 mask_directory: "analysis/demo/masks"
 output_directory: "analysis/demo/output"
+ground_truth_directory: "data/raw/labeled_videos/csv/"
 
 tag: "demo"
 record_output_video: True # Only works for full resolution output

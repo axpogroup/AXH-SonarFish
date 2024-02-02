@@ -1,9 +1,14 @@
+import argparse
+
 import motmetrics as mm
 import numpy as np
 import pandas as pd
+import yaml
 
 
-def prepare_data_for_mot_metrics(ground_truth_source, test_source):
+def prepare_data_for_mot_metrics(
+    ground_truth_source: str, test_source: str, settings_dict
+) -> tuple[str, str]:
     df_tsource = pd.read_csv(test_source, delimiter=",")
     df_gt = pd.read_csv(ground_truth_source, delimiter=",")
     df_gt["id"] = df_gt["id"] - 245
@@ -15,10 +20,14 @@ def prepare_data_for_mot_metrics(ground_truth_source, test_source):
     df_tsource["v_y"] = -1
     df_tsource["contour_area"] = -1
     df_tsource["v_xr"] = -1
-    df_tsource.to_csv("test.csv", header=False, index=False)
-    test_source = "test.csv"
-    df_gt.to_csv("ground_truth.csv", header=False, index=False)
-    ground_truth_source = "ground_truth.csv"
+    df_tsource.to_csv(
+        settings_dict["temp_directory"] + "test.csv", header=False, index=False
+    )
+    test_source = settings_dict["temp_directory"] + "test.csv"
+    df_gt.to_csv(
+        settings_dict["temp_directory"] + "ground_truth.csv", header=False, index=False
+    )
+    ground_truth_source = settings_dict["temp_directory"] + "ground_truth.csv"
     return ground_truth_source, test_source
 
 
@@ -33,16 +42,14 @@ def motMetricsEnhancedCalculator(ground_truth_source, test_source):
     acc = mm.MOTAccumulator(auto_id=True)
 
     # Max frame number maybe different for gt and t files
-    for frame in range(int(ground_truth[:, 1].max())):
+    for frame in range(int(ground_truth[:, 0].max())):
         frame += 1  # detection and frame numbers begin at 1
         # print(frame)
         # select id, x, y, width, height for current frame
         # required format for distance calculation is X, Y, Width, Height \
         # We already have this format
-        if frame == 646:
-            print("debug")
         ground_truth_detections = ground_truth[
-            ground_truth[:, 1] == frame, 1:6
+            ground_truth[:, 0] == frame, 1:6
         ]  # select all detections in gt
         test_detections = test[test[:, 1] == frame, 1:6]  # select all detections in t
 
@@ -108,9 +115,35 @@ def motMetricsEnhancedCalculator(ground_truth_source, test_source):
 
 
 if __name__ == "__main__":
-    ground_truth_source = "labels/hand_labeled.csv"
-    test_source = "labels/demo_sample_sonar_recording.csv"
+    argParser = argparse.ArgumentParser(
+        description="Run the fish detection algorithm with a settings .yaml file."
+    )
+    argParser.add_argument(
+        "-yf", "--yaml_file", help="path to the YAML settings file", required=True
+    )
+    argParser.add_argument("-if", "--input_file", help="path to the input video file")
+
+    args = argParser.parse_args()
+
+    with open(args.yaml_file) as f:
+        settings_dict = yaml.load(f, Loader=yaml.SafeLoader)
+        if args.input_file is not None:
+            print("replacing input file.")
+            settings_dict["input_file"] = args.input_file
+
+    ground_truth_source = (
+        settings_dict["ground_truth_directory"]
+        + settings_dict["file_name_prefix"]
+        + "_labels_ground_truth.csv"
+    )
+    test_source = (
+        settings_dict["test_directory"]
+        + settings_dict["file_name_prefix"]
+        + "/"
+        + settings_dict["file_name_prefix"]
+        + ".csv"
+    )
     ground_truth_source, test_source = prepare_data_for_mot_metrics(
-        ground_truth_source, test_source
+        ground_truth_source, test_source, settings_dict
     )
     motMetricsEnhancedCalculator(ground_truth_source, test_source)

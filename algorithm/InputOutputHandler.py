@@ -259,20 +259,16 @@ class InputOutputHandler:
                 self.show_image(disp, detector)
 
     def initialize_output_recording(self):
-        # grab the width, height, fps and length of the video stream.
-        frame_width = int(self.video_cap.get(cv.CAP_PROP_FRAME_WIDTH))
-        frame_height = int(self.video_cap.get(cv.CAP_PROP_FRAME_HEIGHT))
-        fps = int(self.video_cap.get(cv.CAP_PROP_FPS))
+        fps, frame_height, frame_width = self.get_video_output_settings()
 
         self.output_dir_name = os.path.join(
             self.settings_dict["output_directory"],
-            dt.datetime.now(dt.timezone.utc).isoformat(timespec="minutes")
-            + "_"
-            + self.settings_dict["tag"],
+            self.input_filename.split(".mp4")[0],
+            # + self.settings_dict["tag"],
         )
         self.output_dir_name = self.output_dir_name.replace(":", "-")
         os.makedirs(name=self.output_dir_name, exist_ok=True)
-        output_video_name = self.input_filename[:-4] + "_output.mp4"
+        output_video_name = self.input_filename.split(".mp4")[0] + "_algo_output.mp4"
 
         # initialize the FourCC and a video writer object
         fourcc = cv.VideoWriter_fourcc("m", "p", "4", "v")
@@ -282,6 +278,12 @@ class InputOutputHandler:
             fps,
             (frame_width, frame_height),
         )
+
+    def get_video_output_settings(self):
+        frame_width = int(self.video_cap.get(cv.CAP_PROP_FRAME_WIDTH))
+        frame_height = int(self.video_cap.get(cv.CAP_PROP_FRAME_HEIGHT))
+        fps = int(self.video_cap.get(cv.CAP_PROP_FPS))
+        return fps, frame_height, frame_width
 
     def shutdown(self):
         self.video_cap.release()

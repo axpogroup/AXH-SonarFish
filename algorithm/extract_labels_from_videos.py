@@ -9,7 +9,6 @@ import os
 import cv2 as cv
 import numpy as np
 import yaml
-from dateutil.relativedelta import relativedelta
 from label_extraction.BoxDetector import BoxDetector
 
 
@@ -24,45 +23,6 @@ def initialize_output_recording(input_video, output_video_file):
     return cv.VideoWriter(output_video_file, fourcc, fps, (frame_width, frame_height))
 
 
-def parse_filename(filename):
-    # filename = "2022-05-27_051500_771_2141 ZU BESPRECHEN passage am Schluss.mp4"
-    # special cases "Video 12 2022-05-27_051500_771_2141 ZU BESPRECHEN passage am Schluss.mp4"
-    # "Video 12 2022-05-27_051500_771_2141 ZU BESPRECHEN passage am Schluss.mp4"
-    # "8_2021-11-02_051500_2219_4196 Rechenpass_FischROT"
-    # "2022-05-27_214500_window#001 Rechenkontakte zu besprechen_Fisch"
-    return datetime.datetime.utcnow(), "Nick", "wat"
-    fps = 8
-    if "Video 11_2022-06-16_230000_2437-3635 Abtast" in filename:
-        filename_t = list(filename)
-        filename_t[31] = "_"
-        filename = "".join(filename_t)
-
-    if ("2021" in filename) or ("Video" in filename[:10]):
-        date_part = "_".join(filename.split("_")[1:3])
-        if "window#001" in filename:
-            start_frame = 0
-        else:
-            start_frame = int(filename.split("_")[3])
-        suffix = "_".join(filename.split("_")[5:])
-        prefix = "_".join(filename.split("_")[0:4])
-    elif "window#001" in filename:
-        date_part = "_".join(filename.split("_")[:2])
-        start_frame = 0
-        suffix = " ".join(filename.split(" ")[1:])
-        prefix = filename.split(" ")[0]
-    else:
-        date_part = "_".join(filename.split("_")[:2])
-        start_frame = int(filename.split("_")[2])
-        suffix = " ".join(filename.split(" ")[1:])
-        prefix = filename.split(" ")[0]
-
-    date_fmt = "%Y-%m-%d_%H%M%S"
-    start_dt = dt.datetime.strptime(date_part, date_fmt) + relativedelta(
-        microseconds=(int((1 / fps) * 1000000 * start_frame))
-    )
-    return start_dt, prefix, suffix
-
-
 if __name__ == "__main__":
     # Specify the output folders, possibly ADJUST
     with open("settings/tracking_box_settings.yaml") as f:
@@ -73,7 +33,7 @@ if __name__ == "__main__":
     os.makedirs(name=settings_dict["output_video_dir"], exist_ok=True)
 
     # Specify the input folders, possibly ADJUST
-    filenames = glob.glob("data/raw/labeled_videos/*.mp4")
+    filenames = glob.glob(settings_dict["input_directory"] + "*.mp4")
 
     # filenames = glob.glob("ARIS_videos/2022_reexport/*.mp4")
     # filenames.sort()
@@ -93,7 +53,10 @@ if __name__ == "__main__":
         path_parts = file.split("/")
         file_name = path_parts[-1].split(".mp4")[0]
         csv_file = open(
-            settings_dict["csv_output_directory"] + file_name + "_ground_truth.csv", "w"
+            settings_dict["csv_output_directory"]
+            + file_name
+            + settings_dict["csv_output_suffix"],
+            "w",
         )
         csv_writer = csv.writer(csv_file)
         csv_writer.writerow(
