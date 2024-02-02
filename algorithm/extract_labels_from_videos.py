@@ -1,5 +1,4 @@
 # Code written by Leiv Andresen, HTD-A, leiv.andresen@axpo.com
-
 import csv
 import datetime
 import datetime as dt
@@ -11,18 +10,6 @@ import numpy as np
 import yaml
 from label_extraction.BoxDetector import BoxDetector
 
-
-def initialize_output_recording(input_video, output_video_file):
-    # grab the width, height, fps and length of the video stream.
-    frame_width = int(input_video.get(cv.CAP_PROP_FRAME_WIDTH))
-    frame_height = int(input_video.get(cv.CAP_PROP_FRAME_HEIGHT))
-    fps = int(input_video.get(cv.CAP_PROP_FPS))
-
-    # initialize the FourCC and a video writer object
-    fourcc = cv.VideoWriter_fourcc("m", "p", "4", "v")
-    return cv.VideoWriter(output_video_file, fourcc, fps, (frame_width, frame_height))
-
-
 if __name__ == "__main__":
     # Specify the output folders, possibly ADJUST
     with open("settings/tracking_box_settings.yaml") as f:
@@ -31,20 +18,10 @@ if __name__ == "__main__":
 
     os.makedirs(name=settings_dict["csv_output_directory"], exist_ok=True)
     os.makedirs(name=settings_dict["output_video_dir"], exist_ok=True)
-
-    # Specify the input folders, possibly ADJUST
     filenames = glob.glob(settings_dict["input_directory"] + "*.mp4")
 
-    # filenames = glob.glob("ARIS_videos/2022_reexport/*.mp4")
-    # filenames.sort()
     print("Found the following files: \n")
-    # for file in filenames:
-    #     current_file_dt, prefix, suffix = parse_filename(os.path.split(file)[-1])
-    #     print(current_file_dt, prefix, suffix)
-    # print("\n")
-
     issues = []
-
     video_dt_csv_files = {}
     latest_persistent_object_id = 250
 
@@ -75,12 +52,6 @@ if __name__ == "__main__":
         )
         video_cap = cv.VideoCapture(file)
         detector = BoxDetector(settings_dict, latest_persistent_object_id)
-
-        if "output_video_dir" in settings_dict.keys():
-            video_writer = initialize_output_recording(
-                video_cap, (settings_dict["output_video_dir"] + os.path.split(file)[-1])
-            )
-
         frame_by_frame = False
         frame_no = 0
         frames_total = int(video_cap.get(cv.CAP_PROP_FRAME_COUNT))
@@ -105,11 +76,7 @@ if __name__ == "__main__":
                     file=file,
                 )
             )
-
-            four_images = False
-            fullres = True
-
-            if four_images:
+            if settings_dict["four_images"]:
                 try:
                     up = np.concatenate(
                         (
@@ -142,7 +109,7 @@ if __name__ == "__main__":
                 except TypeError:  # ValueError:
                     disp = raw_frame
 
-            elif fullres:
+            elif settings_dict["fullres"]:
                 disp = detector.draw_output(
                     detector.retrieve_frame(detector.current_raw, file),
                     debug=True,
@@ -160,12 +127,6 @@ if __name__ == "__main__":
                 )
 
             # Video playback control
-            if "output_video_dir" in settings_dict.keys() and detector.issue:
-                cv.imshow("frame", disp)
-                print("Issue_detected.", file, frame_no)
-                issues.append((str(file) + " frame number: " + str(frame_no)))
-                video_writer.write(disp)
-
             if frame_no % 20 == 0:
                 print(f"Processed {frame_no/frames_total*100} % of video.")
                 if frame_no / frames_total * 100 > 35:
@@ -173,8 +134,6 @@ if __name__ == "__main__":
             frame_no += 1
 
         video_cap.release()
-        if "output_video_dir" in settings_dict.keys():
-            video_writer.release()
         if "csv_output_directory" in settings_dict.keys():
             csv_file.close()
         cv.destroyAllWindows()

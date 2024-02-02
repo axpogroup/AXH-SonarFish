@@ -9,6 +9,8 @@ csv_output_directory: "data/annotated/csv/"
 csv_output_suffix: "_ground_truth.csv"
 
 # Enhancement
+four_images: False
+fullres: True
 downsample: 100
 long_mean_frames: 120
 current_mean_frames: 10
