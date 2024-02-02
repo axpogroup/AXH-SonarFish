@@ -90,17 +90,6 @@ if __name__ == "__main__":
 
     for file in filenames:
         print(f"\nProcessing  {file}")
-        # current_file_dt, prefix, suffix = parse_filename(os.path.split(file)[-1])
-        # if prefix in video_dt_csv_files.keys():
-        #     current_csv_file = video_dt_csv_files[prefix]
-        #     csv_f = open(current_csv_file, "a")
-        #     csv_writer = csv.writer(csv_f)
-        #     print("Opening existing csv...")
-        # else:
-        #     current_csv_file = settings_dict["csv_output_directory"] + prefix + ".csv"
-        #     video_dt_csv_files[prefix] = current_csv_file
-        #     csv_f = open(current_csv_file, "w")
-        #     csv_writer = csv.writer(csv_f)
         path_parts = file.split("/")
         file_name = path_parts[-1].split(".mp4")[0]
         csv_file = open(
@@ -141,7 +130,7 @@ if __name__ == "__main__":
                 break
 
             # Detection
-            detector.process_frame(raw_frame, downsample=True)
+            detector.process_frame(raw_frame)
 
             # Output
             current_timestamp = datetime.datetime.utcnow() + dt.timedelta(
@@ -194,7 +183,6 @@ if __name__ == "__main__":
                 disp = detector.draw_output(
                     detector.retrieve_frame(detector.current_raw, file),
                     debug=True,
-                    classifications=True,
                     runtiming=True,
                 )
 
@@ -204,13 +192,10 @@ if __name__ == "__main__":
                         detector.draw_output(
                             detector.current_enhanced, debug=True, runtiming=True
                         ),
-                        detector.draw_output(
-                            detector.current_raw, classifications=True, runtiming=True
-                        ),
+                        detector.draw_output(detector.current_raw, runtiming=True),
                     )
                 )
 
-            # cv.imshow("frame", disp)
             # Video playback control
             if "output_video_dir" in settings_dict.keys() and detector.issue:
                 cv.imshow("frame", disp)
@@ -218,17 +203,6 @@ if __name__ == "__main__":
                 issues.append((str(file) + " frame number: " + str(frame_no)))
                 video_writer.write(disp)
 
-            # if not frame_by_frame:
-            #     usr_input = cv.waitKey(1)
-            # # if usr_input == ord(" "):
-            #     if cv.waitKey(0) == ord(" "):
-            #         frame_by_frame = True
-            #     else:
-            #         frame_by_frame = False
-            #     print("Press any key to continue ... ")
-            # if usr_input == 27:
-            #     break
-            #
             if frame_no % 20 == 0:
                 print(f"Processed {frame_no/frames_total*100} % of video.")
                 if frame_no / frames_total * 100 > 35:

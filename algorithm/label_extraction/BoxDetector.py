@@ -8,8 +8,6 @@ import numpy as np
 from algorithm.label_extraction.BoxObject import BoxObject
 from algorithm.utils import resize_img
 
-# fish_area_mask = cv.imread("masks/fish.png", cv.IMREAD_GRAYSCALE)
-# full_area_mask = cv.imread("masks/full.png", cv.IMREAD_GRAYSCALE)
 fish_area_mask = None
 full_area_mask = None
 
@@ -100,32 +98,17 @@ class BoxDetector:
             0,
         )
         green = copy.deepcopy(current_raw[:, :, 1])
-        # np.place( # blue higher 150, more red than green
-        #     green, ((current_raw[:, :, 1] < 200) | (current_raw[:, :, 0] > 150) | (current_raw[:, :, 2] > 150)),
-        #     0,
-        # )
 
         red = copy.deepcopy(current_raw[:, :, 2])
-        # np.place(
-        #     red, current_raw[:, :, 0] > 150,
-        #     0,
-        # # )
-        # np.place( # blue higher 150, more red than green
-        #     red, ((current_raw[:, :, 0] > 150) | (current_raw[:, :, 1] > 150)),
-        #     0,
-        # )
 
         blue = copy.deepcopy(current_raw[:, :, 0])
         return green, red, blue
 
-    def process_frame(self, raw_frame, secondary=None, downsample=False):
+    def process_frame(self, raw_frame):
         self.issue = False
         start = cv.getTickCount()
-        # if downsample:
-        #     raw_frame = self.resize_img(raw_frame, self.downsample)
 
         self.current_raw = resize_img(raw_frame, 25)
-        # self.current_enhanced = self.enhance_frame(self.current_raw)
         (
             self.current_green,
             self.current_red,
@@ -195,17 +178,13 @@ class BoxDetector:
     def draw_output(
         self,
         img,
-        classifications=False,
         debug=False,
         runtiming=False,
-        fullres=False,
         only_runtime=False,
     ):
         output = self.retrieve_frame(img)
         if not only_runtime:
-            output = self.draw_objects(
-                output, classifications=classifications, debug=debug, fullres=fullres
-            )
+            output = self.draw_objects(output, debug=debug)
         if runtiming:
             cv.rectangle(output, (1390, 25), (1850, 155), (0, 0, 0), -1)
             color = (255, 255, 255)
@@ -242,7 +221,7 @@ class BoxDetector:
                 self.total_runtime_ms = 1
             cv.putText(
                 output,
-                f"{self.total_runtime_ms} ms - Total - FPS: {int(1000/self.total_runtime_ms)}",
+                f"{self.total_runtime_ms} ms - Total - FPS: {int(1000 / self.total_runtime_ms)}",
                 (1400, 140),
                 cv.FONT_HERSHEY_SIMPLEX,
                 0.75,
@@ -271,31 +250,12 @@ class BoxDetector:
             )
         return img
 
-    def draw_objects(self, img, debug=False, classifications=False, fullres=False):
+    def draw_objects(self, img, debug=False):
         for ID, obj in self.current_objects.items():
-            # if obj.show[-1]:
-            #     if classifications:
-            #         if fullres:
-            #             obj.draw_classifications_box(img, self.downsample)
-            #         else:
-            #             obj.draw_classifications_box(img)
-            #     else:
-            #         if obj.classifications[-1] == "Fisch":
-            #             obj.draw_bounding_box(img, color=(0, 255, 0))
-            #             obj.draw_past_midpoints(img, color=(0, 255, 0))
-            #         else:
-            #             obj.draw_bounding_box(img, color=(255, 0, 0))
-            #             obj.draw_past_midpoints(img, color=(255, 0, 0))
-            # if (obj.frames_observed[-1] == self.frame_number) & debug:
-            #     obj.draw_bounding_box(img, color=(20, 20, 20))
-            #     obj.draw_past_midpoints(img, color=(20, 20, 20))
 
             if debug:
                 obj.draw_bounding_box(img, color=(200, 200, 200))
                 obj.draw_past_midpoints(img, color=(200, 200, 200))
-            # if debug:
-            # cv.circle(img, (obj.midpoints[-1][0], obj.midpoints[-1][1]),
-            #           int(self.max_association_dist/2), (0, 0, 255), 1)
 
         return img
 
@@ -397,29 +357,9 @@ class BoxDetector:
 
     def find_points_of_interest(self, enhanced_frame, mode="contour"):
         if mode == "contour":
-            # # Make positive and negative differences the same
-            # enhanced_frame = (abs(enhanced_frame.astype("int16") - 125) + 125).astype(
-            #     "uint8"
-            # )
-
-            # Consolidate the points
-            # enhanced_frame = cv.GaussianBlur(
-            #     enhanced_frame,
-            #     (self.blur_filter_kernel, self.blur_filter_kernel),
-            #     0,
-            # )
-
-            # self.current_blurred_enhanced = enhanced_frame
-            # Threshold
             ret, thres = cv.threshold(enhanced_frame, self.threshold_contours, 255, 0)
 
-            # Alternative consolidation - dilate
-            # kernel = np.ones((11, 11), "uint8")
-            # thres = cv.dilate(thres, kernel, iterations=1)
-            # kernel = np.ones((5, 5), np.uint8)
-            # thres = cv.erode(thres, kernel, iterations=3)
             self.current_threshold = thres
-            # img = self.spatial_filter(img, kernel_size=15, method='median')
 
             contours, hier = cv.findContours(
                 thres, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE
@@ -510,60 +450,6 @@ class BoxDetector:
         diff[abs(diff) < threshold * self.long_std_dev] = 0
         return diff
 
-    def create_mean_std_dev(
-        self,
-    ):  # Unused for now since the ground pattern changes we can't use a hardcoded image
-        # Put in process_frame()
-        # Do this to save time before implementing it in a rolling manner
-        # self.create_mean_std_dev()
-        # quit()
-        # self.current_mean = np.mean(self.framebuffer, axis=2).astype('uint8')
-
-        # Put in initialization
-        # fname_temp = os.path.split(self.filename)
-        # self.mean_stddev_file = (
-        #         fname_temp[0] + "/mean_std_dev/" + fname_temp[1] + "_mean_stddev_.npz"
-        # )
-        # try:
-        #     temp = np.load(self.mean_stddev_file)
-        #     self.long_mean = temp["mean"]
-        #     self.long_std_dev = temp["std_dev"]
-        # except FileNotFoundError:
-        #     print("No existing mean and std-dev file")
-        #     self.long_mean = None
-        #     self.long_std_dev = None
-
-        long_mean = np.mean(self.framebuffer, axis=2)
-        long_std_dev = np.std(self.framebuffer, axis=2)
-        np.savez(self.mean_stddev_file, mean=long_mean, std_dev=long_std_dev)
-
-    @staticmethod
-    def mask_regions(img, area="fish"):
-        # this code is currently unused....
-        if area == "fish":
-            if img.shape[:1] != fish_area_mask.shape[:1]:
-                percent_difference = img.shape[0] / fish_area_mask.shape[0] * 100
-
-                np.place(
-                    img,
-                    BoxDetector.resize_img(fish_area_mask, percent_difference) < 100,
-                    0,
-                )
-            else:
-                np.place(img, fish_area_mask < 100, 0)
-        elif area == "full":
-            if img.shape[:1] != full_area_mask.shape[:1]:
-                percent_difference = img.shape[0] / full_area_mask.shape[0] * 100
-
-                np.place(
-                    img,
-                    BoxDetector.resize_img(full_area_mask, percent_difference) < 100,
-                    0,
-                )
-            else:
-                np.place(img, full_area_mask < 100, 0)
-        return img
-
     @staticmethod
     def rgb_to_gray(img):
         return cv.cvtColor(img, cv.COLOR_BGR2GRAY)
@@ -648,7 +534,6 @@ class BoxDetector:
         rows = []
         if self.current_objects is not None:
             for _, object_ in self.current_objects.items():
-
                 # area = cv.contourArea(object_.contours[-1])
                 x, y, w, h = cv.boundingRect(object_.contours[-1])
                 row = [
