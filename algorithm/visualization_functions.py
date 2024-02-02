@@ -88,28 +88,42 @@ def get_visual_output(
         disp = np.concatenate((first_row_images, second_row_images, third_row_images))
 
     else:
-        disp = _draw_detector_output(
-            object_history,
-            detector,
-            _retrieve_frame("raw", processed_frame),
+        disp = draw_detections_and_truth(
+            detector=detector,
+            object_history=object_history,
+            truth_history=truth_history,
+            processed_frame=processed_frame,
+            color=color,
+            truth_color=truth_color,
             paths=True,
             fullres=True,
             association_dist=True,
             annotate="velocities",
-            color=color,
         )
-        if truth_history is not None:
-            disp = _draw_detector_output(
-                truth_history,
-                detector,
-                disp,
-                paths=True,
-                fullres=True,
-                association_dist=True,
-                annotate="velocities",
-                color=truth_color,
-            )
 
+    return disp
+
+
+def draw_detections_and_truth(
+    detector,
+    object_history,
+    truth_history,
+    processed_frame,
+    color,
+    truth_color,
+    **kwargs
+):
+    disp = _draw_detector_output(
+        object_history,
+        detector,
+        _retrieve_frame("raw", processed_frame),
+        color=color,
+        **kwargs
+    )
+    if truth_history is not None:
+        disp = _draw_detector_output(
+            truth_history, detector, disp, color=truth_color, **kwargs
+        )
     return disp
 
 
