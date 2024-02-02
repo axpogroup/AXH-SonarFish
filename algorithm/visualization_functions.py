@@ -42,37 +42,29 @@ def get_visual_output(
                 axis=1,
             )
 
-        third_row_raw = _draw_detector_output(
-            object_history,
-            detector,
-            _retrieve_frame("raw_downsampled", processed_frame, puttext="Final"),
-            color=color,
-        )
-
-        third_row_binary = _draw_detector_output(
-            object_history,
-            detector,
-            _retrieve_frame("binary", processed_frame, puttext="detections"),
+        third_row_binary = _draw_detections_and_truth(
+            object_history=object_history,
+            truth_history=truth_history,
+            detector=detector,
+            processed_frame=_retrieve_frame(
+                "binary", processed_frame, puttext="detections"
+            ),
             paths=True,
             association_dist=True,
             color=color,
+            truth_color=truth_color,
         )
 
-        if truth_history is not None:
-            third_row_raw = _draw_detector_output(
-                truth_history,
-                detector,
-                third_row_raw,
-                color=truth_color,
-            )
-            third_row_binary = _draw_detector_output(
-                truth_history,
-                detector,
-                third_row_binary,
-                paths=True,
-                association_dist=True,
-                color=truth_color,
-            )
+        third_row_raw = _draw_detections_and_truth(
+            object_history=object_history,
+            truth_history=truth_history,
+            detector=detector,
+            processed_frame=_retrieve_frame(
+                "raw_downsampled", processed_frame, puttext="Final"
+            ),
+            truth_color=truth_color,
+            color=color,
+        )
 
         third_row_images = np.concatenate(
             (
@@ -88,11 +80,11 @@ def get_visual_output(
         disp = np.concatenate((first_row_images, second_row_images, third_row_images))
 
     else:
-        disp = draw_detections_and_truth(
+        disp = _draw_detections_and_truth(
             detector=detector,
             object_history=object_history,
             truth_history=truth_history,
-            processed_frame=processed_frame,
+            processed_frame=_retrieve_frame("raw", processed_frame),
             color=color,
             truth_color=truth_color,
             paths=True,
@@ -104,7 +96,7 @@ def get_visual_output(
     return disp
 
 
-def draw_detections_and_truth(
+def _draw_detections_and_truth(
     detector,
     object_history,
     truth_history,
@@ -114,11 +106,7 @@ def draw_detections_and_truth(
     **kwargs
 ):
     disp = _draw_detector_output(
-        object_history,
-        detector,
-        _retrieve_frame("raw", processed_frame),
-        color=color,
-        **kwargs
+        object_history, detector, processed_frame, color=color, **kwargs
     )
     if truth_history is not None:
         disp = _draw_detector_output(
