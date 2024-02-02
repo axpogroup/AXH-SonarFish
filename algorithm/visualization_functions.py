@@ -1,7 +1,11 @@
 import copy
+from typing import Dict
 
 import cv2 as cv
 import numpy as np
+
+from algorithm.DetectedObject import DetectedObject
+from algorithm.FishDetector import FishDetector
 
 FIRST_ROW = [
     "gray_boosted",
@@ -13,10 +17,10 @@ SECOND_ROW = ["difference_thresholded", "median_filter", "binary", "dilated"]
 
 
 def get_visual_output(
-    object_history,
-    truth_history,
-    detector,
-    processed_frame,
+    object_history: Dict[int, DetectedObject],
+    truth_history: Dict[int, DetectedObject],
+    detector: FishDetector,
+    processed_frame: Dict[str, np.ndarray],
     extensive=False,
     color=(255, 200, 200),
     truth_color=(57, 255, 20),
