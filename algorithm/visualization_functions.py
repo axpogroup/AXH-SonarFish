@@ -28,7 +28,7 @@ def get_visual_output(
             first_row_images = np.concatenate(
                 (
                     first_row_images,
-                    retrieve_frame(frame_type, processed_frame, puttext=frame_type),
+                    _retrieve_frame(frame_type, processed_frame, puttext=frame_type),
                 ),
                 axis=1,
             )
@@ -37,35 +37,35 @@ def get_visual_output(
             second_row_images = np.concatenate(
                 (
                     second_row_images,
-                    retrieve_frame(frame_type, processed_frame, puttext=frame_type),
+                    _retrieve_frame(frame_type, processed_frame, puttext=frame_type),
                 ),
                 axis=1,
             )
 
-        third_row_raw = draw_detector_output(
+        third_row_raw = _draw_detector_output(
             object_history,
             detector,
-            retrieve_frame("raw_downsampled", processed_frame, puttext="Final"),
+            _retrieve_frame("raw_downsampled", processed_frame, puttext="Final"),
             color=color,
         )
 
-        third_row_binary = draw_detector_output(
+        third_row_binary = _draw_detector_output(
             object_history,
             detector,
-            retrieve_frame("binary", processed_frame, puttext="detections"),
+            _retrieve_frame("binary", processed_frame, puttext="detections"),
             paths=True,
             association_dist=True,
             color=color,
         )
 
         if truth_history is not None:
-            third_row_raw = draw_detector_output(
+            third_row_raw = _draw_detector_output(
                 truth_history,
                 detector,
                 third_row_raw,
                 color=truth_color,
             )
-            third_row_binary = draw_detector_output(
+            third_row_binary = _draw_detector_output(
                 truth_history,
                 detector,
                 third_row_binary,
@@ -77,21 +77,21 @@ def get_visual_output(
         third_row_images = np.concatenate(
             (
                 third_row_raw,
-                retrieve_frame(
+                _retrieve_frame(
                     "internal_external", processed_frame, puttext="internal_external"
                 ),
                 third_row_binary,
-                retrieve_frame("closed", processed_frame, puttext="closed"),
+                _retrieve_frame("closed", processed_frame, puttext="closed"),
             ),
             axis=1,
         )
         disp = np.concatenate((first_row_images, second_row_images, third_row_images))
 
     else:
-        disp = draw_detector_output(
+        disp = _draw_detector_output(
             object_history,
             detector,
-            retrieve_frame("raw", processed_frame),
+            _retrieve_frame("raw", processed_frame),
             paths=True,
             fullres=True,
             association_dist=True,
@@ -99,7 +99,7 @@ def get_visual_output(
             color=color,
         )
         if truth_history is not None:
-            disp = draw_detector_output(
+            disp = _draw_detector_output(
                 truth_history,
                 detector,
                 disp,
@@ -113,7 +113,7 @@ def get_visual_output(
     return disp
 
 
-def retrieve_frame(frame, frame_dict, puttext=None):
+def _retrieve_frame(frame, frame_dict, puttext=None):
     if frame not in frame_dict.keys():
         img = None
     else:
@@ -140,7 +140,7 @@ def retrieve_frame(frame, frame_dict, puttext=None):
     return out
 
 
-def draw_detector_output(
+def _draw_detector_output(
     object_history,
     detector,
     img,
