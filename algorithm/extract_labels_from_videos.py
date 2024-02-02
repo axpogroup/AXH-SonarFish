@@ -9,10 +9,8 @@ import os
 import cv2 as cv
 import numpy as np
 import yaml
-from BoxDetector import BoxDetector
 from dateutil.relativedelta import relativedelta
-
-# import code
+from label_extraction.BoxDetector import BoxDetector
 
 
 def initialize_output_recording(input_video, output_video_file):
@@ -75,7 +73,7 @@ if __name__ == "__main__":
     os.makedirs(name=settings_dict["output_video_dir"], exist_ok=True)
 
     # Specify the input folders, possibly ADJUST
-    filenames = glob.glob("labeled_videos/*.mp4")
+    filenames = glob.glob("data/raw/labeled_videos/*.mp4")
 
     # filenames = glob.glob("ARIS_videos/2022_reexport/*.mp4")
     # filenames.sort()
