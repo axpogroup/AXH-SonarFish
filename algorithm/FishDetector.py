@@ -122,7 +122,7 @@ class FishDetector:
             contours, hier = cv.findContours(
                 frame_dict["dilated"], cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE
             )
-            detections = {} #Dict[int, DetectedObject]
+            detections = {}  # Dict[int, DetectedObject]
             for contour in contours:
                 self.latest_obj_index += 1
                 x, y, w, h = cv.boundingRect(contour)
@@ -146,7 +146,9 @@ class FishDetector:
         self.frame_number += 1
         return detections, frame_dict, runtimes_ms
 
-    def associate_detections(self, detections, object_history) -> Dict[int, DetectedObject]:
+    def associate_detections(
+        self, detections, object_history
+    ) -> Dict[int, DetectedObject]:
         if len(detections) == 0:
             return object_history
 
