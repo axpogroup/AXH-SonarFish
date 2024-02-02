@@ -109,6 +109,20 @@ if __name__ == "__main__":
             settings_dict["csv_output_directory"] + file_name + "_ground_truth.csv", "w"
         )
         csv_writer = csv.writer(csv_file)
+        csv_writer.writerow(
+            [
+                "frame",
+                "id",
+                "x",
+                "y",
+                "w",
+                "h",
+                "confidence",
+                "x_3d",
+                "y_3d",
+                "z_3d",
+            ]
+        )
         video_cap = cv.VideoCapture(file)
         detector = BoxDetector(settings_dict, latest_persistent_object_id)
 
