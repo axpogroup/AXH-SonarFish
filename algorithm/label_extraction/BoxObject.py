@@ -37,7 +37,6 @@ class BoxObject:
 
     def draw_bounding_box(self, img, color):
         x, y, w, h = cv.boundingRect(self.contours[-1])
-        # cv.rectangle(img, int(x-w/4, y-h/4), int(x + 1.5*w, y + 1.5*h), color, 3)
         cv.rectangle(img, (x, y), (x + w, y + h), color, 3)
 
         cv.putText(
@@ -55,9 +54,6 @@ class BoxObject:
             color,
             2,
         )
-        # if self.mean_v is not None:
-        #     cv.putText(img, (str(self.mean_v[0])),
-        #                      (x, y + 10), cv.FONT_HERSHEY_SIMPLEX, 0.75, color, 2)
         return img
 
     def draw_classifications_box(self, img, downsampled=100):
@@ -108,29 +104,6 @@ class BoxObject:
     def occurences_in_last_x(self, frame_number, x):
         a = np.array(self.frames_observed, dtype="int")
         return a[a >= frame_number - x].shape[0]
-
-    def classify_object(self):
-        fish = False
-        if len(self.velocity) < 20:
-            fish = False
-            return
-
-        if self.classifications[-1] == "Fisch":
-            if abs(self.mean_v[1]) > 0.5:
-                fish = True
-            elif abs(self.mean_v[0] - 2.185) > 1:
-                fish = True
-
-        if abs(self.mean_v_last_10[1]) > 1:
-            fish = True
-        elif abs(self.mean_v_last_10[0] - 2.185) > 2:
-            fish = True
-
-        if fish:
-            self.classifications.append("Fisch")
-        else:
-            self.classifications.append("Objekt")
-        return
 
     def rotate_vector(self, vec, theta):
         rot = np.array([[cos(theta), -sin(theta)], [sin(theta), cos(theta)]])
