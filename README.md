@@ -16,6 +16,24 @@ The codebase is structured into the following sections:
 - **continous_operation**: all code pertaining to the setup, initialization and continuous operation of the 
   Raspberry Pi.
 
+## Data Structure
+The data structure is as follows:
+
+    - data
+        - annotated
+            - labeled_videos
+            - labels
+        - model_output
+        - raw
+
+- *annotated* : contains the labeled videos and the labels. The labeled videos are the raw videos with the fish 
+    detections drawn on top. The labels are the .csv files containing the fish detections.
+  - *labeled_videos* : contains the labeled videos.
+  - *labels*: this is where the output of *extract_labels_from_videos.py* is stored.
+- *model_output* : contains the output of the fish detection algorithm. This includes a folder for each video file 
+    containing the .csv file with the fish detections and the visual output.
+- *raw*: contains the raw video files.
+
 # Continuous operation
 This is a high-level overview of the steps needed to run the continous operation.
 1. Assemble the hardware as described in [Mingle](https://mingle.axpo.com/display/HTD/System+Overview) 

@@ -1,5 +1,6 @@
 import datetime as dt
 import os
+from pathlib import Path
 
 import cv2 as cv
 import pandas as pd
@@ -12,8 +13,12 @@ class InputOutputHandler:
     def __init__(self, settings_dict):
         self.video_writer = None
         self.settings_dict = settings_dict
-        self.video_cap = cv.VideoCapture(self.settings_dict["input_file"])
-        self.input_filename = os.path.split(self.settings_dict["input_file"])[-1]
+        self.video_cap = cv.VideoCapture(
+            Path(
+                self.settings_dict["input_directory"] + self.settings_dict["file_name"]
+            ).__str__()
+        )
+        self.input_filename = Path(self.settings_dict["file_name"])
         self.output_dir_name = None
         self.output_csv_name = None
 
@@ -38,7 +43,7 @@ class InputOutputHandler:
                 os.makedirs(name=self.output_dir_name, exist_ok=True)
 
             self.output_csv_name = os.path.join(
-                self.output_dir_name, (self.input_filename[:-4] + ".csv")
+                self.output_dir_name, (self.input_filename.stem + ".csv")
             )
 
         self.playback_paused = False
@@ -263,12 +268,12 @@ class InputOutputHandler:
 
         self.output_dir_name = os.path.join(
             self.settings_dict["output_directory"],
-            self.input_filename.split(".mp4")[0],
+            self.input_filename.stem,
             # + self.settings_dict["tag"],
         )
         self.output_dir_name = self.output_dir_name.replace(":", "-")
         os.makedirs(name=self.output_dir_name, exist_ok=True)
-        output_video_name = self.input_filename.split(".mp4")[0] + "_algo_output.mp4"
+        output_video_name = self.input_filename.stem + "_algo_output.mp4"
 
         # initialize the FourCC and a video writer object
         fourcc = cv.VideoWriter_fourcc("m", "p", "4", "v")

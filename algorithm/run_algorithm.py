@@ -1,20 +1,18 @@
 import argparse
-import sys
+from pathlib import Path
 
 import pandas as pd
 import yaml
-
-from algorithm.DetectedObject import DetectedObject
-
-# TOD0 get rid of this stuff
-sys.path.append("/Users/leivandresen/Documents/Hydro_code/AXH-SonarFish/")
-
 from FishDetector import FishDetector
 from InputOutputHandler import InputOutputHandler
 
+from algorithm.DetectedObject import DetectedObject
 
-def read_ground_truth_into_dataframe():
-    return pd.read_csv("algorithm/Validation/labels/hand_labeled.csv")
+
+def read_ground_truth_into_dataframe(ground_truth_path: Path, filename: str):
+    return pd.read_csv(
+        Path(ground_truth_path) / Path(filename + "_labels_ground_truth.csv")
+    )
 
 
 def extract_ground_truth_history(
@@ -53,9 +51,12 @@ if __name__ == "__main__":
         settings_dict = yaml.load(f, Loader=yaml.SafeLoader)
         if args.input_file is not None:
             print("replacing input file.")
-            settings_dict["input_file"] = args.input_file
+            settings_dict["file_name"] = args.input_file
 
-    ground_truth_df = read_ground_truth_into_dataframe()
+    ground_truth_df = read_ground_truth_into_dataframe(
+        ground_truth_path=Path(settings_dict["ground_truth_directory"]),
+        filename=Path(settings_dict["file_name"]).stem,
+    )
 
     input_output_handler = InputOutputHandler(settings_dict)
     detector = FishDetector(settings_dict)

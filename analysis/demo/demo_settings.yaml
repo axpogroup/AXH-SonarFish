@@ -1,18 +1,17 @@
 # Input / Output
 file_name: "start_2023-11-21T17-37-01.696+00-00.mp4"
-input_file:  "analysis/demo/raw_videos/start_2023-11-21T17-37-01.696+00-00.mp4"
-algorithm_output_directory: "analysis/demo/algorithm_output"
+input_directory:  "data/raw/"
 mask_directory: "analysis/demo/masks"
-output_directory: "analysis/demo/output"
-ground_truth_directory: "data/raw/labeled_videos/csv/"
+output_directory: "data/model_output/"
+ground_truth_directory: "data/annotated/labels/"
 
 tag: "demo"
 record_output_video: True # Only works for full resolution output
 record_output_csv: True
 
 display_output_video: True
-display_mode_extensive: False
-display_trackbars: True
+display_mode_extensive: True
+display_trackbars: False
 
 # Size
 input_pixels_per_mm: 0.0838
@@ -24,8 +23,8 @@ brightness: 30
 long_mean_frames: 400
 short_mean_frames: 10
 difference_threshold_scaler: 0.3
-dilation_kernel_mm: 350
-median_filter_kernel_mm: 85
+dilation_kernel_mm: 770
+median_filter_kernel_mm: 340
 
 # Tracking
 max_association_dist_mm: 600
