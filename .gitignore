@@ -136,3 +136,6 @@ output/
 labeling/
 *.mp4
 demo_*
+.venv
+.vscode
+.env

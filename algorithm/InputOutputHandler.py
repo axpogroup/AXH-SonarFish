@@ -239,8 +239,8 @@ class InputOutputHandler:
                 draw_detections=self.settings_dict["draw_detections_on_saved_video"],
             )
 
-            if "record_output_video" in self.settings_dict.keys():
-                if self.settings_dict["record_output_video"] and not self.video_writer:
+            if self.settings_dict["record_output_video"]:
+                if not self.video_writer:
                     self.initialize_output_recording(
                         frame_width=disp.shape[1], 
                         frame_height=disp.shape[0],

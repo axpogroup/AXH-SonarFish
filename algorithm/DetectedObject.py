@@ -1,16 +1,23 @@
 import cv2 as cv
 import numpy as np
+from deepsort.detection import Detection
 
 
 class DetectedObject:
-    def __init__(self, identifier, contour, frame_number):
+    def __init__(
+            self, 
+            identifier: int, 
+            contour: np.ndarray, 
+            frame_number: int,
+        ):
         self.ID = identifier
         self.frames_observed = [frame_number]
-        x, y, w, h = cv.boundingRect(contour)
+        x, y, w, h = contour if contour.shape == (4,) else cv.boundingRect(contour)
         self.midpoints = [(int(x + w / 2), int(y + h / 2))]
         self.bounding_boxes = [(w, h)]
-        self.areas = [cv.contourArea(contour)]
+        self.areas = [w*h if contour.shape == (4,) else cv.contourArea(contour)]
         self.velocities = [np.array([np.NAN, np.NAN])]
+        self.deepsort_detection = MyDeepSortDetection(np.array((x, y, w, h)), np.array([0.9]), np.array([1.0]))
 
     def update_object(self, detection):
         self.frames_observed.append(detection.frames_observed[-1])
@@ -45,3 +52,13 @@ class DetectedObject:
         )
 
         self.velocities.append(np.array([v_x, v_y]))
+        
+
+class MyDeepSortDetection(Detection):
+    
+    def __init__(self, tlwh, confidence, feature):
+        # custom class to deal with np.float deprecation
+        # installing pre-deprecation numpy 1.19.5 leads to conflicts 
+        self.tlwh = np.asarray(tlwh, dtype=float)
+        self.confidence = float(confidence)
+        self.feature = np.asarray(feature, dtype=np.float32)

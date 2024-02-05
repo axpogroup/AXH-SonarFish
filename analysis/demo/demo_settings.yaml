@@ -1,16 +1,16 @@
 # Input / Output
-input_file:  "analysis/labeling/start_2023-11-18T18-23-01.832+00-00/original.mp4"
+input_file: "analysis/demo/demo_sample_sonar_recording.mp4"
 mask_directory: "analysis/demo/masks"
-output_directory: "analysis/labeling/start_2023-11-18T18-23-01.832+00-00"
+output_directory: "analysis/output"
 
 tag: "label"
-record_output_video: True # Only works for full resolution output
+record_output_video: False # Only works for full resolution output
 record_output_csv: True
 record_processing_frame: "binary" # one of ['raw', 'raw_downsampled', 'gray', 'gray_boosted', 'long_mean', 'short_mean', 'difference', 'absolute_difference', 'difference_thresholded', 'difference_thresholded_abs', 'median_filter', 'binary', 'dilated']
 draw_detections_on_saved_video: False
 
-display_output_video: False
-display_mode_extensive: False
+display_output_video: True
+display_mode_extensive: True
 display_trackbars: False
 
 # Size
@@ -24,11 +24,20 @@ long_mean_frames: 400
 short_mean_frames: 10
 difference_threshold_scaler: 0.3
 dilation_kernel_mm: 770
-median_filter_kernel_mm: 85
+median_filter_kernel_mm: 170
 
 # Tracking
-max_association_dist_mm: 600
-phase_out_after_x_frames: 10
+tracking_method: "kalman" # one of ['nearest_neighbor', 'kalman']
+max_association_dist_mm: 50
+phase_out_after_x_frames: 30
+filter_settings:
+  kalman:
+    std_mmt_x: 0.5
+    std_mmt_y: 0.17
+    max_iou_distance: 0.5 # basically (1 - iou_min)
+    max_age: 15
+    n_init: 25
+  nearest_neighbor:
 
 # Classification
 river_pixel_velocity: [2.35, -0.9] # At full resolution

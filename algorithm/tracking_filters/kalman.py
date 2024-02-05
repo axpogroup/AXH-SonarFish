@@ -2,7 +2,11 @@ import scipy
 import numpy as np
 from deepsort.tracker import Track
 from deepsort import iou_matching
-from scipy.optimize import linear_sum_assignment
+from deepsort.detection import Detection
+from deepsort.iou_matching import linear_assignment
+
+from ..flow_conditions import rot_mat_from_river_velocity
+from ..DetectedObject import DetectedObject
 
 
 class KalmanFilter(object):
@@ -17,7 +21,17 @@ class KalmanFilter(object):
     observation model).
     """
 
-    def __init__(self):
+    def __init__(self, conf: dict):
+        """Initialize Kalman filter.
+
+        Args:
+            obj_velocity_initalization (tuple[float, float], optional): Initialization of velocity of objects
+                in x and y direction. Defaults to (0., 0.).
+        """
+        self.conf = conf
+        # adapt the initial velocity to the river velocity
+        self.obj_velocity_initalization = [v / 4. for v in self.conf['river_pixel_velocity']]
+        
         ndim, dt = 4, 1.
 
         # Create Kalman filter model matrices.
@@ -31,6 +45,8 @@ class KalmanFilter(object):
         # the model. This is a bit hacky.
         self._std_weight_position = 1. / 20
         self._std_weight_velocity = 1. / 160
+        self._std_mmt_x = conf['filter_settings']['kalman']['std_mmt_x']
+        self._std_mmt_y = conf['filter_settings']['kalman']['std_mmt_y']
 
     def initiate(self, measurement):
         """Create track from unassociated measurement.
@@ -47,7 +63,7 @@ class KalmanFilter(object):
             to 0 mean.
         """
         mean_pos = measurement
-        mean_vel = np.zeros_like(mean_pos)
+        mean_vel = np.array([*self.obj_velocity_initalization, 0, 0])
         mean = np.r_[mean_pos, mean_vel]
 
         std = [
@@ -111,11 +127,15 @@ class KalmanFilter(object):
             estimate.
         """
         std = [
-            self._std_weight_position * mean[3],
-            self._std_weight_position * mean[3],
+            self._std_mmt_x * mean[3],
+            self._std_mmt_y * mean[3],
             1e-1,
             self._std_weight_position * mean[3]]
-        innovation_cov = np.diag(np.square(std))
+        # rotate the measurement covariance matrix into the river flow direction
+        xy_std = np.dot(self.rot_mat.T, np.diag(std[:2])**2)
+        ah_std = np.diag(std[2:]) ** 2
+        innovation_cov = scipy.linalg.block_diag(xy_std, ah_std)
+        innovation_cov = np.diag(std) ** 2
 
         mean = np.dot(self._update_mat, mean)
         covariance = np.linalg.multi_dot((
@@ -149,6 +169,14 @@ class KalmanFilter(object):
         innovation = measurement - projected_mean
 
         new_mean = mean + np.dot(innovation, kalman_gain.T)
+        # limit velocity to maximum 2 * v_river to prevent jumps of tracked objects
+        v = new_mean[4:6]
+        v_norm = np.linalg.norm(v)
+        if v_norm > 2 * np.linalg.norm(self.conf['river_pixel_velocity']):
+            v = v / v_norm * 2 * np.linalg.norm(self.conf['river_pixel_velocity'])
+            new_mean[4:6] = v
+            
+        
         new_covariance = covariance - np.linalg.multi_dot((
             kalman_gain, projected_cov, kalman_gain.T))
         return new_mean, new_covariance
@@ -192,6 +220,10 @@ class KalmanFilter(object):
         squared_maha = np.sum(z * z, axis=0)
         return squared_maha
     
+    @property
+    def rot_mat(self):
+        return rot_mat_from_river_velocity(self.conf)
+    
     
 class Tracker:
     """
@@ -206,6 +238,8 @@ class Tracker:
         Number of consecutive detections before the track is confirmed. The
         track state is set to `Deleted` if a miss occurs within the first
         `n_init` frames.
+    obj_velocity_initalization : tuple[float, float]
+        Initialization of velocity of objects in x and y direction.
     Attributes
     ----------
     metric : nn_matching.NearestNeighborDistanceMetric
@@ -220,13 +254,18 @@ class Tracker:
         The list of active tracks at the current time step.
     """
 
-    def __init__(self, metric, max_iou_distance=0.7, max_age=30, n_init=3):
+    def __init__(
+            self, 
+            metric, 
+            conf: dict,
+    ) -> None:
         self.metric = metric
-        self.max_iou_distance = max_iou_distance
-        self.max_age = max_age
-        self.n_init = n_init
+        self.conf = conf
+        self.max_iou_distance=self.conf['filter_settings']['kalman']["max_iou_distance"]
+        self.max_age=self.conf['filter_settings']['kalman']["max_age"]
+        self.n_init=self.conf['filter_settings']['kalman']["n_init"]
 
-        self.kf = KalmanFilter()
+        self.kf = KalmanFilter(conf)
         self.tracks = []
         self._next_id = 1
 
@@ -276,7 +315,7 @@ class Tracker:
             features = np.array([dets[i].feature for i in detection_indices])
             targets = np.array([tracks[i].track_id for i in track_indices])
             cost_matrix = self.metric.distance(features, targets)
-            cost_matrix = linear_sum_assignment.gate_cost_matrix(
+            cost_matrix = linear_assignment.gate_cost_matrix(
                 self.kf, cost_matrix, tracks, dets, track_indices,
                 detection_indices)
 
@@ -290,7 +329,7 @@ class Tracker:
 
         # Associate confirmed tracks using appearance features.
         matches_a, unmatched_tracks_a, unmatched_detections = \
-            linear_sum_assignment.matching_cascade(
+            linear_assignment.matching_cascade(
                 gated_metric, self.metric.matching_threshold, self.max_age,
                 self.tracks, detections, confirmed_tracks)
 
@@ -302,7 +341,7 @@ class Tracker:
             k for k in unmatched_tracks_a if
             self.tracks[k].time_since_update != 1]
         matches_b, unmatched_tracks_b, unmatched_detections = \
-            linear_sum_assignment.min_cost_matching(
+            linear_assignment.min_cost_matching(
                 iou_matching.iou_cost, self.max_iou_distance, self.tracks,
                 detections, iou_track_candidates, unmatched_detections)
 
@@ -316,3 +355,27 @@ class Tracker:
             mean, covariance, self._next_id, self.n_init, self.max_age,
             detection.feature))
         self._next_id += 1
+        
+        
+def filter_detections(
+        detections: list[DetectedObject], 
+        conf: dict,
+        tracker: Tracker = None, 
+    ):  
+    tracker.predict()
+    tracker.update([det.deepsort_detection for _, det in detections.items()])
+    
+
+def tracks_to_object_history(
+        tracks: list[Track], 
+        object_history: dict[int, DetectedObject],
+        frame_number: int,
+    ) -> dict[int, DetectedObject]:
+    for track in tracks:
+        if track.is_confirmed():
+            obj = DetectedObject(track.track_id, track.to_tlwh(), frame_number)
+            if track.track_id not in object_history.keys():
+                object_history[track.track_id] = obj
+            else:
+                object_history[track.track_id].update_object(obj)
+    return object_history

@@ -1,16 +1,19 @@
 import os
-from math import atan, cos, sin
 
 import cv2 as cv
 import numpy as np
 import pandas as pd
+from deepsort.nn_matching import NearestNeighborDistanceMetric
 
+from algorithm.flow_conditions import rotate_velocity_vectors
 from algorithm.DetectedObject import DetectedObject
 from algorithm.utils import get_elapsed_ms, resize_img
+from algorithm.tracking_filters import nearest_neighbor, kalman
 
 
 class FishDetector:
     def __init__(self, settings_dict):
+        self.object_filter = None
         self.conf = settings_dict
         self.frame_number = 0
         self.latest_obj_index = 0
@@ -141,81 +144,26 @@ class FishDetector:
         if len(detections) == 0:
             return object_history
 
-        if len(object_history) == 0:
-            object_history = detections
-            return object_history
-
-        existing_object_midpoints = [
-            existing_object.midpoints[-1]
-            for _, existing_object in object_history.items()
-            if (
-                self.frame_number - existing_object.frames_observed[-1]
-                < self.conf["phase_out_after_x_frames"]
+        if self.conf['tracking_method'] == 'nearest_neighbor':
+            max_association_distance_px = self.mm_to_px(
+                self.conf["max_association_dist_mm"]
             )
-        ]
-
-        if len(existing_object_midpoints) == 0:
-            for _, detection in detections.items():
-                object_history[detection.ID] = detection
-            return object_history
-
-        existing_object_ids = [
-            key
-            for key, existing_object in object_history.items()
-            if (
-                self.frame_number - existing_object.frames_observed[-1]
-                < self.conf["phase_out_after_x_frames"]
+            return nearest_neighbor.associate_detections(
+                detections, 
+                object_history, 
+                self.frame_number, 
+                self.conf, 
+                max_association_distance_px
             )
-        ]
-
-        new_objects = []
-        associations = {}
-        max_association_distance_px = self.mm_to_px(
-            self.conf["max_association_dist_mm"]
-        )
-        # Loop the detections
-        for _, detection in detections.items():
-            # Find the closest existing object
-            min_id, min_dist = self.closest_point(
-                detection.midpoints[-1], existing_object_midpoints
-            )
-            if min_dist < max_association_distance_px:
-                if existing_object_ids[min_id] in associations.keys():
-                    if associations[existing_object_ids[min_id]]["distance"] > min_dist:
-                        new_objects.append(
-                            associations[existing_object_ids[min_id]]["detection"]
-                        )
-                        associations[existing_object_ids[min_id]] = {
-                            "detection_id": detection.ID,
-                            "distance": min_dist,
-                            "detection": detection,
-                        }
-                    new_objects.append(detection)
-                else:
-                    associations[existing_object_ids[min_id]] = {
-                        "detection_id": detection.ID,
-                        "distance": min_dist,
-                        "detection": detection,
-                    }
-            else:
-                new_objects.append(detection)
-
-        for new_object in new_objects:
-            object_history[new_object.ID] = new_object
-
-        for existing_object_id, associated_detection in associations.items():
-            object_history[existing_object_id].update_object(
-                detections[associated_detection["detection_id"]]
-            )
-
-        return object_history
-
-    @staticmethod
-    def closest_point(point, points):
-        points = np.asarray(points)
-        dist_2 = np.sqrt(np.sum((points - point) ** 2, axis=1))
-        min_index = np.argmin(dist_2)
-        return min_index, dist_2[min_index]
+        elif self.conf['tracking_method'] == 'kalman':
+            if not self.object_filter:
+                # TODO: figure out why even with a small association distance, the bboxes still jump
+                metric = NearestNeighborDistanceMetric("euclidean", self.mm_to_px(self.conf["max_association_dist_mm"]))                
+                self.object_filter = kalman.Tracker(metric,self.conf)
+            kalman.filter_detections(detections, self.conf, self.object_filter)
+            return kalman.tracks_to_object_history(self.object_filter.tracks, object_history, self.frame_number)
+        else:
+            raise ValueError(f"Invalid tracking method: {self.conf['tracking_method']}")
 
     def update_buffers_calculate_means(self, img):
         if self.framebuffer is None:
@@ -343,7 +291,7 @@ class FishDetector:
         return px
 
     def classify_detections(self, df):
-        rotated_velocities = self.rotate_velocity_vectors(df[["v_x", "v_y"]])
+        rotated_velocities = rotate_velocity_vectors(df[["v_x", "v_y"]], conf=self.conf)
         df = pd.concat([df, rotated_velocities], axis=1)
 
         abs_vel = np.linalg.norm(self.conf["river_pixel_velocity"])
@@ -367,16 +315,3 @@ class FishDetector:
                 df.loc[df.ID == ID, "classification"] = "object"
 
         return df
-
-    def rotate_velocity_vectors(self, velocities_df):
-        # Rotate the velocity vectors
-        theta = -(
-            np.pi * 1.5
-            - atan(
-                self.conf["river_pixel_velocity"][0]
-                / self.conf["river_pixel_velocity"][1]
-            )
-        )
-
-        rot = np.array([[cos(theta), -sin(theta)], [sin(theta), cos(theta)]])
-        return pd.DataFrame(np.dot(rot, velocities_df.T).T, columns=["v_xr", "v_yr"])
