@@ -8,8 +8,8 @@ import yaml
 
 
 def prepare_data_for_mot_metrics(
-    ground_truth_source: str, test_source: str, settings_dict
-) -> tuple[str, str]:
+    ground_truth_source: Path, test_source: Path, settings_dict
+) -> tuple[Path, Path]:
     df_tsource = pd.read_csv(test_source, delimiter=",")
     df_gt = pd.read_csv(ground_truth_source, delimiter=",")
     df_tsource.drop(
