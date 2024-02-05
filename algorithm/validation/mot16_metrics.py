@@ -1,4 +1,5 @@
 import argparse
+from pathlib import Path
 
 import motmetrics as mm
 import numpy as np
@@ -11,7 +12,6 @@ def prepare_data_for_mot_metrics(
 ) -> tuple[str, str]:
     df_tsource = pd.read_csv(test_source, delimiter=",")
     df_gt = pd.read_csv(ground_truth_source, delimiter=",")
-    df_gt["id"] = df_gt["id"] - 245
     df_tsource.drop(
         df_tsource[df_tsource["classification"] != "fish"].index, inplace=True
     )
@@ -20,18 +20,17 @@ def prepare_data_for_mot_metrics(
     df_tsource["v_y"] = -1
     df_tsource["contour_area"] = -1
     df_tsource["v_xr"] = -1
-    df_tsource.to_csv(
-        settings_dict["temp_directory"] + "test.csv", header=False, index=False
+    test_source = Path(settings_dict["temp_directory"]) / Path("test.csv")
+    df_tsource.to_csv(test_source, header=False, index=False)
+    ground_truth_source = Path(settings_dict["temp_directory"]) / Path(
+        "ground_truth.csv"
     )
-    test_source = settings_dict["temp_directory"] + "test.csv"
-    df_gt.to_csv(
-        settings_dict["temp_directory"] + "ground_truth.csv", header=False, index=False
-    )
-    ground_truth_source = settings_dict["temp_directory"] + "ground_truth.csv"
+    df_gt.to_csv(ground_truth_source, header=False, index=False)
+
     return ground_truth_source, test_source
 
 
-def motMetricsEnhancedCalculator(ground_truth_source, test_source):
+def mot_metrics_enhanced_calculator(ground_truth_source, test_source):
 
     ground_truth = np.loadtxt(ground_truth_source, delimiter=",", encoding="utf-8-sig")
 
@@ -129,21 +128,19 @@ if __name__ == "__main__":
         settings_dict = yaml.load(f, Loader=yaml.SafeLoader)
         if args.input_file is not None:
             print("replacing input file.")
-            settings_dict["input_file"] = args.input_file
+            settings_dict["file_name"] = args.input_file
 
-    ground_truth_source = (
-        settings_dict["ground_truth_directory"]
-        + settings_dict["file_name_prefix"]
-        + "_labels_ground_truth.csv"
+    file_name_prefix = Path(settings_dict["file_name"]).stem
+    ground_truth_source = Path(settings_dict["ground_truth_directory"]) / Path(
+        file_name_prefix + "_labels_ground_truth.csv"
     )
     test_source = (
-        settings_dict["test_directory"]
-        + settings_dict["file_name_prefix"]
-        + "/"
-        + settings_dict["file_name_prefix"]
-        + ".csv"
+        Path(settings_dict["test_directory"])
+        / file_name_prefix
+        / Path(file_name_prefix + ".csv")
     )
+
     ground_truth_source, test_source = prepare_data_for_mot_metrics(
         ground_truth_source, test_source, settings_dict
     )
-    motMetricsEnhancedCalculator(ground_truth_source, test_source)
+    mot_metrics_enhanced_calculator(ground_truth_source, test_source)
