@@ -2,14 +2,14 @@ import argparse
 from pathlib import Path
 
 import motmetrics as mm
-import numpy as np
 import pandas as pd
 import yaml
+from numpy import ndarray
 
 
 def prepare_data_for_mot_metrics(
-    ground_truth_source: Path, test_source: Path, settings_dict
-) -> tuple[Path, Path]:
+    ground_truth_source: Path, test_source: Path
+) -> tuple[ndarray, ndarray]:
     df_tsource = pd.read_csv(test_source, delimiter=",")
     df_gt = pd.read_csv(ground_truth_source, delimiter=",")
     df_tsource.drop(
@@ -20,22 +20,10 @@ def prepare_data_for_mot_metrics(
     df_tsource["v_y"] = -1
     df_tsource["contour_area"] = -1
     df_tsource["v_xr"] = -1
-    test_source = Path(settings_dict["temp_directory"]) / Path("test.csv")
-    df_tsource.to_csv(test_source, header=False, index=False)
-    ground_truth_source = Path(settings_dict["temp_directory"]) / Path(
-        "ground_truth.csv"
-    )
-    df_gt.to_csv(ground_truth_source, header=False, index=False)
-
-    return ground_truth_source, test_source
+    return df_gt.to_numpy(), df_tsource.to_numpy()
 
 
-def mot_metrics_enhanced_calculator(ground_truth_source, test_source):
-
-    ground_truth = np.loadtxt(ground_truth_source, delimiter=",", encoding="utf-8-sig")
-
-    # load tracking output
-    test = np.loadtxt(test_source, delimiter=",", encoding="utf-8-sig")
+def mot_metrics_enhanced_calculator(ground_truth, test):
 
     # Create an accumulator that will be updated during each frame
     acc = mm.MOTAccumulator(auto_id=True)
@@ -141,6 +129,6 @@ if __name__ == "__main__":
     )
 
     ground_truth_source, test_source = prepare_data_for_mot_metrics(
-        ground_truth_source, test_source, settings_dict
+        ground_truth_source, test_source
     )
     mot_metrics_enhanced_calculator(ground_truth_source, test_source)
