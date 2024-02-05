@@ -5,7 +5,7 @@ input_directory: "data/annotated/labeled_videos/"
 
 # Output
 output_video_dir: "output/videos/"
-csv_output_directory: "data/annotated/csv/"
+csv_output_directory: "data/annotated/labels/"
 csv_output_suffix: "_ground_truth.csv"
 
 # Enhancement
