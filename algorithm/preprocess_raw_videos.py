@@ -3,6 +3,8 @@ from pathlib import Path
 import cv2
 
 
+# Stackoverflow:
+# https://stackoverflow.com/questions/69306191/how-to-change-frame-per-second-fps-while-using-cv2-when-converting-video-to
 def down_sample_frame_rate_of_video(input_file: Path, output_file: Path, fps_out: int):
     vidcap = cv2.VideoCapture(input_file.__str__())
     assert vidcap.isOpened()
