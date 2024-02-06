@@ -11,7 +11,7 @@ record_output_csv: True
 
 display_output_video: True
 display_mode_extensive: True
-display_trackbars: False
+display_trackbars: True
 
 # Size
 input_pixels_per_mm: 0.0838
