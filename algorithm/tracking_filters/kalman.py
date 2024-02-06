@@ -276,13 +276,14 @@ class Tracker:
         for track in self.tracks:
             track.predict(self.kf)
 
-    def update(self, detections):
+    def update(self, detections: dict[int: DetectedObject]):
         """Perform measurement update and track management.
         Parameters
         ----------
         detections : List[deep_sort.detection.Detection]
             A list of detections at the current time step.
         """
+        ds_detections = [d.deepsort_detection for d in detections.values()]
         # Run matching cascade.
         matches, unmatched_tracks, unmatched_detections = \
             self._match(detections)
@@ -290,11 +291,11 @@ class Tracker:
         # Update track set.
         for track_idx, detection_idx in matches:
             self.tracks[track_idx].update(
-                self.kf, detections[detection_idx])
+                self.kf, ds_detections[detection_idx])
         for track_idx in unmatched_tracks:
             self.tracks[track_idx].mark_missed()
         for detection_idx in unmatched_detections:
-            self._initiate_track(detections[detection_idx])
+            self._initiate_track(ds_detections[detection_idx])
         self.tracks = [t for t in self.tracks if not t.is_deleted()]
 
         # Update distance metric.
@@ -306,13 +307,12 @@ class Tracker:
             features += track.features
             targets += [track.track_id for _ in track.features]
             track.features = []
-        self.metric.partial_fit(
-            np.asarray(features), np.asarray(targets), active_targets)
+        self.metric.partial_fit(features, targets, active_targets)
 
-    def _match(self, detections):
+    def _match(self, detections: dict[int: DetectedObject]):
 
         def gated_metric(tracks, dets, track_indices, detection_indices):
-            features = np.array([dets[i].feature for i in detection_indices])
+            features = [dets[i].feature for i in detection_indices]
             targets = np.array([tracks[i].track_id for i in track_indices])
             cost_matrix = self.metric.distance(features, targets)
             cost_matrix = linear_assignment.gate_cost_matrix(
@@ -320,6 +320,16 @@ class Tracker:
                 detection_indices)
 
             return cost_matrix
+        
+        # def gated_metric(tracks, dets, track_indices, detection_indices):
+        #     cost_matrix = self.metric.distance(dets, tracks, detection_indices, track_indices)
+        #     cost_matrix = linear_assignment.gate_cost_matrix(
+        #         self.kf, cost_matrix, tracks, dets, track_indices,
+        #         detection_indices)
+
+        #     return cost_matrix
+        
+        ds_detections = [d.deepsort_detection for d in detections.values()]
 
         # Split track set into confirmed and unconfirmed tracks.
         confirmed_tracks = [
@@ -331,7 +341,7 @@ class Tracker:
         matches_a, unmatched_tracks_a, unmatched_detections = \
             linear_assignment.matching_cascade(
                 gated_metric, self.metric.matching_threshold, self.max_age,
-                self.tracks, detections, confirmed_tracks)
+                self.tracks, ds_detections, confirmed_tracks)
 
         # Associate remaining tracks together with unconfirmed tracks using IOU.
         iou_track_candidates = unconfirmed_tracks + [
@@ -343,7 +353,7 @@ class Tracker:
         matches_b, unmatched_tracks_b, unmatched_detections = \
             linear_assignment.min_cost_matching(
                 iou_matching.iou_cost, self.max_iou_distance, self.tracks,
-                detections, iou_track_candidates, unmatched_detections)
+                ds_detections, iou_track_candidates, unmatched_detections)
 
         matches = matches_a + matches_b
         unmatched_tracks = list(set(unmatched_tracks_a + unmatched_tracks_b))
@@ -358,12 +368,12 @@ class Tracker:
         
         
 def filter_detections(
-        detections: list[DetectedObject], 
+        detections: dict[int: DetectedObject], 
         conf: dict,
         tracker: Tracker = None, 
     ):  
     tracker.predict()
-    tracker.update([det.deepsort_detection for _, det in detections.items()])
+    tracker.update(detections)
     
 
 def tracks_to_object_history(

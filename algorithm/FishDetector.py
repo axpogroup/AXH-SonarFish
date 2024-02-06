@@ -9,6 +9,7 @@ from algorithm.flow_conditions import rotate_velocity_vectors
 from algorithm.DetectedObject import DetectedObject
 from algorithm.utils import get_elapsed_ms, resize_img
 from algorithm.tracking_filters import nearest_neighbor, kalman
+from algorithm.matching.DistanceMetric import DistanceMetric
 
 
 class FishDetector:
@@ -143,11 +144,8 @@ class FishDetector:
     def associate_detections(self, detections, object_history):
         if len(detections) == 0:
             return object_history
-
+        max_association_distance_px = self.mm_to_px(self.conf["max_association_dist_mm"])
         if self.conf['tracking_method'] == 'nearest_neighbor':
-            max_association_distance_px = self.mm_to_px(
-                self.conf["max_association_dist_mm"]
-            )
             return nearest_neighbor.associate_detections(
                 detections, 
                 object_history, 
@@ -157,9 +155,12 @@ class FishDetector:
             )
         elif self.conf['tracking_method'] == 'kalman':
             if not self.object_filter:
-                # TODO: figure out why even with a small association distance, the bboxes still jump
-                metric = NearestNeighborDistanceMetric("euclidean", self.mm_to_px(self.conf["max_association_dist_mm"]))                
-                self.object_filter = kalman.Tracker(metric,self.conf)
+                if self.conf['filter_settings']['blob_matching_metric'] == 'nearest_neighbor':
+                    metric = DistanceMetric("euclidean", max_association_distance_px)                
+                else:
+                    metric = DistanceMetric(self.conf['filter_settings']['blob_matching_metric'],
+                                            self.conf['filter_settings']['area_ratio_threshold'])
+                self.object_filter = kalman.Tracker(metric, self.conf)
             kalman.filter_detections(detections, self.conf, self.object_filter)
             return kalman.tracks_to_object_history(self.object_filter.tracks, object_history, self.frame_number)
         else:

@@ -1,5 +1,8 @@
 # Input / Output
-input_file: "analysis/demo/demo_sample_sonar_recording.mp4"
+# input_file: "analysis/demo/demo_sample_sonar_recording.mp4"
+# mask_directory: "analysis/demo/masks"
+# output_directory: "analysis/output"
+input_file: "analysis/labeling/start_2023-05-09T03-00-36.314+00-00/original.mp4"
 mask_directory: "analysis/demo/masks"
 output_directory: "analysis/output"
 
@@ -23,21 +26,23 @@ brightness: 30
 long_mean_frames: 400
 short_mean_frames: 10
 difference_threshold_scaler: 0.3
-dilation_kernel_mm: 770
+dilation_kernel_mm: 500
 median_filter_kernel_mm: 170
 
 # Tracking
 tracking_method: "kalman" # one of ['nearest_neighbor', 'kalman']
-max_association_dist_mm: 50
+max_association_dist_mm: 150
 phase_out_after_x_frames: 30
 filter_settings:
   kalman:
     std_mmt_x: 0.5
     std_mmt_y: 0.17
     max_iou_distance: 0.5 # basically (1 - iou_min)
-    max_age: 15
+    max_age: 20
     n_init: 25
   nearest_neighbor:
+  blob_matching_metric: "blob_area" # one of ['nearest_neighbor', 'blob_area']
+  area_ratio_threshold: 0.97
 
 # Classification
 river_pixel_velocity: [2.35, -0.9] # At full resolution
