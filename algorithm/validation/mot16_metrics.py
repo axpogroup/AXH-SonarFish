@@ -38,7 +38,7 @@ def mot_metrics_enhanced_calculator(ground_truth, test):
         ground_truth_detections = ground_truth[
             ground_truth[:, 0] == frame, 1:6
         ]  # select all detections in gt
-        test_detections = test[test[:, 1] == frame, 1:6]  # select all detections in t
+        test_detections = test[test[:, 0] == frame, 1:6]  # select all detections in t
 
         C = mm.distances.iou_matrix(
             ground_truth_detections[:, 1:], test_detections[:, 1:], max_iou=0.5

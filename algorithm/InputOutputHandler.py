@@ -6,6 +6,7 @@ import cv2 as cv
 import pandas as pd
 
 import algorithm.visualization_functions as visualization_functions
+from algorithm.DetectedObject import DetectedObject
 from algorithm.utils import get_elapsed_ms
 
 
@@ -82,14 +83,14 @@ class InputOutputHandler:
             return False
 
     @staticmethod
-    def get_detections_pd(object_history):
+    def get_detections_pd(object_history: dict[int, DetectedObject]) -> pd.DataFrame:
         rows = []
         for _, obj in object_history.items():
             for i in range(len(obj.frames_observed)):
                 rows.append(
                     [
-                        obj.ID,
                         obj.frames_observed[i],
+                        obj.ID,
                         obj.top_lefts_x[i],
                         obj.top_lefts_y[i],
                         obj.bounding_boxes[i][0],
@@ -103,12 +104,12 @@ class InputOutputHandler:
         return pd.DataFrame(
             rows,
             columns=[
-                "ID",
-                "frames_observed",
+                "frame",
+                "id",
                 "x",
                 "y",
-                "width",
-                "height",
+                "w",
+                "h",
                 "v_x",
                 "v_y",
                 "contour_area",

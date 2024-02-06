@@ -359,23 +359,23 @@ class FishDetector:
 
         abs_vel = np.linalg.norm(self.conf["river_pixel_velocity"])
         df.classification = ""
-        for ID in df.ID.unique():
-            obj = df.loc[df.ID == ID]
+        for ID in df.id.unique():
+            obj = df.loc[df.id == ID]
             if obj.shape[0] < np.max([20, 10]):
-                df.loc[df.ID == ID, "classification"] = "object"
+                df.loc[df.id == ID, "classification"] = "object"
 
             if (
                 abs(obj.v_yr).max()
                 > self.conf["deviation_from_river_velocity"] * abs_vel
             ):
-                df.loc[df.ID == ID, "classification"] = "fish"
+                df.loc[df.id == ID, "classification"] = "fish"
             elif (
                 abs(obj.v_xr - abs_vel).max()
                 > self.conf["deviation_from_river_velocity"] * abs_vel
             ):
-                df.loc[df.ID == ID, "classification"] = "fish"
+                df.loc[df.id == ID, "classification"] = "fish"
             else:
-                df.loc[df.ID == ID, "classification"] = "object"
+                df.loc[df.id == ID, "classification"] = "object"
 
         return df
 

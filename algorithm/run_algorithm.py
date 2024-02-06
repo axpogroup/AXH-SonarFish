@@ -80,6 +80,6 @@ if __name__ == "__main__":
         )
 
     if input_output_handler.output_csv_name is not None:
-        detections = input_output_handler.get_detections_pd(object_history)
-        detections = detector.classify_detections(detections)
-        detections.to_csv(input_output_handler.output_csv_name, index=False)
+        df_detections = input_output_handler.get_detections_pd(object_history)
+        df_detections = detector.classify_detections(df_detections)
+        df_detections.to_csv(input_output_handler.output_csv_name, index=False)
