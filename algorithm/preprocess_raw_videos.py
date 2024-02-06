@@ -47,5 +47,5 @@ if __name__ == "__main__":
     for file_path in filenames:
         output_file_path = Path("data/intermediate") / file_path.name
         down_sample_frame_rate_of_video(
-            input_file=file_path, output_file=output_file_path, fps_out=30
+            input_file=file_path, output_file=output_file_path, fps_out=10
         )
