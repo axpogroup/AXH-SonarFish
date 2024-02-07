@@ -58,6 +58,19 @@ This is a short guide to run the fish detection algorithm on a sample video.
 6. Use the settings "display_output_video: True" and "display_mode_extensive: True" to tune the settings in an 
    interactive window and "display_mode_extensive: False" to read the velocity of the river.
 
+# Running the algorithm on a batch of files and evaluating the output
+
+1. Store your prelabeled videos in the folder _"data/annotated/labeled_videos"_
+2. If you want to reduce the frame rate of the videos, run the script _"analysis/reduce_frame_rate.py"_. This script needs _"settings/preprocessing_settings.yaml"_ file where you have to choose: 
+    1. input_directory:("data/raw") for the raw videos or input directory:("annotated/labeled_videos") for the labeled videos
+    2. output_directory:("data/intermediate") for the raw videos or output directory:("annotated/labeled_videos") for the labeled videos
+    3. fps: the desired frame rate
+3. To extract the labels in csv run _"algorithm/extract_labels_from_videos.py"_ with settings file tracking_box_settings.yaml.
+   in the folder _"data/annotated/labels"_
+4. Run the algorithm for one video using _"algorithm/run_algorithm.py"_. E.g.: _"python3 algorithm/run_algorithm.py -yf 
+   analysis/demo/demo_settings.yaml"_. Specify the name of the video file in the settings file. 
+5. Evaluate the output using the script _"algorithm/validation/mot16_metrics.py"_.
+
 # Comments
 Tested with Python 3.10, 
 direct questions to the Axpo HTD-A team 

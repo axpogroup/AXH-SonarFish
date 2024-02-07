@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import cv2
+import yaml
 
 
 # Stackoverflow:
@@ -15,7 +16,7 @@ def down_sample_frame_rate_of_video(input_file: Path, output_file: Path, fps_out
     index_out = -1
     fourcc = cv2.VideoWriter_fourcc("m", "p", "4", "v")
     video_writer = cv2.VideoWriter(
-        output_file.__str__(),
+        output_file.__str__().replace("_labels", ""),
         fourcc=fourcc,
         fps=fps_in,
         frameSize=(int(width), int(height)),
@@ -43,9 +44,12 @@ def down_sample_frame_rate_of_video(input_file: Path, output_file: Path, fps_out
 
 
 if __name__ == "__main__":
-    filenames = Path("data/raw/").glob("*.mp4")
+    with open("settings/preprocessing_settings.yaml") as f:
+        settings_dict = yaml.load(f, Loader=yaml.SafeLoader)
+    filenames = Path(settings_dict["input_directory"]).glob("*.mp4")
+
     for file_path in filenames:
-        output_file_path = Path("data/intermediate") / file_path.name
+        output_file_path = Path(settings_dict["output_directory"]) / file_path.name
         down_sample_frame_rate_of_video(
             input_file=file_path, output_file=output_file_path, fps_out=10
         )
