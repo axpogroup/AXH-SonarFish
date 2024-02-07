@@ -44,8 +44,6 @@ class KalmanFilter(object):
         # the model. This is a bit hacky.
         self._std_weight_position = 1. / 20
         self._std_weight_velocity = 1. / 160
-        self._std_mmt_x = conf['filter_settings']['kalman']['std_mmt_x']
-        self._std_mmt_y = conf['filter_settings']['kalman']['std_mmt_y']
 
     def initiate(self, measurement):
         """Create track from unassociated measurement.
@@ -65,16 +63,12 @@ class KalmanFilter(object):
         mean_vel = np.array([*self.obj_velocity_initalization, 0, 0])
         mean = np.r_[mean_pos, mean_vel]
 
-        std = [
-            2 * self._std_weight_position * measurement[3],
-            2 * self._std_weight_position * measurement[3],
-            1e-2,
-            2 * self._std_weight_position * measurement[3],
-            10 * self._std_weight_velocity * measurement[3],
-            10 * self._std_weight_velocity * measurement[3],
-            1e-5,
-            10 * self._std_weight_velocity * measurement[3]]
-        covariance = np.diag(np.square(std))
+        std_trace = np.array(self.conf['filter_settings']['kalman']['std_obj_initialization_trace']) * \
+                    self.conf['filter_settings']['kalman']['std_obj_initialization_factor']
+        bbox_height_scaling_selection = np.array([1, 1, 0, 1, 1, 1, 0, 1])
+        std_trace = std_trace * (bbox_height_scaling_selection * measurement[3] + 
+                                 1 - bbox_height_scaling_selection)
+        covariance = np.diag(np.square(std_trace))
         return mean, covariance
 
     def predict(self, mean: np.ndarray, covariance: np.ndarray):
@@ -93,17 +87,12 @@ class KalmanFilter(object):
             Returns the mean vector and covariance matrix of the predicted
             state. Unobserved velocities are initialized to 0 mean.
         """
-        std_pos = [
-            self._std_weight_position * mean[3],
-            self._std_weight_position * mean[3],
-            1e-2,
-            self._std_weight_position * mean[3]]
-        std_vel = [
-            self._std_weight_velocity * mean[3],
-            self._std_weight_velocity * mean[3],
-            1e-5,
-            self._std_weight_velocity * mean[3]]
-        motion_cov = np.diag(np.square(np.r_[std_pos, std_vel]))
+        std_trace = np.array(self.conf['filter_settings']['kalman']['std_process_noise_trace']) * \
+                    self.conf['filter_settings']['kalman']['std_obj_initialization_factor']
+        bbox_height_scaling_selection = np.array([1, 1, 0, 1, 1, 1, 0, 1])
+        std_trace = std_trace * (bbox_height_scaling_selection * mean[3] +
+                                 1 - bbox_height_scaling_selection)
+        motion_cov = np.diag(np.square(std_trace))
 
         mean = np.dot(self._motion_mat, mean)
         covariance = np.linalg.multi_dot((
@@ -125,16 +114,18 @@ class KalmanFilter(object):
             Returns the projected mean and covariance matrix of the given state
             estimate.
         """
-        std = [
-            self._std_mmt_x * mean[3],
-            self._std_mmt_y * mean[3],
-            1e-1,
-            self._std_weight_position * mean[3]]
+        std_trace = np.array(self.conf['filter_settings']['kalman']['std_mmt_noise_trace']) * \
+                    self.conf['filter_settings']['kalman']['std_obj_initialization_factor']
+        bbox_height_scaling_selection = np.array([1, 1, 0, 1])
+        std_trace = std_trace * (bbox_height_scaling_selection * mean[3] +
+                                 1 - bbox_height_scaling_selection)
         # rotate the measurement covariance matrix into the river flow direction
-        xy_std = np.dot(self.rot_mat.T, np.diag(std[:2])**2)
-        ah_std = np.diag(std[2:]) ** 2
-        innovation_cov = scipy.linalg.block_diag(xy_std, ah_std)
-        innovation_cov = np.diag(std) ** 2
+        if self.conf['filter_settings']['kalman']['rotate_mmt_noise_in_river_direction']:
+            xy_std = np.dot(self.rot_mat.T, np.diag(std_trace[:2])**2)
+            ah_std = np.diag(std_trace[2:]) ** 2
+            innovation_cov = scipy.linalg.block_diag(xy_std, ah_std)
+        else:
+            innovation_cov = np.diag(std_trace) ** 2
 
         mean = np.dot(self._update_mat, mean)
         covariance = np.linalg.multi_dot((

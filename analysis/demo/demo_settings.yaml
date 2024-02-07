@@ -1,7 +1,4 @@
 # Input / Output
-# input_file: "analysis/demo/demo_sample_sonar_recording.mp4"
-# mask_directory: "analysis/demo/masks"
-# output_directory: "analysis/output"
 file_name: "start_2023-11-21T17-37-01.696+00-00.mp4"
 input_directory:  "data/raw/"
 mask_directory: "analysis/demo/masks"
@@ -37,11 +34,16 @@ max_association_dist_mm: 150
 phase_out_after_x_frames: 30
 filter_settings:
   kalman:
-    std_mmt_x: 0.5
-    std_mmt_y: 0.17
+    std_obj_initialization_factor: 0.1
+    std_obj_initialization_trace: [1, 1, 0.1, 1, 0.5, 0.5, 0.0001, 0.5] # [x, y, w, h, vx, vy, va, vh]
+    std_process_noise_factor: 0.1
+    std_process_noise_trace: [1, 1, 0.1, 1, 0.05, 0.05, 0.0001, 0.05] # [x, y, w, h, vx, vy, va, vh]
+    std_mmt_noise_factor: 0.5
+    std_mmt_noise_trace: [5, 1.7, 1, 0.05] # [x, y, a, h]
+    rotate_mmt_noise_in_river_direction: False
     max_iou_distance: 0.5 # basically (1 - iou_min)
-    max_age: 20
-    n_init: 25
+    max_age: 30
+    n_init: 35
   nearest_neighbor:
   blob_matching_metric: "nearest_neighbor" # one of ['nearest_neighbor', 'blob_area']
   area_ratio_threshold: 0.97

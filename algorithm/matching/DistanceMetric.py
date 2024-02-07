@@ -6,6 +6,11 @@ from deepsort.nn_matching import _nn_euclidean_distance, _nn_cosine_distance
 from matching.area_matching import _area_cost
 
 class DistanceMetric(object):
+    metric_options = {
+        'euclidean': _nn_euclidean_distance, 
+        'cosine': _nn_cosine_distance, 
+        'blob_area': _area_cost,
+    }
     """
     A nearest neighbor distance metric that, for each target, returns
     the closest distance to any sample that has been observed so far.
@@ -30,17 +35,14 @@ class DistanceMetric(object):
     """
 
     def __init__(self, metric, matching_threshold, budget=None):
-        if metric == "euclidean":
-            self._metric = _nn_euclidean_distance
-            self.feature_keys = ['center_pos']
-        elif metric == "cosine":
-            self._metric = _nn_cosine_distance
-            self.feature_keys = ['center_pos']
-        elif metric == "blob_area":
-            self._metric = _area_cost
+        try:
+            self.metric = self.metric_options[metric]
+        except KeyError:
+            raise ValueError(f"Invalid metric; must be one of {self.metric_options.keys()}")
+        self.feature_keys = ['center_pos']
+        if metric == 'blob_area':
             self.feature_keys = ['contour']
-        else:
-            raise ValueError("Invalid metric; must be either 'euclidean', 'cosine' or 'blob_area'")
+            
         self.matching_threshold = matching_threshold
         self.budget = budget
         self.samples = {}

@@ -4,6 +4,42 @@ from deepsort.detection import Detection
 from deepsort.track import Track
 
 
+class MyDeepSortDetection(Detection):
+    """
+    This class represents a bounding box detection in a single image.
+
+    Parameters
+    ----------
+    tlwh : array_like
+        Bounding box in format `(x, y, w, h)`.
+    confidence : float
+        Detector confidence score.
+    feature : dict
+        A dict of feature vectors that describes the object contained in this image.
+
+    Attributes
+    ----------
+    tlwh : ndarray
+        Bounding box in format `(top left x, top left y, width, height)`.
+    confidence : ndarray
+        Detector confidence score.
+    feature : ndarray | NoneType
+        A dict of feature vectors that describes the object contained in this image.
+
+    """
+    def __init__(
+            self, 
+            tlwh: tuple[float, float, float, float], 
+            confidence: np.ndarray, 
+            feature: dict[str, np.ndarray],
+        ):
+        # custom class to deal with np.float deprecation
+        # installing pre-deprecation numpy 1.19.5 leads to conflicts 
+        self.tlwh = np.asarray(tlwh, dtype=float)
+        self.confidence = float(confidence)
+        self.feature = feature
+
+
 class DetectedObject:
     def __init__(
             self, 
@@ -30,7 +66,7 @@ class DetectedObject:
             }
         )
 
-    def update_object(self, detection):
+    def update_object(self, detection: MyDeepSortDetection):
         self.frames_observed.append(detection.frames_observed[-1])
         self.midpoints.append(detection.midpoints[-1])
         self.top_lefts_x.append(detection.top_lefts_x[-1])
@@ -63,35 +99,3 @@ class DetectedObject:
             float(self.midpoints[-1][1] - self.midpoints[past_observation_id][1])
             / frame_diff
         )
-
-        
-
-class MyDeepSortDetection(Detection):
-    """
-    This class represents a bounding box detection in a single image.
-
-    Parameters
-    ----------
-    tlwh : array_like
-        Bounding box in format `(x, y, w, h)`.
-    confidence : float
-        Detector confidence score.
-    feature : dict
-        A dict of feature vectors that describes the object contained in this image.
-
-    Attributes
-    ----------
-    tlwh : ndarray
-        Bounding box in format `(top left x, top left y, width, height)`.
-    confidence : ndarray
-        Detector confidence score.
-    feature : ndarray | NoneType
-        A dict of feature vectors that describes the object contained in this image.
-
-    """
-    def __init__(self, tlwh, confidence, feature):
-        # custom class to deal with np.float deprecation
-        # installing pre-deprecation numpy 1.19.5 leads to conflicts 
-        self.tlwh = np.asarray(tlwh, dtype=float)
-        self.confidence = float(confidence)
-        self.feature = feature

@@ -232,12 +232,8 @@ class InputOutputHandler:
                 f"Total: {total_time_per_frame} | FPS: {'{:.1f}'.format(self.frame_no/(2*total_runtime/1000))}"
             )
 
-        if ("display_output_video" in self.settings_dict.keys()) or \
-            ("record_output_video" in self.settings_dict.keys()):
-            if "display_mode_extensive" not in self.settings_dict.keys():
-                extensive = False
-            else: 
-                extensive = self.settings_dict["display_mode_extensive"]
+        if self.settings_dict["display_output_video"] or self.settings_dict["record_output_video"]:
+            extensive = self.settings_dict["display_mode_extensive"]
             disp = visualization_functions.get_visual_output(
                 object_history=object_history,
                 truth_history=truth_history,
@@ -255,10 +251,7 @@ class InputOutputHandler:
                     )
                 self.video_writer.write(disp)
 
-            if (
-                "display_output_video" in self.settings_dict.keys()
-                and self.settings_dict["display_output_video"]
-            ):
+            if self.settings_dict["display_output_video"]:
                 self.show_image(disp, detector)
 
     def initialize_output_recording(
