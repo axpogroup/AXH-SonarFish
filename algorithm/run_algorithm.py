@@ -34,7 +34,11 @@ def extract_ground_truth_history(
         truth_detected = DetectedObject(
             identifier=row["id"],
             frame_number=row["frame"],
-            contour=np.array(row[["x", "y", "w", "h"]]),
+            x=row["x"],
+            y=row["y"],
+            w=row["w"],
+            h=row["h"],
+            area=None,
         )
         if row["id"] not in ground_truth_object_history:
             ground_truth_object_history[row["id"]] = truth_detected
