@@ -4,7 +4,8 @@
 # output_directory: "analysis/output"
 input_file: "analysis/labeling/start_2023-05-09T03-00-36.314+00-00/original.mp4"
 mask_directory: "analysis/demo/masks"
-output_directory: "analysis/output"
+output_directory: "data/model_output/"
+ground_truth_directory: "data/annotated/labels/"
 
 tag: "label"
 record_output_video: False # Only works for full resolution output

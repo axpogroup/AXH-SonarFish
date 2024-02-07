@@ -1,10 +1,12 @@
 import datetime as dt
 import os
+from pathlib import Path
 
 import cv2 as cv
 import pandas as pd
 
 import algorithm.visualization_functions as visualization_functions
+from algorithm.DetectedObject import DetectedObject
 from algorithm.utils import get_elapsed_ms
 
 
@@ -12,8 +14,12 @@ class InputOutputHandler:
     def __init__(self, settings_dict):
         self.video_writer = None
         self.settings_dict = settings_dict
-        self.video_cap = cv.VideoCapture(self.settings_dict["input_file"])
-        self.input_filename = os.path.split(self.settings_dict["input_file"])[-1]
+        self.video_cap = cv.VideoCapture(
+            Path(
+                self.settings_dict["input_directory"] + self.settings_dict["file_name"]
+            ).__str__()
+        )
+        self.input_filename = Path(self.settings_dict["file_name"])
         self.output_dir_name = None
         self.output_csv_name = None
 
@@ -32,7 +38,7 @@ class InputOutputHandler:
                 os.makedirs(name=self.output_dir_name, exist_ok=True)
 
             self.output_csv_name = os.path.join(
-                self.output_dir_name, (self.input_filename[:-4] + ".csv")
+                self.output_dir_name, (self.input_filename.stem + ".csv")
             )
 
         self.playback_paused = False
@@ -71,16 +77,16 @@ class InputOutputHandler:
             return False
 
     @staticmethod
-    def get_detections_pd(object_history):
+    def get_detections_pd(object_history: dict[int, DetectedObject]) -> pd.DataFrame:
         rows = []
         for _, obj in object_history.items():
             for i in range(len(obj.frames_observed)):
                 rows.append(
                     [
-                        obj.ID,
                         obj.frames_observed[i],
-                        obj.midpoints[i][0],
-                        obj.midpoints[i][1],
+                        obj.ID,
+                        obj.top_lefts_x[i],
+                        obj.top_lefts_y[i],
                         obj.bounding_boxes[i][0],
                         obj.bounding_boxes[i][1],
                         obj.velocities[i][0],
@@ -92,12 +98,12 @@ class InputOutputHandler:
         return pd.DataFrame(
             rows,
             columns=[
-                "ID",
-                "frames_observed",
+                "frame",
+                "id",
                 "x",
                 "y",
-                "width",
-                "height",
+                "w",
+                "h",
                 "v_x",
                 "v_y",
                 "contour_area",
@@ -205,7 +211,9 @@ class InputOutputHandler:
             self.shutdown()
             return
 
-    def handle_output(self, processed_frame, object_history, runtimes, detector):       
+    def handle_output(
+        self, processed_frame, object_history, runtimes, detector, truth_history=None
+    ):
         # Total runtime
         if self.last_output_time is not None:
             total_time_per_frame = get_elapsed_ms(self.last_output_time)
@@ -231,10 +239,11 @@ class InputOutputHandler:
             else: 
                 extensive = self.settings_dict["display_mode_extensive"]
             disp = visualization_functions.get_visual_output(
-                object_history, 
-                detector, 
-                processed_frame, 
-                extensive=extensive, 
+                object_history=object_history,
+                truth_history=truth_history,
+                detector=detector,
+                processed_frame=processed_frame,
+                extensive=extensive,
                 save_frame=self.settings_dict["record_processing_frame"],
                 draw_detections=self.settings_dict["draw_detections_on_saved_video"],
             )
@@ -269,9 +278,8 @@ class InputOutputHandler:
 
         self.output_dir_name = os.path.join(
             self.settings_dict["output_directory"],
-            dt.datetime.now(dt.timezone.utc).isoformat(timespec="minutes")
-            + "_"
-            + self.settings_dict["tag"],
+            self.input_filename.stem,
+            # + self.settings_dict["tag"],
         )
         self.output_dir_name = self.output_dir_name.replace(":", "-")
         os.makedirs(name=self.output_dir_name, exist_ok=True)
@@ -285,6 +293,12 @@ class InputOutputHandler:
             fps,
             (frame_width, frame_height),
         )
+
+    def get_video_output_settings(self):
+        frame_width = int(self.video_cap.get(cv.CAP_PROP_FRAME_WIDTH))
+        frame_height = int(self.video_cap.get(cv.CAP_PROP_FRAME_HEIGHT))
+        fps = int(self.video_cap.get(cv.CAP_PROP_FPS))
+        return fps, frame_height, frame_width
 
     def shutdown(self):
         self.video_cap.release()

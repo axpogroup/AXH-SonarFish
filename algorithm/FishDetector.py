@@ -1,4 +1,5 @@
 import os
+from typing import Dict
 
 import cv2 as cv
 import numpy as np
@@ -125,11 +126,19 @@ class FishDetector:
             contours, hier = cv.findContours(
                 frame_dict["dilated"], cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE
             )
-            detections = {}
+            detections: Dict[int, DetectedObject] = {}
             for contour in contours:
                 self.latest_obj_index += 1
+                x, y, w, h = cv.boundingRect(contour)
+                area = cv.contourArea(contour)
                 new_object = DetectedObject(
-                    self.latest_obj_index, contour, self.frame_number
+                    identifier=self.latest_obj_index,
+                    frame_number=self.frame_number,
+                    x=x,
+                    y=y,
+                    w=w,
+                    h=h,
+                    area=area,
                 )
                 detections[new_object.ID] = new_object
 
@@ -141,7 +150,9 @@ class FishDetector:
         self.frame_number += 1
         return detections, frame_dict, runtimes_ms
 
-    def associate_detections(self, detections, object_history):
+    def associate_detections(
+        self, detections, object_history
+    ) -> Dict[int, DetectedObject]:
         if len(detections) == 0:
             return object_history
         max_association_distance_px = self.mm_to_px(self.conf["max_association_dist_mm"])
@@ -297,22 +308,22 @@ class FishDetector:
 
         abs_vel = np.linalg.norm(self.conf["river_pixel_velocity"])
         df.classification = ""
-        for ID in df.ID.unique():
-            obj = df.loc[df.ID == ID]
+        for ID in df.id.unique():
+            obj = df.loc[df.id == ID]
             if obj.shape[0] < np.max([20, 10]):
-                df.loc[df.ID == ID, "classification"] = "object"
+                df.loc[df.id == ID, "classification"] = "object"
 
             if (
                 abs(obj.v_yr).max()
                 > self.conf["deviation_from_river_velocity"] * abs_vel
             ):
-                df.loc[df.ID == ID, "classification"] = "fish"
+                df.loc[df.id == ID, "classification"] = "fish"
             elif (
                 abs(obj.v_xr - abs_vel).max()
                 > self.conf["deviation_from_river_velocity"] * abs_vel
             ):
-                df.loc[df.ID == ID, "classification"] = "fish"
+                df.loc[df.id == ID, "classification"] = "fish"
             else:
-                df.loc[df.ID == ID, "classification"] = "object"
+                df.loc[df.id == ID, "classification"] = "object"
 
         return df

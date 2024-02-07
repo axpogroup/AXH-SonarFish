@@ -16,8 +16,12 @@ stages:
         inputs:
           versionSpec: 3.10
       - bash: |
-          pip install black==24.1.1 flake8==7.0.0 isort==5.13.2
-        displayName: Install linting tools
+          pip install -r requirements.txt
+        displayName: Install dependencies
+      - bash: |
+          mypy .
+        displayName: Check types
+        continueOnError: true
       - script: |
           black . --check
         displayName: run black

@@ -1,7 +1,11 @@
 import copy
+from typing import Dict
 
 import cv2 as cv
 import numpy as np
+
+from algorithm.DetectedObject import DetectedObject
+from algorithm.FishDetector import FishDetector
 
 FIRST_ROW = [
     "gray_boosted",
@@ -12,7 +16,16 @@ FIRST_ROW = [
 SECOND_ROW = ["difference_thresholded", "median_filter", "binary", "dilated"]
 
 
-def get_visual_output(object_history, detector, processed_frame, extensive=False, save_frame: str = 'raw', draw_detections: bool = True):
+def get_visual_output(
+    object_history: Dict[int, DetectedObject],
+    truth_history: Dict[int, DetectedObject],
+    detector: FishDetector,
+    processed_frame: Dict[str, np.ndarray],
+    extensive=False,
+    color=(255, 200, 200),
+    truth_color=(57, 255, 20),
+    save_frame: str = 'raw',
+):
     if extensive:
         first_row_images = np.ndarray(shape=(270, 0, 3), dtype="uint8")
         second_row_images = np.ndarray(shape=(270, 0, 3), dtype="uint8")
@@ -20,7 +33,7 @@ def get_visual_output(object_history, detector, processed_frame, extensive=False
             first_row_images = np.concatenate(
                 (
                     first_row_images,
-                    retrieve_frame(frame_type, processed_frame, puttext=frame_type),
+                    _retrieve_frame(frame_type, processed_frame, puttext=frame_type),
                 ),
                 axis=1,
             )
@@ -29,41 +42,58 @@ def get_visual_output(object_history, detector, processed_frame, extensive=False
             second_row_images = np.concatenate(
                 (
                     second_row_images,
-                    retrieve_frame(frame_type, processed_frame, puttext=frame_type),
+                    _retrieve_frame(frame_type, processed_frame, puttext=frame_type),
                 ),
                 axis=1,
             )
 
+        third_row_binary = _draw_detections_and_truth(
+            object_history=object_history,
+            truth_history=truth_history,
+            detector=detector,
+            processed_frame=_retrieve_frame(
+                "binary", processed_frame, puttext="detections"
+            ),
+            paths=True,
+            association_dist=True,
+            color=color,
+            truth_color=truth_color,
+        )
+
+        third_row_raw = _draw_detections_and_truth(
+            object_history=object_history,
+            truth_history=truth_history,
+            detector=detector,
+            processed_frame=_retrieve_frame(
+                "raw_downsampled", processed_frame, puttext="Final"
+            ),
+            truth_color=truth_color,
+            color=color,
+        )
+
         third_row_images = np.concatenate(
             (
-                draw_detector_output(
-                    object_history,
-                    detector,
-                    retrieve_frame("raw_downsampled", processed_frame, puttext="Final"),
-                ),
-                retrieve_frame(
+                third_row_raw,
+                _retrieve_frame(
                     "internal_external", processed_frame, puttext="internal_external"
                 ),
-                draw_detector_output(
-                    object_history,
-                    detector,
-                    retrieve_frame("binary", processed_frame, puttext="detections"),
-                    paths=True,
-                    association_dist=True,
-                ),
-                retrieve_frame("closed", processed_frame, puttext="closed"),
+                third_row_binary,
+                _retrieve_frame("closed", processed_frame, puttext="closed"),
             ),
             axis=1,
         )
         disp = np.concatenate((first_row_images, second_row_images, third_row_images))
 
     else:
-        img = retrieve_frame(save_frame, processed_frame)
-        if draw_detections:
-            disp = draw_detector_output(
-                object_history,
-                detector,
-                img,
+        img = _retrieve_frame(save_frame, processed_frame)
+        if _draw_detections_and_truth:
+            disp = _draw_detections_and_truth(
+                detector=detector,
+                object_history=object_history,
+                truth_history=truth_history,
+                processed_frame=_retrieve_frame("raw", processed_frame),
+                color=color,
+                truth_color=truth_color,
                 paths=True,
                 fullres=True,
                 association_dist=True,
@@ -75,7 +105,26 @@ def get_visual_output(object_history, detector, processed_frame, extensive=False
     return disp
 
 
-def retrieve_frame(frame, frame_dict, puttext=None):
+def _draw_detections_and_truth(
+    detector,
+    object_history,
+    truth_history,
+    processed_frame,
+    color,
+    truth_color,
+    **kwargs
+):
+    disp = _draw_detector_output(
+        object_history, detector, processed_frame, color=color, **kwargs
+    )
+    if truth_history is not None:
+        disp = _draw_detector_output(
+            truth_history, detector, disp, color=truth_color, **kwargs
+        )
+    return disp
+
+
+def _retrieve_frame(frame, frame_dict, puttext=None):
     if frame not in frame_dict.keys():
         img = None
     else:
@@ -102,7 +151,7 @@ def retrieve_frame(frame, frame_dict, puttext=None):
     return out
 
 
-def draw_detector_output(
+def _draw_detector_output(
     object_history,
     detector,
     img,
@@ -110,6 +159,7 @@ def draw_detector_output(
     fullres=False,
     association_dist=False,
     annotate=False,
+    color=(255, 200, 200),
 ):
     for ID, obj in object_history.items():
         if (
@@ -131,7 +181,6 @@ def draw_detector_output(
             h * scale,
         )
 
-        color = (255, 200, 200)
         cv.rectangle(
             img,
             (x - int(w / 2), y - int(h / 2)),

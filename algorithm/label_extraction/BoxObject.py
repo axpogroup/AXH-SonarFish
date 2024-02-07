@@ -1,20 +1,24 @@
+# Code written by Leiv Andresen, HTD-A, leiv.andresen@axpo.com
+
 from math import cos, sin
 
 import cv2 as cv
 import numpy as np
 
 
-class Object:
+class BoxObject:
     def __init__(self, identifier, contour, frame_number):
         self.ID = identifier
+        self.persistent_id = None
         self.frames_observed = [frame_number]
         self.show = [False]
         self.contours = [contour]
 
         x, y, w, h = cv.boundingRect(contour)
+        self.area = [w * h]
         self.midpoints = [(int(x + w / 2), int(y + h / 2))]
 
-        self.classification = ["Objekt"]
+        self.classifications = ["Objekt"]
 
         self.velocity = []
         self.mean_v = None
@@ -26,25 +30,30 @@ class Object:
         self.show.append(False)
         self.contours.append(detection.contours[-1])
         self.midpoints.append(detection.midpoints[-1])
+        self.area.append(detection.area[-1])
 
         self.calculate_speed()
         # self.classify_object()
 
     def draw_bounding_box(self, img, color):
         x, y, w, h = cv.boundingRect(self.contours[-1])
-        cv.rectangle(img, (x, y), (x + w, y + h), color, 2)
-        # cv.putText(
-        #     img,
-        #     (self.classification[-1] + " " + str(self.ID)),
-        #     (x, y - 10),
-        #     cv.FONT_HERSHEY_SIMPLEX,
-        #     0.75,
-        #     color,
-        #     2,
-        # )
-        # if self.mean_v is not None:
-        #     cv.putText(img, (str(self.mean_v[0])),
-        #                      (x, y + 10), cv.FONT_HERSHEY_SIMPLEX, 0.75, color, 2)
+        cv.rectangle(img, (x, y), (x + w, y + h), color, 3)
+
+        cv.putText(
+            img,
+            (
+                self.classifications[-1]
+                + " "
+                + str(self.persistent_id)
+                + " Area: "
+                + str(self.area[-1])
+            ),
+            (x, y - 10),
+            cv.FONT_HERSHEY_SIMPLEX,
+            0.75,
+            color,
+            2,
+        )
         return img
 
     def draw_classifications_box(self, img, downsampled=100):
@@ -56,22 +65,22 @@ class Object:
             w * upsample_factor,
             h * upsample_factor,
         )
-        x, y, w, h = x - 2 * w, y - 2 * h, w * 4, h * 4
-        if self.classification[-1] == "Fisch":
+        if self.classifications[-1] == "Fisch":
             color = (0, 255, 0)
         else:
-            color = (0, 0, 250)
+            color = (250, 150, 150)
 
-        cv.rectangle(img, (x, y), (x + w, y + h), color, 4)
-        cv.putText(
-            img,
-            (self.classification[-1]),
-            (x, y - 10),
-            cv.FONT_HERSHEY_SIMPLEX,
-            0.75,
-            color,
-            2,
-        )
+        cv.rectangle(img, (x, y), (x + w, y + h), color, 2)
+        if downsampled != 100:
+            cv.putText(
+                img,
+                (self.classifications[-1]),
+                (x, y - 10),
+                cv.FONT_HERSHEY_SIMPLEX,
+                0.75,
+                color,
+                2,
+            )
 
         return img
 
@@ -95,29 +104,6 @@ class Object:
     def occurences_in_last_x(self, frame_number, x):
         a = np.array(self.frames_observed, dtype="int")
         return a[a >= frame_number - x].shape[0]
-
-    def classify_object(self):
-        fish = False
-        if len(self.velocity) < 20:
-            fish = False
-            return
-
-        if self.classification[-1] == "Fisch":
-            if abs(self.mean_v[1]) > 0.5:
-                fish = True
-            elif abs(self.mean_v[0] - 2.185) > 1:
-                fish = True
-
-        if abs(self.mean_v_last_10[1]) > 1:
-            fish = True
-        elif abs(self.mean_v_last_10[0] - 2.185) > 2:
-            fish = True
-
-        if fish:
-            self.classification.append("Fisch")
-        else:
-            self.classification.append("Objekt")
-        return
 
     def rotate_vector(self, vec, theta):
         rot = np.array([[cos(theta), -sin(theta)], [sin(theta), cos(theta)]])

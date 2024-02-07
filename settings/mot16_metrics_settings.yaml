@@ -1,0 +1,4 @@
+# Input
+file_name: "start_2023-05-09T03-00-36.314+00-00.mp4"
+test_directory: "data/model_output/"
+ground_truth_directory: "data/annotated/labels/"
