@@ -1,5 +1,5 @@
 import copy
-from typing import Dict
+from typing import Dict, Optional
 
 import cv2 as cv
 import numpy as np
@@ -18,9 +18,9 @@ SECOND_ROW = ["difference_thresholded", "median_filter", "binary", "dilated"]
 
 def get_visual_output(
     object_history: Dict[int, DetectedObject],
-    truth_history: Dict[int, DetectedObject],
     detector: FishDetector,
     processed_frame: Dict[str, np.ndarray],
+    truth_history: Optional[Dict[int, DetectedObject]] = None,
     extensive=False,
     color=(255, 200, 200),
     truth_color=(57, 255, 20),
@@ -108,10 +108,10 @@ def get_visual_output(
 def _draw_detections_and_truth(
     detector,
     object_history,
-    truth_history,
     processed_frame,
     color,
     truth_color,
+    truth_history=None,
     **kwargs
 ):
     disp = _draw_detector_output(
