@@ -99,6 +99,7 @@ def mot_metrics_enhanced_calculator(ground_truth, test):
         },
     )
     print(strsummary)
+    return summary.to_dict("records")[0]
 
 
 if __name__ == "__main__":
@@ -117,10 +118,9 @@ if __name__ == "__main__":
         if args.input_file is not None:
             print("replacing input file.")
             settings_dict["file_name"] = args.input_file
-
     file_name_prefix = Path(settings_dict["file_name"]).stem
     ground_truth_source = Path(settings_dict["ground_truth_directory"]) / Path(
-        file_name_prefix + "_labels_ground_truth.csv"
+        file_name_prefix + "_ground_truth.csv"
     )
     test_source = (
         Path(settings_dict["test_directory"])

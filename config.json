@@ -1,0 +1,5 @@
+{
+  "subscription_id": "your-azure-subscription-id",
+  "resource_group": "axsa-lab-appl-fishsonar-rg",
+  "workspace_name": "axsa-lab-appl-fishsonar-ml"
+}
