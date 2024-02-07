@@ -12,7 +12,11 @@ from InputOutputHandler import InputOutputHandler
 from algorithm.DetectedObject import DetectedObject
 from algorithm.validation import mot16_metrics
 
-workspace = Workspace.from_config()
+workspace = Workspace(
+    resource_group="axsa-lab-appl-fishsonar-rg",
+    workspace_name="axsa-lab-appl-fishsonar-ml",
+    subscription_id="your-azure-subscription-id",
+)
 mlflow.set_tracking_uri(workspace.get_mlflow_tracking_uri())
 experiment_name = "how_much_is_the_fish"
 mlflow.set_experiment(experiment_name)
