@@ -1,12 +1,13 @@
 import argparse
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import yaml
 from FishDetector import FishDetector
 from InputOutputHandler import InputOutputHandler
 
-from algorithm.DetectedObject import DetectedObject
+from DetectedObject import DetectedObject
 
 
 def read_ground_truth_into_dataframe(ground_truth_path: Path, filename: str):
@@ -23,11 +24,7 @@ def extract_ground_truth_history(
         truth_detected = DetectedObject(
             identifier=row["id"],
             frame_number=row["frame"],
-            x=row["x"],
-            y=row["y"],
-            w=row["w"],
-            h=row["h"],
-            area=None,
+            contour=np.array(row[['x', 'y', 'w', 'h']]),
         )
         if row["id"] not in ground_truth_object_history:
             ground_truth_object_history[row["id"]] = truth_detected

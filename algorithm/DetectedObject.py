@@ -1,3 +1,4 @@
+import cv2 as cv
 import numpy as np
 from deepsort.detection import Detection
 from deepsort.track import Track
@@ -12,7 +13,7 @@ class DetectedObject:
         ):
         self.ID = identifier
         self.frames_observed = [frame_number]
-        x, y, w, h = cv.boundingRect(contour)
+        x, y, w, h = contour if contour.shape == (4,) else cv.boundingRect(contour)
         self.top_lefts_x = [x]
         self.top_lefts_y = [y]
         self.midpoints = [(int(x + w / 2), int(y + h / 2))]

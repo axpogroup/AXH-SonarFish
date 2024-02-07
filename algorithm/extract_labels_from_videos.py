@@ -4,6 +4,7 @@ import datetime
 import datetime as dt
 import glob
 import os
+from pathlib import Path
 
 import cv2 as cv
 import numpy as np
@@ -27,8 +28,7 @@ if __name__ == "__main__":
 
     for file in filenames:
         print(f"\nProcessing  {file}")
-        path_parts = file.split("/")
-        file_name = path_parts[-1].split(".mp4")[0]
+        file_name = Path(file).stem
         csv_file = open(
             settings_dict["csv_output_directory"]
             + file_name

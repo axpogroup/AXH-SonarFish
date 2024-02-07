@@ -6,11 +6,11 @@ import numpy as np
 import pandas as pd
 from deepsort.nn_matching import NearestNeighborDistanceMetric
 
-from algorithm.flow_conditions import rotate_velocity_vectors
-from algorithm.DetectedObject import DetectedObject
-from algorithm.utils import get_elapsed_ms, resize_img
-from algorithm.tracking_filters import nearest_neighbor, kalman
-from algorithm.matching.DistanceMetric import DistanceMetric
+from flow_conditions import rotate_velocity_vectors
+from DetectedObject import DetectedObject
+from utils import get_elapsed_ms, resize_img
+from tracking_filters import nearest_neighbor, kalman
+from matching.DistanceMetric import DistanceMetric
 
 
 class FishDetector:
@@ -129,16 +129,10 @@ class FishDetector:
             detections: Dict[int, DetectedObject] = {}
             for contour in contours:
                 self.latest_obj_index += 1
-                x, y, w, h = cv.boundingRect(contour)
-                area = cv.contourArea(contour)
                 new_object = DetectedObject(
                     identifier=self.latest_obj_index,
                     frame_number=self.frame_number,
-                    x=x,
-                    y=y,
-                    w=w,
-                    h=h,
-                    area=area,
+                    contour=contour,
                 )
                 detections[new_object.ID] = new_object
 

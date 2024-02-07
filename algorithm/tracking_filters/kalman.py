@@ -2,11 +2,10 @@ import scipy
 import numpy as np
 from deepsort.tracker import Track
 from deepsort import iou_matching
-from deepsort.detection import Detection
 from deepsort.iou_matching import linear_assignment
 
-from ..flow_conditions import rot_mat_from_river_velocity
-from ..DetectedObject import DetectedObject
+from flow_conditions import rot_mat_from_river_velocity
+from DetectedObject import DetectedObject
 
 
 class KalmanFilter(object):

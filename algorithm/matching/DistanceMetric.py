@@ -3,7 +3,7 @@ from typing import Union
 import numpy as np
 from deepsort.nn_matching import _nn_euclidean_distance, _nn_cosine_distance
 
-from algorithm.matching.area_matching import _area_cost
+from matching.area_matching import _area_cost
 
 class DistanceMetric(object):
     """

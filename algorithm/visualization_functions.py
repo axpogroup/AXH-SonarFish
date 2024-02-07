@@ -4,8 +4,8 @@ from typing import Dict
 import cv2 as cv
 import numpy as np
 
-from algorithm.DetectedObject import DetectedObject
-from algorithm.FishDetector import FishDetector
+from DetectedObject import DetectedObject
+from FishDetector import FishDetector
 
 FIRST_ROW = [
     "gray_boosted",

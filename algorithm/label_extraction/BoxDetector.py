@@ -5,8 +5,8 @@ import copy
 import cv2 as cv
 import numpy as np
 
-from algorithm.label_extraction.BoxObject import BoxObject
-from algorithm.utils import resize_img
+from .BoxObject import BoxObject
+from utils import resize_img
 
 fish_area_mask = None
 full_area_mask = None

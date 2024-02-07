@@ -2,7 +2,8 @@
 # input_file: "analysis/demo/demo_sample_sonar_recording.mp4"
 # mask_directory: "analysis/demo/masks"
 # output_directory: "analysis/output"
-input_file: "analysis/labeling/start_2023-05-09T03-00-36.314+00-00/original.mp4"
+file_name: "start_2023-11-21T17-37-01.696+00-00.mp4"
+input_directory:  "data/raw/"
 mask_directory: "analysis/demo/masks"
 output_directory: "data/model_output/"
 ground_truth_directory: "data/annotated/labels/"
@@ -42,7 +43,7 @@ filter_settings:
     max_age: 20
     n_init: 25
   nearest_neighbor:
-  blob_matching_metric: "blob_area" # one of ['nearest_neighbor', 'blob_area']
+  blob_matching_metric: "nearest_neighbor" # one of ['nearest_neighbor', 'blob_area']
   area_ratio_threshold: 0.97
 
 # Classification

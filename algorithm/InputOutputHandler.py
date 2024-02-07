@@ -5,9 +5,9 @@ from pathlib import Path
 import cv2 as cv
 import pandas as pd
 
-import algorithm.visualization_functions as visualization_functions
-from algorithm.DetectedObject import DetectedObject
-from algorithm.utils import get_elapsed_ms
+import visualization_functions as visualization_functions
+from DetectedObject import DetectedObject
+from utils import get_elapsed_ms
 
 
 class InputOutputHandler:
@@ -244,8 +244,7 @@ class InputOutputHandler:
                 detector=detector,
                 processed_frame=processed_frame,
                 extensive=extensive,
-                save_frame=self.settings_dict["record_processing_frame"],
-                draw_detections=self.settings_dict["draw_detections_on_saved_video"],
+                save_frame=self.settings_dict["record_processing_frame"]
             )
 
             if self.settings_dict["record_output_video"]:
