@@ -10,9 +10,7 @@ from algorithm.DetectedObject import DetectedObject
 
 
 def read_ground_truth_into_dataframe(ground_truth_path: Path, filename: str):
-    return pd.read_csv(
-        Path(ground_truth_path) / Path(filename + "_labels_ground_truth.csv")
-    )
+    return pd.read_csv(Path(ground_truth_path) / Path(filename + "_ground_truth.csv"))
 
 
 def extract_ground_truth_history(
