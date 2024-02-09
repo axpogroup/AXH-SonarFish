@@ -4,13 +4,12 @@ from typing import Dict
 import cv2 as cv
 import numpy as np
 import pandas as pd
-from deepsort.nn_matching import NearestNeighborDistanceMetric
 
-from flow_conditions import rotate_velocity_vectors
-from DetectedObject import DetectedObject
-from utils import get_elapsed_ms, resize_img
-from tracking_filters import nearest_neighbor, kalman
-from matching.DistanceMetric import DistanceMetric
+from algorithm.DetectedObject import DetectedObject
+from algorithm.flow_conditions import rotate_velocity_vectors
+from algorithm.matching.distance import DistanceMetric
+from algorithm.tracking_filters import kalman, nearest_neighbor
+from algorithm.utils import get_elapsed_ms, resize_img
 
 
 class FishDetector:
@@ -149,25 +148,37 @@ class FishDetector:
     ) -> Dict[int, DetectedObject]:
         if len(detections) == 0:
             return object_history
-        max_association_distance_px = self.mm_to_px(self.conf["max_association_dist_mm"])
-        if self.conf['tracking_method'] == 'nearest_neighbor':
+        max_association_distance_px = self.mm_to_px(
+            self.conf["max_association_dist_mm"]
+        )
+        if self.conf["tracking_method"] == "nearest_neighbor":
             return nearest_neighbor.associate_detections(
-                detections, 
-                object_history, 
-                self.frame_number, 
-                self.conf, 
-                max_association_distance_px
+                detections,
+                object_history,
+                self.frame_number,
+                self.conf,
+                max_association_distance_px,
             )
-        elif self.conf['tracking_method'] == 'kalman':
+        elif self.conf["tracking_method"] == "kalman":
             if not self.object_filter:
-                if self.conf['filter_settings']['blob_matching_metric'] == 'nearest_neighbor':
-                    metric = DistanceMetric("euclidean", max_association_distance_px)                
+                if (
+                    self.conf["filter_settings"]["blob_matching_metric"]
+                    == "euclidean_distance"
+                ):
+                    metric = DistanceMetric("euclidean", max_association_distance_px)
                 else:
-                    metric = DistanceMetric(self.conf['filter_settings']['blob_matching_metric'],
-                                            self.conf['filter_settings']['area_ratio_threshold'])
+                    metric = DistanceMetric(
+                        self.conf["filter_settings"]["blob_matching_metric"],
+                        1 - self.conf["filter_settings"]["area_ratio_threshold"],
+                        budget=self.conf["filter_settings"]["kalman"][
+                            "trace_history_matching_budget"
+                        ],
+                    )
                 self.object_filter = kalman.Tracker(metric, self.conf)
             kalman.filter_detections(detections, self.conf, self.object_filter)
-            return kalman.tracks_to_object_history(self.object_filter.tracks, object_history, self.frame_number)
+            return kalman.tracks_to_object_history(
+                self.object_filter.tracks, object_history, self.frame_number
+            )
         else:
             raise ValueError(f"Invalid tracking method: {self.conf['tracking_method']}")
 

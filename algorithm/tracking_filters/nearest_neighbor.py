@@ -8,7 +8,9 @@ def closest_point(point, points):
     return min_index, dist_2[min_index]
 
 
-def associate_detections(detections, object_history, frame_number, conf, max_association_distance_px):
+def associate_detections(
+    detections, object_history, frame_number, conf, max_association_distance_px
+):
     if len(object_history) == 0:
         object_history = detections
         return object_history

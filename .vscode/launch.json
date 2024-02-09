@@ -10,10 +10,14 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
             "justMyCode": false,
             "args": [
                 "-yf", "analysis/demo/demo_settings.yaml",
-            ]
+            ],
+            "env": {
+                "PYTHONPATH": "${workspaceFolder};${env:PYTHONPATH}"
+            }
         }
     ]
 }

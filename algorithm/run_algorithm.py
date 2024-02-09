@@ -4,10 +4,10 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import yaml
-from FishDetector import FishDetector
-from InputOutputHandler import InputOutputHandler
 
-from DetectedObject import DetectedObject
+from algorithm.DetectedObject import DetectedObject
+from algorithm.FishDetector import FishDetector
+from algorithm.InputOutputHandler import InputOutputHandler
 
 
 def read_ground_truth_into_dataframe(ground_truth_path: Path, filename: str):
@@ -22,7 +22,7 @@ def extract_ground_truth_history(
         truth_detected = DetectedObject(
             identifier=row["id"],
             frame_number=row["frame"],
-            contour=np.array(row[['x', 'y', 'w', 'h']]),
+            contour=np.array(row[["x", "y", "w", "h"]]),
         )
         if row["id"] not in ground_truth_object_history:
             ground_truth_object_history[row["id"]] = truth_detected

@@ -5,9 +5,9 @@ from pathlib import Path
 import cv2 as cv
 import pandas as pd
 
-import visualization_functions as visualization_functions
-from DetectedObject import DetectedObject
-from utils import get_elapsed_ms
+from algorithm import visualization_functions
+from algorithm.DetectedObject import DetectedObject
+from algorithm.utils import get_elapsed_ms
 
 
 class InputOutputHandler:
@@ -232,7 +232,10 @@ class InputOutputHandler:
                 f"Total: {total_time_per_frame} | FPS: {'{:.1f}'.format(self.frame_no/(2*total_runtime/1000))}"
             )
 
-        if self.settings_dict["display_output_video"] or self.settings_dict["record_output_video"]:
+        if (
+            self.settings_dict["display_output_video"]
+            or self.settings_dict["record_output_video"]
+        ):
             extensive = self.settings_dict["display_mode_extensive"]
             disp = visualization_functions.get_visual_output(
                 object_history=object_history,
@@ -240,13 +243,13 @@ class InputOutputHandler:
                 detector=detector,
                 processed_frame=processed_frame,
                 extensive=extensive,
-                save_frame=self.settings_dict["record_processing_frame"]
+                save_frame=self.settings_dict["record_processing_frame"],
             )
 
             if self.settings_dict["record_output_video"]:
                 if not self.video_writer:
                     self.initialize_output_recording(
-                        frame_width=disp.shape[1], 
+                        frame_width=disp.shape[1],
                         frame_height=disp.shape[0],
                     )
                 self.video_writer.write(disp)
@@ -255,17 +258,23 @@ class InputOutputHandler:
                 self.show_image(disp, detector)
 
     def initialize_output_recording(
-            self, 
-            frame_width: int = None, 
-            frame_height: int = None,
-        ):
+        self,
+        frame_width: int = None,
+        frame_height: int = None,
+    ):
         # grab the width, height, fps and length of the video stream.
-        frame_width = int(self.video_cap.get(cv.CAP_PROP_FRAME_WIDTH))  \
-            if frame_width is None else frame_width
-        frame_height = int(self.video_cap.get(cv.CAP_PROP_FRAME_HEIGHT)) \
-            if frame_height is None else frame_height
+        frame_width = (
+            int(self.video_cap.get(cv.CAP_PROP_FRAME_WIDTH))
+            if frame_width is None
+            else frame_width
+        )
+        frame_height = (
+            int(self.video_cap.get(cv.CAP_PROP_FRAME_HEIGHT))
+            if frame_height is None
+            else frame_height
+        )
         fps = int(self.video_cap.get(cv.CAP_PROP_FPS))
-        if self.settings_dict['record_processing_frame'] != 'raw':
+        if self.settings_dict["record_processing_frame"] != "raw":
             fps = fps // 2
 
         self.output_dir_name = os.path.join(
@@ -275,7 +284,7 @@ class InputOutputHandler:
         )
         self.output_dir_name = self.output_dir_name.replace(":", "-")
         os.makedirs(name=self.output_dir_name, exist_ok=True)
-        output_video_name = f"{self.input_filename[:-4]}_{self.settings_dict['record_processing_frame']}_output.mp4"
+        output_video_name = f"{self.input_filename.stem}_{self.settings_dict['record_processing_frame']}_output.mp4"
 
         # initialize the FourCC and a video writer object
         fourcc = cv.VideoWriter_fourcc("m", "p", "4", "v")

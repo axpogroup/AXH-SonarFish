@@ -4,8 +4,8 @@ from typing import Dict
 import cv2 as cv
 import numpy as np
 
-from DetectedObject import DetectedObject
-from FishDetector import FishDetector
+from algorithm.DetectedObject import DetectedObject
+from algorithm.FishDetector import FishDetector
 
 FIRST_ROW = [
     "gray_boosted",
@@ -24,7 +24,7 @@ def get_visual_output(
     extensive=False,
     color=(255, 200, 200),
     truth_color=(57, 255, 20),
-    save_frame: str = 'raw',
+    save_frame: str = "raw",
 ):
     if extensive:
         first_row_images = np.ndarray(shape=(270, 0, 3), dtype="uint8")

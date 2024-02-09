@@ -1,7 +1,6 @@
 import cv2 as cv
 import numpy as np
 from deepsort.detection import Detection
-from deepsort.track import Track
 
 
 class MyDeepSortDetection(Detection):
@@ -27,14 +26,15 @@ class MyDeepSortDetection(Detection):
         A dict of feature vectors that describes the object contained in this image.
 
     """
+
     def __init__(
-            self, 
-            tlwh: tuple[float, float, float, float], 
-            confidence: np.ndarray, 
-            feature: dict[str, np.ndarray],
-        ):
+        self,
+        tlwh: tuple[float, float, float, float],
+        confidence: np.ndarray,
+        feature: dict[str, np.ndarray],
+    ):
         # custom class to deal with np.float deprecation
-        # installing pre-deprecation numpy 1.19.5 leads to conflicts 
+        # installing pre-deprecation numpy 1.19.5 leads to conflicts
         self.tlwh = np.asarray(tlwh, dtype=float)
         self.confidence = float(confidence)
         self.feature = feature
@@ -42,11 +42,11 @@ class MyDeepSortDetection(Detection):
 
 class DetectedObject:
     def __init__(
-            self, 
-            identifier: int, 
-            contour: np.ndarray, 
-            frame_number: int,
-        ):
+        self,
+        identifier: int,
+        contour: np.ndarray,
+        frame_number: int,
+    ):
         self.ID = identifier
         self.frames_observed = [frame_number]
         x, y, w, h = contour if contour.shape == (4,) else cv.boundingRect(contour)
@@ -54,16 +54,16 @@ class DetectedObject:
         self.top_lefts_y = [y]
         self.midpoints = [(int(x + w / 2), int(y + h / 2))]
         self.bounding_boxes = [(w, h)]
-        self.areas = [w*h if contour.shape == (4,) else cv.contourArea(contour)]
+        self.areas = [w * h if contour.shape == (4,) else cv.contourArea(contour)]
         self.velocities = [np.array([np.NAN, np.NAN])]
         self.deepsort_detection = MyDeepSortDetection(
-            np.array((x, y, w, h)), 
-            np.array([0.9]), 
+            np.array((x, y, w, h)),
+            np.array([0.9]),
             feature={
-                'center_pos': np.array([int(x + w / 2), int(y + h / 2)]),
-                'contour': contour, 
-                'area': self.areas[-1],
-            }
+                "center_pos": np.array([int(x + w / 2), int(y + h / 2)]),
+                "contour": contour,
+                "area": self.areas[-1],
+            },
         )
 
     def update_object(self, detection: MyDeepSortDetection):
@@ -99,3 +99,4 @@ class DetectedObject:
             float(self.midpoints[-1][1] - self.midpoints[past_observation_id][1])
             / frame_diff
         )
+        return v_x, v_y
