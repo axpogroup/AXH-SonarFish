@@ -3,11 +3,13 @@ import csv
 import datetime
 import datetime as dt
 import glob
+from pathlib import Path
 
 import cv2 as cv
 import numpy as np
 import yaml
-from label_extraction.BoxDetector import BoxDetector
+
+from algorithm.label_extraction.BoxDetector import BoxDetector
 
 if __name__ == "__main__":
     # Specify the output folders, possibly ADJUST
@@ -24,8 +26,7 @@ if __name__ == "__main__":
 
     for file in filenames:
         print(f"\nProcessing  {file}")
-        path_parts = file.split("/")
-        file_name = path_parts[-1].split(".mp4")[0]
+        file_name = Path(file).stem
         csv_file = open(
             settings_dict["csv_output_directory"]
             + file_name

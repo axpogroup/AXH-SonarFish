@@ -24,6 +24,7 @@ def get_visual_output(
     extensive=False,
     color=(255, 200, 200),
     truth_color=(57, 255, 20),
+    save_frame: str = "raw",
 ):
     if extensive:
         first_row_images = np.ndarray(shape=(270, 0, 3), dtype="uint8")
@@ -84,18 +85,22 @@ def get_visual_output(
         disp = np.concatenate((first_row_images, second_row_images, third_row_images))
 
     else:
-        disp = _draw_detections_and_truth(
-            detector=detector,
-            object_history=object_history,
-            truth_history=truth_history,
-            processed_frame=_retrieve_frame("raw", processed_frame),
-            color=color,
-            truth_color=truth_color,
-            paths=True,
-            fullres=True,
-            association_dist=True,
-            annotate="velocities",
-        )
+        img = _retrieve_frame(save_frame, processed_frame)
+        if _draw_detections_and_truth:
+            disp = _draw_detections_and_truth(
+                detector=detector,
+                object_history=object_history,
+                truth_history=truth_history,
+                processed_frame=_retrieve_frame("raw", processed_frame),
+                color=color,
+                truth_color=truth_color,
+                paths=True,
+                fullres=True,
+                association_dist=True,
+                annotate="velocities",
+            )
+        else:
+            disp = img
 
     return disp
 
