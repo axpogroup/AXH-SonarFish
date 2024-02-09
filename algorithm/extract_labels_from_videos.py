@@ -3,7 +3,6 @@ import csv
 import datetime
 import datetime as dt
 import glob
-import os
 
 import cv2 as cv
 import numpy as np
@@ -16,8 +15,6 @@ if __name__ == "__main__":
         settings_dict = yaml.load(f, Loader=yaml.SafeLoader)
         print(settings_dict)
 
-    os.makedirs(name=settings_dict["csv_output_directory"], exist_ok=True)
-    os.makedirs(name=settings_dict["output_video_dir"], exist_ok=True)
     filenames = glob.glob(settings_dict["input_directory"] + "*.mp4")
 
     print("Found the following files: \n")

@@ -1,16 +1,16 @@
 # Input / Output
-file_name: "start_2023-11-21T17-37-01.696+00-00.mp4"
-input_directory:  "data/intermediate/"
+file_name: "start_2023-06-27T04-09-06.935+00-00.mp4"
+input_directory:  "data/intermediate/videos/"
 mask_directory: "analysis/demo/masks"
 output_directory: "data/model_output/"
-ground_truth_directory: "data/annotated/labels/"
+ground_truth_directory: "data/labels/"
 
 tag: "demo"
 record_output_video: True # Only works for full resolution output
 record_output_csv: True
 
 display_output_video: True
-display_mode_extensive: True
+display_mode_extensive: False
 display_trackbars: True
 
 # Size
