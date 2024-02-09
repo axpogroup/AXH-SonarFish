@@ -3,7 +3,7 @@ file_name: "start_2023-11-21T17-37-01.696+00-00.mp4"
 input_directory:  "data/raw/"
 mask_directory: "analysis/demo/masks"
 output_directory: "data/model_output/"
-ground_truth_directory: "data/annotated/labels/"
+ground_truth_directory: "data/labels/"
 
 tag: "label"
 record_output_video: True # Only works for full resolution output
