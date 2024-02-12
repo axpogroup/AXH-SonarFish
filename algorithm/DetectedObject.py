@@ -3,49 +3,13 @@ import numpy as np
 from deepsort.detection import Detection
 
 
-class MyDeepSortDetection(Detection):
-    """
-    This class represents a bounding box detection in a single image.
-
-    Parameters
-    ----------
-    tlwh : array_like
-        Bounding box in format `(x, y, w, h)`.
-    confidence : float
-        Detector confidence score.
-    feature : dict
-        A dict of feature vectors that describes the object contained in this image.
-
-    Attributes
-    ----------
-    tlwh : ndarray
-        Bounding box in format `(top left x, top left y, width, height)`.
-    confidence : ndarray
-        Detector confidence score.
-    feature : ndarray | NoneType
-        A dict of feature vectors that describes the object contained in this image.
-
-    """
-
-    def __init__(
-        self,
-        tlwh: tuple[float, float, float, float],
-        confidence: np.ndarray,
-        feature: dict[str, np.ndarray],
-    ):
-        # custom class to deal with np.float deprecation
-        # installing pre-deprecation numpy 1.19.5 leads to conflicts
-        self.tlwh = np.asarray(tlwh, dtype=float)
-        self.confidence = float(confidence)
-        self.feature = feature
-
-
-class DetectedObject:
+class DetectedObject(Detection):
     def __init__(
         self,
         identifier: int,
         contour: np.ndarray,
         frame_number: int,
+        confidence: float = 0.9,
     ):
         self.ID = identifier
         self.frames_observed = [frame_number]
@@ -56,17 +20,16 @@ class DetectedObject:
         self.bounding_boxes = [(w, h)]
         self.areas = [w * h if contour.shape == (4,) else cv.contourArea(contour)]
         self.velocities = [np.array([np.NAN, np.NAN])]
-        self.deepsort_detection = MyDeepSortDetection(
-            np.array((x, y, w, h)),
-            np.array([0.9]),
-            feature={
-                "center_pos": np.array([int(x + w / 2), int(y + h / 2)]),
-                "contour": contour,
-                "area": self.areas[-1],
-            },
-        )
 
-    def update_object(self, detection: MyDeepSortDetection):
+        self.tlwh = np.array([x, y, w, h], dtype=float)
+        self.confidence = confidence
+        self.feature = {
+            "center_pos": self.midpoints[-1],
+            "contour": contour,
+            "area": self.areas[-1],
+        }
+
+    def update_object(self, detection: Detection):
         self.frames_observed.append(detection.frames_observed[-1])
         self.midpoints.append(detection.midpoints[-1])
         self.top_lefts_x.append(detection.top_lefts_x[-1])
