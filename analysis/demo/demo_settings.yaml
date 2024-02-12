@@ -48,7 +48,7 @@ kalman_max_iou_distance: 0.5 # basically (1 - iou_min)
 kalman_max_age: 30
 kalman_n_init: 35
 filter_nearest_neighbor:
-filter_blob_matching_metric: "blob_area" # one of ['euclidean_distance', 'blob_area']
+filter_blob_matching_metric: "euclidean_distance" # one of ['euclidean_distance', 'blob_area']
 filter_area_ratio_threshold: 0.97
 
 
