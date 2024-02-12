@@ -11,6 +11,8 @@ opencv-contrib-python-rolling==5.0.0.20221015
 matplotlib==3.6.2
 pyyaml==6.0
 pandas==1.5.3
+deepsort==0.0.5
+numpy==1.25.2
 
 # MOT16 metrics
 motmetrics==1.4.0
@@ -24,6 +26,6 @@ mypy==1.8.0
 
 #Dev typing
 types-PyYAML==6.0.12.12
-pandas-stubs==2.1.4.231227
+pandas-stubs==1.5.3.230321
 
 
