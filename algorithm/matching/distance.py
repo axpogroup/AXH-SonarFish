@@ -1,4 +1,4 @@
-from typing import Union
+from functools import wraps
 
 import numpy as np
 from deepsort.nn_matching import _nn_cosine_distance, _nn_euclidean_distance
@@ -6,11 +6,34 @@ from deepsort.nn_matching import _nn_cosine_distance, _nn_euclidean_distance
 from algorithm.matching.area_matching import _area_cost
 
 
+def feature_extractor(func, feature_to_extract: str):
+    """
+    Decorator to extract the required feature for a distance metric from
+    samples and features, i.e., detections and tracks.
+
+    Args:
+        func (Callable): The original function that calculates the distance metric.
+        feature_to_extract (str): The name of the feature to extract from the samples and features.
+
+    Returns:
+        Callable: The decorated function that extracts the specified feature before calculating the distance.
+    """
+
+    @wraps(func)
+    def wrapper(samples, features):
+        samples = [s[feature_to_extract] for s in samples]
+        features = [f[feature_to_extract] for f in features]
+
+        return func(samples, features)
+
+    return wrapper
+
+
 class DistanceMetric(object):
     metric_options = {
-        "euclidean": _nn_euclidean_distance,
-        "cosine": _nn_cosine_distance,
-        "blob_area": _area_cost,
+        "euclidean": feature_extractor(_nn_euclidean_distance, "center_pos"),
+        "cosine": feature_extractor(_nn_cosine_distance, "center_pos"),
+        "blob_area": feature_extractor(_area_cost, "contour"),
     }
 
     def __init__(self, metric: str, matching_threshold: float, budget: int = None):
@@ -38,29 +61,9 @@ class DistanceMetric(object):
         self.budget = budget
         self.samples = {}
 
-    def extract_features(
-        self, features: Union[list[dict[str, np.ndarray]], dict[str, np.ndarray]]
-    ) -> Union[list[np.ndarray], np.ndarray]:
-        """
-        Extracts the relevant features from the input.
-
-        Args:
-            features: The input features.
-
-        Returns:
-            The extracted features.
-        """
-        if isinstance(features, dict):
-            features = [features]
-        features = [feature[self.feature_keys[0]] for feature in features]
-        if self.feature_keys[0] == "center_pos":
-            return np.array(features)
-        else:
-            return features
-
     def partial_fit(
         self,
-        features: Union[list[np.ndarray], np.ndarray],
+        features: list[dict],
         targets: list[int],
         active_targets: list[int],
     ) -> None:
@@ -72,16 +75,13 @@ class DistanceMetric(object):
             targets: An integer array of associated target identities.
             active_targets: A list of targets that are currently present in the scene.
         """
-        features = self.extract_features(features)
-        for feature, target in zip(features, targets):
-            self.samples.setdefault(target, []).append(feature)
+        for feature_dict, target in zip(features, targets):
+            self.samples.setdefault(target, []).append(feature_dict)
             if self.budget is not None:
                 self.samples[target] = self.samples[target][-self.budget :]
         self.samples = {k: self.samples[k] for k in active_targets}
 
-    def distance(
-        self, features: list[dict[str, np.ndarray]], targets: list[int]
-    ) -> np.ndarray:
+    def distance(self, features: list[dict], targets: list[int]) -> np.ndarray:
         """
         Compute distance between features and targets.
 
@@ -96,7 +96,5 @@ class DistanceMetric(object):
         """
         cost_matrix = np.zeros((len(targets), len(features)))
         for i, target in enumerate(targets):
-            cost_matrix[i, :] = self._metric(
-                self.samples[target], self.extract_features(features)
-            )
-        return cost_matrix
+            cost_matrix[i, :] = self._metric(self.samples[target], features)
+        return
