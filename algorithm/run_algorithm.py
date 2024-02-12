@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 
 import mlflow
+import numpy as np
 import pandas as pd
 import yaml
 from azureml.core import Workspace
@@ -102,8 +103,9 @@ if __name__ == "__main__":
 
         if settings_dict.get("ground_truth_directory"):
             file_name_prefix = Path(settings_dict["file_name"]).stem
-            ground_truth_source = Path(settings_dict["ground_truth_directory"]) / Path(
-                file_name_prefix + "_ground_truth.csv"
+            ground_truth_source = (
+                Path(settings_dict["ground_truth_directory"])
+                / f"{file_name_prefix}_ground_truth.csv"
             )
             test_source = (
                 Path(settings_dict["output_directory"])
