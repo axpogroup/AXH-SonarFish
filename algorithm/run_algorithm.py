@@ -1,4 +1,5 @@
 import argparse
+import os
 from pathlib import Path
 
 import mlflow
@@ -6,23 +7,19 @@ import numpy as np
 import pandas as pd
 import yaml
 from azureml.core import Workspace
+from dotenv import load_dotenv
 from FishDetector import FishDetector
 from InputOutputHandler import InputOutputHandler
 
 from algorithm.DetectedObject import DetectedObject
 from algorithm.validation import mot16_metrics
 
-workspace = Workspace(
-    resource_group="axsa-lab-appl-fishsonar-rg",
-    workspace_name="axsa-lab-appl-fishsonar-ml",
-    subscription_id="your-azure-subscription-id",
-)
-mlflow.set_tracking_uri(workspace.get_mlflow_tracking_uri())
-experiment_name = "how_much_is_the_fish"
-mlflow.set_experiment(experiment_name)
+load_dotenv()
 
 
-def read_ground_truth_into_dataframe(ground_truth_path: Path, filename: str):
+def read_ground_truth_into_dataframe(
+    ground_truth_path: Path, filename: str
+) -> pd.DataFrame:
     return pd.read_csv(Path(ground_truth_path) / Path(filename + "_ground_truth.csv"))
 
 
@@ -63,6 +60,14 @@ if __name__ == "__main__":
         if args.input_file is not None:
             print("replacing input file.")
             settings_dict["file_name"] = args.input_file
+    workspace = Workspace(
+        resource_group=os.getenv("RESOURCE_GROUP"),
+        workspace_name=os.getenv("WORKSPACE_NAME"),
+        subscription_id=os.getenv("SUBSCRIPTION_ID"),
+    )
+    mlflow.set_tracking_uri(workspace.get_mlflow_tracking_uri())
+    experiment_name = settings_dict["experiment_name"]
+    mlflow.set_experiment(experiment_name)
     with mlflow.start_run():
         mlflow.log_params(settings_dict)
         if settings_dict.get("ground_truth_directory"):
