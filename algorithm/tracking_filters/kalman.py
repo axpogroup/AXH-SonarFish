@@ -70,10 +70,8 @@ class KalmanFilter(object):
         mean = np.r_[mean_pos, mean_vel]
 
         std_trace = (
-            np.array(
-                self.conf["filter_settings"]["kalman"]["std_obj_initialization_trace"]
-            )
-            * self.conf["filter_settings"]["kalman"]["std_obj_initialization_factor"]
+            np.array(self.conf["kalman_std_obj_initialization_trace"])
+            * self.conf["kalman_std_obj_initialization_factor"]
         )
         bbox_height_scaling_selection = np.array([1, 1, 0, 1, 1, 1, 0, 1])
         std_trace = std_trace * (
@@ -101,8 +99,8 @@ class KalmanFilter(object):
             state. Unobserved velocities are initialized to 0 mean.
         """
         std_trace = (
-            np.array(self.conf["filter_settings"]["kalman"]["std_process_noise_trace"])
-            * self.conf["filter_settings"]["kalman"]["std_obj_initialization_factor"]
+            np.array(self.conf["kalman_std_process_noise_trace"])
+            * self.conf["kalman_std_obj_initialization_factor"]
         )
         bbox_height_scaling_selection = np.array([1, 1, 0, 1, 1, 1, 0, 1])
         std_trace = std_trace * (
@@ -133,17 +131,15 @@ class KalmanFilter(object):
             estimate.
         """
         std_trace = (
-            np.array(self.conf["filter_settings"]["kalman"]["std_mmt_noise_trace"])
-            * self.conf["filter_settings"]["kalman"]["std_obj_initialization_factor"]
+            np.array(self.conf["kalman_std_mmt_noise_trace"])
+            * self.conf["kalman_std_obj_initialization_factor"]
         )
         bbox_height_scaling_selection = np.array([1, 1, 0, 1])
         std_trace = std_trace * (
             bbox_height_scaling_selection * mean[3] + 1 - bbox_height_scaling_selection
         )
         # rotate the measurement covariance matrix into the river flow direction
-        if self.conf["filter_settings"]["kalman"][
-            "rotate_mmt_noise_in_river_direction"
-        ]:
+        if self.conf["kalman_rotate_mmt_noise_in_river_direction"]:
             xy_std = np.dot(self.rot_mat.T, np.diag(std_trace[:2]) ** 2)
             ah_std = np.diag(std_trace[2:]) ** 2
             innovation_cov = scipy.linalg.block_diag(xy_std, ah_std)
@@ -277,11 +273,9 @@ class Tracker:
     ) -> None:
         self.metric = metric
         self.conf = conf
-        self.max_iou_distance = self.conf["filter_settings"]["kalman"][
-            "max_iou_distance"
-        ]
-        self.max_age = self.conf["filter_settings"]["kalman"]["max_age"]
-        self.n_init = self.conf["filter_settings"]["kalman"]["n_init"]
+        self.max_iou_distance = self.conf["kalman_max_iou_distance"]
+        self.max_age = self.conf["kalman_max_age"]
+        self.n_init = self.conf["kalman_n_init"]
 
         self.kf = KalmanFilter(conf)
         self.tracks = []
