@@ -127,13 +127,13 @@ class FishDetector:
             )
             detections: Dict[int, DetectedObject] = {}
             for contour in contours:
-                self.latest_obj_index += 1
                 new_object = DetectedObject(
                     identifier=self.latest_obj_index,
                     frame_number=self.frame_number,
                     contour=contour,
                 )
                 detections[new_object.ID] = new_object
+                self.latest_obj_index += 1
 
             runtimes_ms["detection_tracking"] = (
                 get_elapsed_ms(start) - runtimes_ms["enhance"]
@@ -161,18 +161,13 @@ class FishDetector:
             )
         elif self.conf["tracking_method"] == "kalman":
             if not self.object_filter:
-                if (
-                    self.conf["filter_settings"]["blob_matching_metric"]
-                    == "euclidean_distance"
-                ):
+                if self.conf["filter_blob_matching_metric"] == "euclidean_distance":
                     metric = DistanceMetric("euclidean", max_association_distance_px)
                 else:
                     metric = DistanceMetric(
-                        self.conf["filter_settings"]["blob_matching_metric"],
-                        1 - self.conf["filter_settings"]["area_ratio_threshold"],
-                        budget=self.conf["filter_settings"]["kalman"][
-                            "trace_history_matching_budget"
-                        ],
+                        self.conf["filter_blob_matching_metric"],
+                        1 - self.conf["filter_area_ratio_threshold"],
+                        budget=self.conf["kalman_trace_history_matching_budget"],
                     )
                 self.object_filter = kalman.Tracker(metric, self.conf)
             kalman.filter_detections(detections, self.object_filter)

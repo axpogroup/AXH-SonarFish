@@ -5,6 +5,10 @@ mask_directory: "analysis/demo/masks"
 output_directory: "data/model_output/"
 ground_truth_directory: "data/labels/"
 
+# Azure ML
+experiment_name: "how_much_is_the_fish"
+
+
 tag: "label"
 record_output_video: True # Only works for full resolution output
 record_output_csv: True
@@ -25,29 +29,28 @@ brightness: 30
 long_mean_frames: 400
 short_mean_frames: 10
 difference_threshold_scaler: 0.3
-dilation_kernel_mm: 400
-median_filter_kernel_mm: 170
+dilation_kernel_mm: 770
+median_filter_kernel_mm: 340
 
 # Tracking
 tracking_method: "kalman" # one of ['nearest_neighbor', 'kalman']
 max_association_dist_mm: 150
 phase_out_after_x_frames: 30
-filter_settings:
-  kalman:
-    std_obj_initialization_factor: 0.1
-    std_obj_initialization_trace: [1, 1, 0.1, 1, 0.5, 0.5, 0.0001, 0.5] # [x, y, w, h, vx, vy, va, vh]
-    std_process_noise_factor: 0.1
-    std_process_noise_trace: [1, 1, 0.1, 1, 0.05, 0.05, 0.0001, 0.05] # [x, y, w, h, vx, vy, va, vh]
-    std_mmt_noise_factor: 0.5
-    std_mmt_noise_trace: [5, 1.7, 1, 0.05] # [x, y, a, h]
-    rotate_mmt_noise_in_river_direction: False
-    trace_history_matching_budget: 3
-    max_iou_distance: 0.5 # basically (1 - iou_min)
-    max_age: 30
-    n_init: 35
-  nearest_neighbor:
-  blob_matching_metric: "euclidean_distance" # one of ['euclidean_distance', 'blob_area']
-  area_ratio_threshold: 0.97
+kalman_std_obj_initialization_factor: 0.1
+kalman_std_obj_initialization_trace: [1, 1, 0.1, 1, 0.5, 0.5, 0.0001, 0.5] # [x, y, w, h, vx, vy, va, vh]
+kalman_std_process_noise_factor: 0.1
+kalman_std_process_noise_trace: [1, 1, 0.1, 1, 0.05, 0.05, 0.0001, 0.05] # [x, y, w, h, vx, vy, va, vh]
+kalman_std_mmt_noise_factor: 0.5
+kalman_std_mmt_noise_trace: [5, 1.7, 1, 0.05] # [x, y, a, h]
+kalman_rotate_mmt_noise_in_river_direction: False
+kalman_trace_history_matching_budget: 3
+kalman_max_iou_distance: 0.5 # basically (1 - iou_min)
+kalman_max_age: 30
+kalman_n_init: 35
+filter_nearest_neighbor:
+filter_blob_matching_metric: "blob_area" # one of ['euclidean_distance', 'blob_area']
+filter_area_ratio_threshold: 0.97
+
 
 # Classification
 river_pixel_velocity: [2.35, -0.9] # At full resolution
