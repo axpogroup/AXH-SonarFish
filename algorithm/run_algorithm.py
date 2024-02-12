@@ -3,7 +3,6 @@ import os
 from pathlib import Path
 
 import mlflow
-import numpy as np
 import pandas as pd
 import yaml
 from azureml.core import Workspace
