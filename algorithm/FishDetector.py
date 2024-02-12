@@ -127,13 +127,13 @@ class FishDetector:
             )
             detections: Dict[int, DetectedObject] = {}
             for contour in contours:
-                self.latest_obj_index += 1
                 new_object = DetectedObject(
                     identifier=self.latest_obj_index,
                     frame_number=self.frame_number,
                     contour=contour,
                 )
                 detections[new_object.ID] = new_object
+                self.latest_obj_index += 1
 
             runtimes_ms["detection_tracking"] = (
                 get_elapsed_ms(start) - runtimes_ms["enhance"]

@@ -1,12 +1,15 @@
 import numpy as np
 import scipy
 from deepsort import iou_matching
-from deepsort.iou_matching import linear_assignment
 from deepsort.tracker import Track
 
 from algorithm.DetectedObject import DetectedObject
 from algorithm.flow_conditions import rot_mat_from_river_velocity
-from algorithm.matching.linear_assignment import matching_cascade, min_cost_matching
+from algorithm.matching.linear_assignment import (
+    gate_cost_matrix,
+    matching_cascade,
+    min_cost_matching,
+)
 
 
 class KalmanFilter(object):
@@ -25,8 +28,8 @@ class KalmanFilter(object):
         """Initialize Kalman filter.
 
         Args:
-            obj_velocity_initalization (tuple[float, float], optional): Initialization of velocity of objects
-                in x and y direction. Defaults to (0., 0.).
+            obj_velocity_initalization (tuple[float, float], optional): Initialization
+                of velocity of objects in x and y direction. Defaults to (0., 0.).
         """
         self.conf = conf
         # adapt the initial velocity to the river velocity
@@ -285,24 +288,23 @@ class Tracker:
         for track in self.tracks:
             track.predict(self.kf)
 
-    def update(self, detections: dict[int:DetectedObject]):
+    def update(self, detections: dict[int, DetectedObject]):
         """Perform measurement update and track management.
         Parameters
         ----------
         detections : List[deep_sort.detection.Detection]
             A list of detections at the current time step.
         """
-        ds_detections = [d.deepsort_detection for d in detections.values()]
         # Run matching cascade.
         matches, unmatched_tracks, unmatched_detections = self._match(detections)
 
         # Update track set.
         for track_idx, detection_idx in matches:
-            self.tracks[track_idx].update(self.kf, ds_detections[detection_idx])
+            self.tracks[track_idx].update(self.kf, detections[detection_idx])
         for track_idx in unmatched_tracks:
             self.tracks[track_idx].mark_missed()
         for detection_idx in unmatched_detections:
-            self._initiate_track(ds_detections[detection_idx])
+            self._initiate_track(detections[detection_idx])
         self.tracks = [t for t in self.tracks if not t.is_deleted()]
 
         # Update distance metric.
@@ -322,13 +324,11 @@ class Tracker:
             features = [dets[i].feature for i in detection_indices]
             targets = np.array([tracks[i].track_id for i in track_indices])
             cost_matrix = self.metric.distance(features, targets)
-            cost_matrix = linear_assignment.gate_cost_matrix(
+            cost_matrix = gate_cost_matrix(
                 self.kf, cost_matrix, tracks, dets, track_indices, detection_indices
             )
 
             return cost_matrix
-
-        ds_detections = [d.deepsort_detection for d in detections.values()]
 
         # Split track set into confirmed and unconfirmed tracks.
         confirmed_tracks = [i for i, t in enumerate(self.tracks) if t.is_confirmed()]
@@ -342,8 +342,9 @@ class Tracker:
             self.metric.matching_threshold,
             self.max_age,
             self.tracks,
-            ds_detections,
+            detections,
             confirmed_tracks,
+            detection_indices=list(detections.keys()),
         )
 
         # Associate remaining tracks together with unconfirmed tracks using IOU.
@@ -357,7 +358,7 @@ class Tracker:
             iou_matching.iou_cost,
             self.max_iou_distance,
             self.tracks,
-            ds_detections,
+            detections,
             iou_track_candidates,
             unmatched_detections,
         )
@@ -382,7 +383,7 @@ class Tracker:
 
 
 def filter_detections(
-    detections: dict[int:DetectedObject],
+    detections: dict[int, DetectedObject],
     tracker: Tracker,
 ):
     tracker.predict()
