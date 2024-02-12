@@ -23,7 +23,7 @@ def read_labels_into_dataframe(
 
 def extract_labels_history(
     label_history: dict, labels: Optional[pd.DataFrame], current_frame: int
-):
+) -> Optional[dict[int, DetectedObject]]:
     if labels is None:
         return None
     current_frame_df = labels[labels["frame"] == current_frame]
