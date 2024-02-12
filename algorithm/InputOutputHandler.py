@@ -212,7 +212,7 @@ class InputOutputHandler:
             return
 
     def handle_output(
-        self, processed_frame, object_history, runtimes, detector, truth_history=None
+        self, processed_frame, object_history, runtimes, detector, label_history=None
     ):
         # Total runtime
         if self.last_output_time is not None:
@@ -239,7 +239,7 @@ class InputOutputHandler:
             extensive = self.settings_dict["display_mode_extensive"]
             disp = visualization_functions.get_visual_output(
                 object_history=object_history,
-                truth_history=truth_history,
+                truth_history=label_history,
                 detector=detector,
                 processed_frame=processed_frame,
                 extensive=extensive,

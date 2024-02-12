@@ -57,7 +57,7 @@ if __name__ == "__main__":
             print("replacing input file.")
             settings_dict["file_name"] = args.input_file
 
-    ground_truth_df = read_labels_into_dataframe(
+    labels_df = read_labels_into_dataframe(
         labels_path=Path(settings_dict["ground_truth_directory"]),
         filename=Path(settings_dict["file_name"]).stem,
     )
@@ -75,12 +75,12 @@ if __name__ == "__main__":
         )
         object_history = detector.associate_detections(detections, object_history)
         truth_history = extract_labels_history(
-            truth_history, ground_truth_df, input_output_handler.frame_no
+            truth_history, labels_df, input_output_handler.frame_no
         )
         input_output_handler.handle_output(
             processed_frame=processed_frame_dict,
             object_history=object_history,
-            truth_history=truth_history,
+            label_history=truth_history,
             runtimes=runtimes,
             detector=detector,
         )
