@@ -15,9 +15,10 @@ class InputOutputHandler:
         self.video_writer = None
         self.settings_dict = settings_dict
         self.video_cap = cv.VideoCapture(
-            Path(
-                self.settings_dict["input_directory"] + self.settings_dict["file_name"]
-            ).__str__()
+            str(
+                Path(self.settings_dict["input_directory"])
+                / self.settings_dict["file_name"]
+            )
         )
         self.input_filename = Path(self.settings_dict["file_name"])
         self.output_dir_name = None

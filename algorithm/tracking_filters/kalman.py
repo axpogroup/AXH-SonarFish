@@ -6,6 +6,7 @@ from deepsort.tracker import Track
 
 from algorithm.DetectedObject import DetectedObject
 from algorithm.flow_conditions import rot_mat_from_river_velocity
+from algorithm.matching.linear_assignment import min_cost_matching
 
 
 class KalmanFilter(object):
@@ -321,7 +322,7 @@ class Tracker:
             track.features = []
         self.metric.partial_fit(features, targets, active_targets)
 
-    def _match(self, detections: dict[int:DetectedObject]):
+    def _match(self, detections: dict[int, DetectedObject]):
 
         def gated_metric(tracks, dets, track_indices, detection_indices):
             features = [dets[i].feature for i in detection_indices]
@@ -360,15 +361,13 @@ class Tracker:
         unmatched_tracks_a = [
             k for k in unmatched_tracks_a if self.tracks[k].time_since_update != 1
         ]
-        matches_b, unmatched_tracks_b, unmatched_detections = (
-            linear_assignment.min_cost_matching(
-                iou_matching.iou_cost,
-                self.max_iou_distance,
-                self.tracks,
-                ds_detections,
-                iou_track_candidates,
-                unmatched_detections,
-            )
+        matches_b, unmatched_tracks_b, unmatched_detections = min_cost_matching(
+            iou_matching.iou_cost,
+            self.max_iou_distance,
+            self.tracks,
+            ds_detections,
+            iou_track_candidates,
+            unmatched_detections,
         )
 
         matches = matches_a + matches_b
@@ -392,8 +391,7 @@ class Tracker:
 
 def filter_detections(
     detections: dict[int:DetectedObject],
-    conf: dict,
-    tracker: Tracker = None,
+    tracker: Tracker,
 ):
     tracker.predict()
     tracker.update(detections)

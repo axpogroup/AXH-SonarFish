@@ -175,7 +175,7 @@ class FishDetector:
                         ],
                     )
                 self.object_filter = kalman.Tracker(metric, self.conf)
-            kalman.filter_detections(detections, self.conf, self.object_filter)
+            kalman.filter_detections(detections, self.object_filter)
             return kalman.tracks_to_object_history(
                 self.object_filter.tracks, object_history, self.frame_number
             )
