@@ -65,22 +65,20 @@ if __name__ == "__main__":
     input_output_handler = InputOutputHandler(settings_dict)
     detector = FishDetector(settings_dict)
     object_history = {}
-    # todo: This should be initialized in extract_labels_history
-    # not doing it because we are in a broken state right now
-    truth_history = {}
+    label_history = {}
 
     while input_output_handler.get_new_frame():
         detections, processed_frame_dict, runtimes = detector.detect_objects(
             input_output_handler.current_raw_frame
         )
         object_history = detector.associate_detections(detections, object_history)
-        truth_history = extract_labels_history(
-            truth_history, labels_df, input_output_handler.frame_no
+        label_history = extract_labels_history(
+            label_history, labels_df, input_output_handler.frame_no
         )
         input_output_handler.handle_output(
             processed_frame=processed_frame_dict,
             object_history=object_history,
-            label_history=truth_history,
+            label_history=label_history,
             runtimes=runtimes,
             detector=detector,
         )
