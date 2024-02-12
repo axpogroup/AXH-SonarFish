@@ -1,5 +1,5 @@
 import copy
-from typing import Dict
+from typing import Dict, Optional
 
 import cv2 as cv
 import numpy as np
@@ -18,7 +18,7 @@ SECOND_ROW = ["difference_thresholded", "median_filter", "binary", "dilated"]
 
 def get_visual_output(
     object_history: Dict[int, DetectedObject],
-    truth_history: Dict[int, DetectedObject],
+    label_history: Optional[Dict[int, DetectedObject]],
     detector: FishDetector,
     processed_frame: Dict[str, np.ndarray],
     extensive=False,
@@ -47,9 +47,9 @@ def get_visual_output(
                 axis=1,
             )
 
-        third_row_binary = _draw_detections_and_truth(
+        third_row_binary = _draw_detections_and_labels(
             object_history=object_history,
-            truth_history=truth_history,
+            label_history=label_history,
             detector=detector,
             processed_frame=_retrieve_frame(
                 "binary", processed_frame, puttext="detections"
@@ -60,9 +60,9 @@ def get_visual_output(
             truth_color=truth_color,
         )
 
-        third_row_raw = _draw_detections_and_truth(
+        third_row_raw = _draw_detections_and_labels(
             object_history=object_history,
-            truth_history=truth_history,
+            label_history=label_history,
             detector=detector,
             processed_frame=_retrieve_frame(
                 "raw_downsampled", processed_frame, puttext="Final"
@@ -86,11 +86,11 @@ def get_visual_output(
 
     else:
         img = _retrieve_frame(save_frame, processed_frame)
-        if _draw_detections_and_truth:
-            disp = _draw_detections_and_truth(
+        if _draw_detections_and_labels:
+            disp = _draw_detections_and_labels(
                 detector=detector,
                 object_history=object_history,
-                truth_history=truth_history,
+                label_history=label_history,
                 processed_frame=_retrieve_frame("raw", processed_frame),
                 color=color,
                 truth_color=truth_color,
@@ -105,21 +105,21 @@ def get_visual_output(
     return disp
 
 
-def _draw_detections_and_truth(
-    detector,
-    object_history,
-    truth_history,
-    processed_frame,
-    color,
-    truth_color,
+def _draw_detections_and_labels(
+    detector: FishDetector,
+    object_history: Dict[int, DetectedObject],
+    label_history: Optional[Dict[int, DetectedObject]],
+    processed_frame: Dict[str, np.ndarray],
+    color: tuple,
+    truth_color: tuple,
     **kwargs
 ):
     disp = _draw_detector_output(
         object_history, detector, processed_frame, color=color, **kwargs
     )
-    if truth_history is not None:
+    if label_history is not None:
         disp = _draw_detector_output(
-            truth_history, detector, disp, color=truth_color, **kwargs
+            label_history, detector, disp, color=truth_color, **kwargs
         )
     return disp
 

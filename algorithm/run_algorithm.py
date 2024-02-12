@@ -22,7 +22,7 @@ def read_labels_into_dataframe(
 
 
 def extract_labels_history(
-    labels_history: dict, labels: Optional[pd.DataFrame], current_frame: int
+    label_history: dict, labels: Optional[pd.DataFrame], current_frame: int
 ):
     if labels is None:
         return None
@@ -33,11 +33,11 @@ def extract_labels_history(
             frame_number=row["frame"],
             contour=np.array(row[["x", "y", "w", "h"]]),
         )
-        if row["id"] not in labels_history:
-            labels_history[row["id"]] = truth_detected
+        if row["id"] not in label_history:
+            label_history[row["id"]] = truth_detected
         else:
-            labels_history[row["id"]].update_object(truth_detected)
-    return labels_history
+            label_history[row["id"]].update_object(truth_detected)
+    return label_history
 
 
 if __name__ == "__main__":

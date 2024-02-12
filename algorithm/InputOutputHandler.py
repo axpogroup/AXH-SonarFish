@@ -239,7 +239,7 @@ class InputOutputHandler:
             extensive = self.settings_dict["display_mode_extensive"]
             disp = visualization_functions.get_visual_output(
                 object_history=object_history,
-                truth_history=label_history,
+                label_history=label_history,
                 detector=detector,
                 processed_frame=processed_frame,
                 extensive=extensive,
