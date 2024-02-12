@@ -1,5 +1,6 @@
 import argparse
 from pathlib import Path
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -10,25 +11,33 @@ from algorithm.FishDetector import FishDetector
 from algorithm.InputOutputHandler import InputOutputHandler
 
 
-def read_ground_truth_into_dataframe(ground_truth_path: Path, filename: str):
-    return pd.read_csv(Path(ground_truth_path) / Path(filename + "_ground_truth.csv"))
+def read_labels_into_dataframe(
+    labels_path: Path, filename: str
+) -> Optional[pd.DataFrame]:
+    labels_path = Path(labels_path) / Path(filename + "_ground_truth.csv")
+    if not labels_path.exists():
+        print("No labels file found.")
+        return None
+    return pd.read_csv(labels_path)
 
 
-def extract_ground_truth_history(
-    ground_truth_object_history, ground_truth, current_frame: int
+def extract_labels_history(
+    labels_history: dict, labels: Optional[pd.DataFrame], current_frame: int
 ):
-    current_frame_df = ground_truth[ground_truth["frame"] == current_frame]
+    if labels is None:
+        return None
+    current_frame_df = labels[labels["frame"] == current_frame]
     for _, row in current_frame_df.iterrows():
         truth_detected = DetectedObject(
             identifier=row["id"],
             frame_number=row["frame"],
             contour=np.array(row[["x", "y", "w", "h"]]),
         )
-        if row["id"] not in ground_truth_object_history:
-            ground_truth_object_history[row["id"]] = truth_detected
+        if row["id"] not in labels_history:
+            labels_history[row["id"]] = truth_detected
         else:
-            ground_truth_object_history[row["id"]].update_object(truth_detected)
-    return ground_truth_object_history
+            labels_history[row["id"]].update_object(truth_detected)
+    return labels_history
 
 
 if __name__ == "__main__":
@@ -48,14 +57,16 @@ if __name__ == "__main__":
             print("replacing input file.")
             settings_dict["file_name"] = args.input_file
 
-    ground_truth_df = read_ground_truth_into_dataframe(
-        ground_truth_path=Path(settings_dict["ground_truth_directory"]),
+    ground_truth_df = read_labels_into_dataframe(
+        labels_path=Path(settings_dict["ground_truth_directory"]),
         filename=Path(settings_dict["file_name"]).stem,
     )
 
     input_output_handler = InputOutputHandler(settings_dict)
     detector = FishDetector(settings_dict)
     object_history = {}
+    # todo: This should be initialized in extract_labels_history
+    # not doing it because we are in a broken state right now
     truth_history = {}
 
     while input_output_handler.get_new_frame():
@@ -63,7 +74,7 @@ if __name__ == "__main__":
             input_output_handler.current_raw_frame
         )
         object_history = detector.associate_detections(detections, object_history)
-        truth_history = extract_ground_truth_history(
+        truth_history = extract_labels_history(
             truth_history, ground_truth_df, input_output_handler.frame_no
         )
         input_output_handler.handle_output(
