@@ -6,7 +6,7 @@ from deepsort.tracker import Track
 
 from algorithm.DetectedObject import DetectedObject
 from algorithm.flow_conditions import rot_mat_from_river_velocity
-from algorithm.matching.linear_assignment import min_cost_matching
+from algorithm.matching.linear_assignment import matching_cascade, min_cost_matching
 
 
 class KalmanFilter(object):
@@ -343,15 +343,13 @@ class Tracker:
         ]
 
         # Associate confirmed tracks using appearance features.
-        matches_a, unmatched_tracks_a, unmatched_detections = (
-            linear_assignment.matching_cascade(
-                gated_metric,
-                self.metric.matching_threshold,
-                self.max_age,
-                self.tracks,
-                ds_detections,
-                confirmed_tracks,
-            )
+        matches_a, unmatched_tracks_a, unmatched_detections = matching_cascade(
+            gated_metric,
+            self.metric.matching_threshold,
+            self.max_age,
+            self.tracks,
+            ds_detections,
+            confirmed_tracks,
         )
 
         # Associate remaining tracks together with unconfirmed tracks using IOU.
