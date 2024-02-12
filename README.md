@@ -54,15 +54,23 @@ This is a high-level overview of the steps needed to run the continous operation
 5. Monitor the recording and the outputs using the commands in continous_operation/src/controller.py. They should be 
    accessible via an alias, e.g., "control check_status". 
 
+# Running Locally
+- Install Requirements from requirements.txt
+- Add .env file with the following contents in the top level folder:
+    ```
+        RESOURCE_GROUP=axsa-lab-appl-fishsonar-rg
+        WORKSPACE_NAME=axsa-lab-appl-fishsonar-ml
+        SUBSCRIPTION_ID=your-azure-subscription-id
+  ```
+
 # Running the algorithm on an individual file
 This is a short guide to run the fish detection algorithm on a sample video.
-1.	Install the requirements specified in requirements.txt
-2.	Download the sample sonar video from here: [demo_sample_sonar_recording.mp4 - Sharepoint](https://axpogrp.sharepoint.com/:v:/s/DEPTHTD-A/ESdKpDEWDEBDqYR6KVFZ0D8BJrxKcDi6F8JaenjD0YhWWw?e=5jNCLF) 
-3.	Place the video in the following folder: _"data/raw/videos/"_
-4. Specify the desired settings for the algorithm and the output in _"analysis/demo/demo_settings.yaml"_
-5. Run the algorithm using _"algorithm/run_algorithm.py"_. E.g.: _"python3 algorithm/run_algorithm.py -yf 
+1. Download the sample sonar video from here: [demo_sample_sonar_recording.mp4 - Sharepoint](https://axpogrp.sharepoint.com/:v:/s/DEPTHTD-A/ESdKpDEWDEBDqYR6KVFZ0D8BJrxKcDi6F8JaenjD0YhWWw?e=5jNCLF) 
+2. Place the video in the following folder: _"data/raw/videos/"_
+3. Specify the desired settings for the algorithm and the output in _"analysis/demo/demo_settings.yaml"_
+4. Run the algorithm using _"algorithm/run_algorithm.py"_. E.g.: _"python3 algorithm/run_algorithm.py -yf 
    analysis/demo/demo_settings.yaml"_
-6. Use the settings "display_output_video: True" and "display_mode_extensive: True" to tune the settings in an 
+4. Use the settings "display_output_video: True" and "display_mode_extensive: True" to tune the settings in an 
    interactive window and "display_mode_extensive: False" to read the velocity of the river.
 
 # Running the algorithm on a batch of files and evaluating the output
