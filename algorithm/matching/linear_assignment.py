@@ -14,7 +14,7 @@ def min_cost_matching(
     detections: list[Detection],
     track_indices: list[int] = None,
     detection_indices: list[int] = None,
-):
+) -> tuple[list[tuple[int, int]], list[int], list[int]]:
     """Solve linear assignment problem. Adapted from deepsort.linear_assignment.min_cost_matching
     due to a bug. The bug was that the indices were not transformed to a numpy array.
 
@@ -87,14 +87,14 @@ def min_cost_matching(
 
 
 def matching_cascade(
-    distance_metric,
-    max_distance,
-    cascade_depth,
-    tracks,
-    detections,
-    track_indices=None,
-    detection_indices=None,
-):
+    distance_metric: callable,
+    max_distance: float,
+    cascade_depth: int,
+    tracks: list[Track],
+    detections: list[Detection],
+    track_indices: list[int] = None,
+    detection_indices: list[int] = None,
+) -> tuple[list[tuple[int, int]], list[int], list[int]]:
     """Run matching cascade.
 
     Parameters
