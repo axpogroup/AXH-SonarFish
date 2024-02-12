@@ -1,5 +1,5 @@
 import copy
-from typing import Dict
+from typing import Optional
 
 import cv2 as cv
 import numpy as np
