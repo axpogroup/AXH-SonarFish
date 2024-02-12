@@ -23,7 +23,7 @@ def prepare_data_for_mot_metrics(
     return df_gt.to_numpy(), df_tsource.to_numpy()
 
 
-def mot_metrics_enhanced_calculator(ground_truth, test):
+def mot_metrics_enhanced_calculator(ground_truth: ndarray, test: ndarray) -> dict:
 
     # Create an accumulator that will be updated during each frame
     acc = mm.MOTAccumulator(auto_id=True)
