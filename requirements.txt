@@ -11,6 +11,7 @@ opencv-contrib-python-rolling==5.0.0.20221015
 matplotlib==3.6.2
 pyyaml==6.0
 pandas==1.5.3
+deepsort==0.0.5
 
 # MOT16 metrics
 motmetrics==1.4.0
