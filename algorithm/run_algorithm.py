@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 
 import mlflow
+import numpy as np
 import pandas as pd
 import yaml
 from azureml.core import Workspace
@@ -30,11 +31,7 @@ def extract_ground_truth_history(
         truth_detected = DetectedObject(
             identifier=row["id"],
             frame_number=row["frame"],
-            x=row["x"],
-            y=row["y"],
-            w=row["w"],
-            h=row["h"],
-            area=None,
+            contour=np.array(row[["x", "y", "w", "h"]]),
         )
         if row["id"] not in ground_truth_object_history:
             ground_truth_object_history[row["id"]] = truth_detected
@@ -106,8 +103,9 @@ if __name__ == "__main__":
 
         if settings_dict.get("ground_truth_directory"):
             file_name_prefix = Path(settings_dict["file_name"]).stem
-            ground_truth_source = Path(settings_dict["ground_truth_directory"]) / Path(
-                file_name_prefix + "_ground_truth.csv"
+            ground_truth_source = (
+                Path(settings_dict["ground_truth_directory"])
+                / f"{file_name_prefix}_ground_truth.csv"
             )
             test_source = (
                 Path(settings_dict["output_directory"])
