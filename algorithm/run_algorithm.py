@@ -100,28 +100,28 @@ if __name__ == "__main__":
                 detector=detector,
             )
 
-            if input_output_handler.output_csv_name is not None:
-                df_detections = input_output_handler.get_detections_pd(object_history)
-                df_detections = detector.classify_detections(df_detections)
-                df_detections.to_csv(input_output_handler.output_csv_name, index=False)
+        if input_output_handler.output_csv_name is not None:
+            df_detections = input_output_handler.get_detections_pd(object_history)
+            df_detections = detector.classify_detections(df_detections)
+            df_detections.to_csv(input_output_handler.output_csv_name, index=False)
 
-            if settings_dict.get("ground_truth_directory"):
-                file_name_prefix = Path(settings_dict["file_name"]).stem
-                ground_truth_source = (
-                    Path(settings_dict["ground_truth_directory"])
-                    / f"{file_name_prefix}_ground_truth.csv"
-                )
-                test_source = (
-                    Path(settings_dict["output_directory"])
-                    / file_name_prefix
-                    / Path(file_name_prefix + ".csv")
-                )
-                ground_truth_source, test_source = (
-                    mot16_metrics.prepare_data_for_mot_metrics(
-                        ground_truth_source, test_source
-                    )
-                )
-                mot16_metrics_dict = mot16_metrics.mot_metrics_enhanced_calculator(
+        if settings_dict.get("ground_truth_directory"):
+            file_name_prefix = Path(settings_dict["file_name"]).stem
+            ground_truth_source = (
+                Path(settings_dict["ground_truth_directory"])
+                / f"{file_name_prefix}_ground_truth.csv"
+            )
+            test_source = (
+                Path(settings_dict["output_directory"])
+                / file_name_prefix
+                / Path(file_name_prefix + ".csv")
+            )
+            ground_truth_source, test_source = (
+                mot16_metrics.prepare_data_for_mot_metrics(
                     ground_truth_source, test_source
                 )
-                mlflow.log_metrics(mot16_metrics_dict)
+            )
+            mot16_metrics_dict = mot16_metrics.mot_metrics_enhanced_calculator(
+                ground_truth_source, test_source
+            )
+            mlflow.log_metrics(mot16_metrics_dict)
