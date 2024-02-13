@@ -4,7 +4,6 @@
 input_directory: "data/intermediate/labels/"
 
 # Output
-output_video_dir: "output/videos/"
 csv_output_directory: "data/labels/"
 csv_output_suffix: "_ground_truth.csv"
 
