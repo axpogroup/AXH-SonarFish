@@ -50,9 +50,7 @@ class DistanceMetric(object):
         try:
             self._metric = self.metric_options[metric]
         except KeyError:
-            raise ValueError(
-                f"Invalid metric; must be one of {self.metric_options.keys()}"
-            )
+            raise ValueError(f"Invalid metric; must be one of {self.metric_options.keys()}")
         self.feature_keys = ["center_pos"]
         if metric == "blob_area":
             self.feature_keys = ["contour"]

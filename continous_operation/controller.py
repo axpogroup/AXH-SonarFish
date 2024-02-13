@@ -21,9 +21,7 @@ def downsample_and_upload_recording(file):
         "recording_uploads",
     )
     os.makedirs(recording_uploads_dir, exist_ok=True)
-    downsampled_rec_name = os.path.join(
-        recording_uploads_dir, (os.path.split(file)[-1][:-4] + "_downsampled.mp4")
-    )
+    downsampled_rec_name = os.path.join(recording_uploads_dir, (os.path.split(file)[-1][:-4] + "_downsampled.mp4"))
     downsample_cmd = (
         f"ffmpeg -y -i {file} -c:v libx264 -preset medium -crf 30 -vf scale=iw*0.25:ih*0.25 -r 10 "
         f"{downsampled_rec_name}"
@@ -55,16 +53,12 @@ def downsample_and_upload_recording(file):
     if success:
         print(f"Attempting to upload downsampled recording: {downsampled_rec_name}")
         cloud_handler = CloudHandler()
-        cloud_handler.upload_file_to_container(
-            downsampled_rec_name, orchestrator_settings_dict["azure_container_name"]
-        )
+        cloud_handler.upload_file_to_container(downsampled_rec_name, orchestrator_settings_dict["azure_container_name"])
         print("Success!")
 
 
 def upload_sample_of_latest_recording():
-    recording_uploads_dir = os.path.join(
-        orchestrator_settings_dict["output_directory"], "recording_uploads"
-    )
+    recording_uploads_dir = os.path.join(orchestrator_settings_dict["output_directory"], "recording_uploads")
     os.makedirs(recording_uploads_dir, exist_ok=True)
 
     existing_completed_recordings = pd.read_csv(
@@ -109,16 +103,13 @@ def upload_sample_of_latest_recording():
     if success:
         print(f"Attempting to upload snippet: {snippet_name}")
         cloud_handler = CloudHandler()
-        cloud_handler.upload_file_to_container(
-            snippet_name, orchestrator_settings_dict["azure_container_name"]
-        )
+        cloud_handler.upload_file_to_container(snippet_name, orchestrator_settings_dict["azure_container_name"])
         print("Success!")
 
 
 def modified_in_past_x_minutes(filepath, x):
     if (
-        dt.datetime.now(dt.timezone.utc)
-        - dt.datetime.fromtimestamp(os.path.getmtime(filepath), tz=dt.timezone.utc)
+        dt.datetime.now(dt.timezone.utc) - dt.datetime.fromtimestamp(os.path.getmtime(filepath), tz=dt.timezone.utc)
     ) < dt.timedelta(minutes=x):
         return True
     else:
@@ -127,9 +118,7 @@ def modified_in_past_x_minutes(filepath, x):
 
 def get_latest_logs():
     log_files = glob.glob(
-        os.path.join(
-            orchestrator_settings_dict["output_directory"], "logs", "**/*.log*"
-        ),
+        os.path.join(orchestrator_settings_dict["output_directory"], "logs", "**/*.log*"),
         recursive=True,
     )
 
@@ -149,9 +138,7 @@ def get_latest_logs():
 def check_status():
     def check_recordings():
         all_recordings = glob.glob(
-            os.path.join(
-                orchestrator_settings_dict["output_directory"], "recordings", "**/*.mp4"
-            )
+            os.path.join(orchestrator_settings_dict["output_directory"], "recordings", "**/*.mp4")
         )
         if len(all_recordings) == 0:
             raise Exception("No recordings found.")
@@ -160,9 +147,7 @@ def check_status():
         if not modified_in_past_x_minutes(all_recordings[-1], no_mod_thres):
             raise Exception(f"No file modification in the past {no_mod_thres} minutes.")
 
-    no_mod_thres = orchestrator_settings_dict[
-        "error_after_no_file_modification_minutes"
-    ]
+    no_mod_thres = orchestrator_settings_dict["error_after_no_file_modification_minutes"]
     print("Checking recording status...")
     try:
         check_recordings()
@@ -190,9 +175,7 @@ def check_status():
 
 
 if __name__ == "__main__":
-    argParser = argparse.ArgumentParser(
-        description="Various controls for the continous fish detection system."
-    )
+    argParser = argparse.ArgumentParser(description="Various controls for the continous fish detection system.")
 
     argParser.add_argument(
         "-command",
@@ -230,9 +213,7 @@ if __name__ == "__main__":
         upload = orc_logs + rec_logs
         for file in upload:
             print(f"Uploading {file}")
-            cloud_handler.upload_file_to_container(
-                file, orchestrator_settings_dict["azure_container_name"]
-            )
+            cloud_handler.upload_file_to_container(file, orchestrator_settings_dict["azure_container_name"])
         print("Success!")
 
     elif args.command == "upload_sample":
@@ -244,9 +225,7 @@ if __name__ == "__main__":
             exit()
         print(f"Attempting to upload: {args.file}")
         cloud_handler = CloudHandler()
-        cloud_handler.upload_file_to_container(
-            args.file, orchestrator_settings_dict["azure_container_name"]
-        )
+        cloud_handler.upload_file_to_container(args.file, orchestrator_settings_dict["azure_container_name"])
         print("Success!")
     elif args.command == "downsample_and_upload_file":
         if args.file is None:
@@ -255,9 +234,9 @@ if __name__ == "__main__":
         downsample_and_upload_recording(args.file)
 
     elif args.command == "feed_watchdog":
-        pd.DataFrame(
-            [dt.datetime.now(dt.timezone.utc).isoformat(timespec="milliseconds")]
-        ).to_csv(orchestrator_settings_dict["watchdog_food_file"])
+        pd.DataFrame([dt.datetime.now(dt.timezone.utc).isoformat(timespec="milliseconds")]).to_csv(
+            orchestrator_settings_dict["watchdog_food_file"]
+        )
         print("Fed watchdog.")
 
     elif args.command in ["help", "h", "man"]:

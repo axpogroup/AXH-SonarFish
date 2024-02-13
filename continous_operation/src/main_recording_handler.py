@@ -20,9 +20,7 @@ if __name__ == "__main__":
         os.path.join(orchestrator_settings_dict["output_directory"], "logs"),
         "recording",
     )
-    recording_directory = os.path.join(
-        orchestrator_settings_dict["output_directory"], "recordings"
-    )
+    recording_directory = os.path.join(orchestrator_settings_dict["output_directory"], "recordings")
     os.makedirs(name=recording_directory, exist_ok=True)
 
     capture_initialization_cmd = "sh /home/fish-pi/code/continous_operation/initialize_capture/initialize_capture.sh"
@@ -55,17 +53,11 @@ if __name__ == "__main__":
 
     logger.info("Starting recording...")
     while True:
-        savedir = os.path.join(
-            recording_directory, dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d")
-        )
+        savedir = os.path.join(recording_directory, dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d"))
         os.makedirs(name=savedir, exist_ok=True)
         savepath = os.path.join(
             savedir,
-            (
-                "start_"
-                + dt.datetime.now(dt.timezone.utc).isoformat(timespec="milliseconds")
-                + ".mp4"
-            ),
+            ("start_" + dt.datetime.now(dt.timezone.utc).isoformat(timespec="milliseconds") + ".mp4"),
         )
         savepath = savepath.replace(":", "-")
         recording_command = record_cmd_prefix + " " + savepath
@@ -81,7 +73,5 @@ if __name__ == "__main__":
             )
             logger.info(f"Saved: {savepath}")
         except subprocess.CalledProcessError as e:
-            logger.error(
-                f"Error starting recording. \n Command: {recording_command} \n {e.output}"
-            )
+            logger.error(f"Error starting recording. \n Command: {recording_command} \n {e.output}")
             time.sleep(30)
