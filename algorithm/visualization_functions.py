@@ -51,9 +51,7 @@ def get_visual_output(
             object_history=object_history,
             label_history=label_history,
             detector=detector,
-            processed_frame=_retrieve_frame(
-                "binary", processed_frame, puttext="detections"
-            ),
+            processed_frame=_retrieve_frame("binary", processed_frame, puttext="detections"),
             paths=True,
             association_dist=True,
             color=color,
@@ -64,9 +62,7 @@ def get_visual_output(
             object_history=object_history,
             label_history=label_history,
             detector=detector,
-            processed_frame=_retrieve_frame(
-                "raw_downsampled", processed_frame, puttext="Final"
-            ),
+            processed_frame=_retrieve_frame("raw_downsampled", processed_frame, puttext="Final"),
             truth_color=truth_color,
             color=color,
         )
@@ -74,9 +70,7 @@ def get_visual_output(
         third_row_images = np.concatenate(
             (
                 third_row_raw,
-                _retrieve_frame(
-                    "internal_external", processed_frame, puttext="internal_external"
-                ),
+                _retrieve_frame("internal_external", processed_frame, puttext="internal_external"),
                 third_row_binary,
                 _retrieve_frame("closed", processed_frame, puttext="closed"),
             ),
@@ -114,13 +108,9 @@ def _draw_detections_and_labels(
     truth_color: tuple,
     **kwargs,
 ):
-    disp = _draw_detector_output(
-        object_history, detector, processed_frame, color=color, **kwargs
-    )
+    disp = _draw_detector_output(object_history, detector, processed_frame, color=color, **kwargs)
     if label_history is not None:
-        disp = _draw_detector_output(
-            label_history, detector, disp, color=truth_color, **kwargs
-        )
+        disp = _draw_detector_output(label_history, detector, disp, color=truth_color, **kwargs)
     return disp
 
 
@@ -162,10 +152,7 @@ def _draw_detector_output(
     color=(255, 200, 200),
 ):
     for ID, obj in object_history.items():
-        if (
-            detector.frame_number - obj.frames_observed[-1]
-            > detector.conf["no_more_show_after_x_frames"]
-        ):
+        if detector.frame_number - obj.frames_observed[-1] > detector.conf["no_more_show_after_x_frames"]:
             continue
 
         if fullres:
@@ -203,9 +190,7 @@ def _draw_detector_output(
             cv.circle(
                 img,
                 (obj.midpoints[-1][0] * scale, obj.midpoints[-1][1] * scale),
-                int(
-                    detector.mm_to_px(detector.conf["max_association_dist_mm"]) * scale
-                ),
+                int(detector.mm_to_px(detector.conf["max_association_dist_mm"]) * scale),
                 (0, 0, 255),
                 1 * scale,
             )

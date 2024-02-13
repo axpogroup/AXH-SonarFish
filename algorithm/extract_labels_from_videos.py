@@ -22,9 +22,7 @@ def main(settings_dict: dict):
         print(f"\nProcessing  {file}")
         file_name = Path(file).stem
         csv_file = open(
-            settings_dict["csv_output_directory"]
-            + file_name
-            + settings_dict["csv_output_suffix"],
+            settings_dict["csv_output_directory"] + file_name + settings_dict["csv_output_suffix"],
             "w",
         )
         csv_writer = csv.writer(csv_file)
@@ -58,9 +56,7 @@ def main(settings_dict: dict):
             detector.process_frame(raw_frame)
 
             # Output
-            current_timestamp = datetime.datetime.utcnow() + dt.timedelta(
-                seconds=float(frame_no) / fps
-            )
+            current_timestamp = datetime.datetime.utcnow() + dt.timedelta(seconds=float(frame_no) / fps)
             csv_writer.writerows(
                 detector.prepare_objects_for_csv(
                     timestr=current_timestamp.strftime("%y-%m-%d_%H-%M-%S.%f")[:-3],
@@ -72,26 +68,18 @@ def main(settings_dict: dict):
                     up = np.concatenate(
                         (
                             detector.draw_output(
-                                detector.retrieve_frame(
-                                    detector.current_raw, puttext="raw"
-                                ),
+                                detector.retrieve_frame(detector.current_raw, puttext="raw"),
                                 debug=True,
                                 classifications=True,
                             ),
-                            detector.retrieve_frame(
-                                detector.current_blue, puttext="blue"
-                            ),
+                            detector.retrieve_frame(detector.current_blue, puttext="blue"),
                         ),
                         axis=1,
                     )
                     down = np.concatenate(
                         (
-                            detector.retrieve_frame(
-                                detector.current_red, puttext="red"
-                            ),
-                            detector.retrieve_frame(
-                                detector.current_green, puttext="green"
-                            ),
+                            detector.retrieve_frame(detector.current_red, puttext="red"),
+                            detector.retrieve_frame(detector.current_green, puttext="green"),
                         ),
                         axis=1,
                     )
@@ -110,9 +98,7 @@ def main(settings_dict: dict):
             else:
                 disp = np.concatenate(
                     (
-                        detector.draw_output(
-                            detector.current_enhanced, debug=True, runtiming=True
-                        ),
+                        detector.draw_output(detector.current_enhanced, debug=True, runtiming=True),
                         detector.draw_output(detector.current_raw, runtiming=True),
                     )
                 )

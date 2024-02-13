@@ -15,25 +15,17 @@ class InputOutputHandler:
         self.video_writer = None
         self.settings_dict = settings_dict
         self.video_cap = cv.VideoCapture(
-            str(
-                Path(self.settings_dict["input_directory"])
-                / self.settings_dict["file_name"]
-            )
+            str(Path(self.settings_dict["input_directory"]) / self.settings_dict["file_name"])
         )
         self.input_filename = Path(self.settings_dict["file_name"])
         self.output_dir_name = None
         self.output_csv_name = None
 
-        if (
-            "record_output_csv" in settings_dict.keys()
-            and self.settings_dict["record_output_csv"]
-        ):
+        if "record_output_csv" in settings_dict.keys() and self.settings_dict["record_output_csv"]:
             if self.output_dir_name is None:
                 self.output_dir_name = self.settings_dict["output_directory"]
 
-            self.output_csv_name = os.path.join(
-                self.output_dir_name, (self.input_filename.stem + ".csv")
-            )
+            self.output_csv_name = os.path.join(self.output_dir_name, (self.input_filename.stem + ".csv"))
 
         self.playback_paused = False
         self.usr_input = None
@@ -138,9 +130,7 @@ class InputOutputHandler:
             30,
             change_alpha,
         )
-        cv.createTrackbar(
-            "brightness", "frame", detector.conf["brightness"], 120, change_beta
-        )
+        cv.createTrackbar("brightness", "frame", detector.conf["brightness"], 120, change_beta)
         cv.createTrackbar(
             "s_mean",
             "frame",
@@ -180,10 +170,7 @@ class InputOutputHandler:
     def show_image(self, img, detector):
         cv.imshow("frame", img)
 
-        if (
-            "display_trackbars" in self.settings_dict.keys()
-            and self.settings_dict["display_trackbars"]
-        ):
+        if "display_trackbars" in self.settings_dict.keys() and self.settings_dict["display_trackbars"]:
             self.trackbars(detector)
 
         # Wait briefly for user input unless the video is paused
@@ -205,9 +192,7 @@ class InputOutputHandler:
             self.shutdown()
             return
 
-    def handle_output(
-        self, processed_frame, object_history, runtimes, detector, label_history=None
-    ):
+    def handle_output(self, processed_frame, object_history, runtimes, detector, label_history=None):
         # Total runtime
         if self.last_output_time is not None:
             total_time_per_frame = get_elapsed_ms(self.last_output_time)
@@ -226,10 +211,7 @@ class InputOutputHandler:
                 f"Total: {total_time_per_frame} | FPS: {'{:.1f}'.format(self.frame_no/(2*total_runtime/1000))}"
             )
 
-        if (
-            self.settings_dict["display_output_video"]
-            or self.settings_dict["record_output_video"]
-        ):
+        if self.settings_dict["display_output_video"] or self.settings_dict["record_output_video"]:
             extensive = self.settings_dict["display_mode_extensive"]
             disp = visualization_functions.get_visual_output(
                 object_history=object_history,
@@ -257,16 +239,8 @@ class InputOutputHandler:
         frame_height: int = None,
     ):
         # grab the width, height, fps and length of the video stream.
-        frame_width = (
-            int(self.video_cap.get(cv.CAP_PROP_FRAME_WIDTH))
-            if frame_width is None
-            else frame_width
-        )
-        frame_height = (
-            int(self.video_cap.get(cv.CAP_PROP_FRAME_HEIGHT))
-            if frame_height is None
-            else frame_height
-        )
+        frame_width = int(self.video_cap.get(cv.CAP_PROP_FRAME_WIDTH)) if frame_width is None else frame_width
+        frame_height = int(self.video_cap.get(cv.CAP_PROP_FRAME_HEIGHT)) if frame_height is None else frame_height
         fps = int(self.video_cap.get(cv.CAP_PROP_FPS))
         if self.settings_dict["record_processing_frame"] != "raw":
             fps = fps // 2

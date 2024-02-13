@@ -10,9 +10,7 @@ def main(settings_dict: dict):
     input_video_file_paths = input_directory_path.glob("**/*.mp4")
 
     for file_path in input_video_file_paths:
-        output_file_path = output_directory_path / file_path.relative_to(
-            input_directory_path
-        )
+        output_file_path = output_directory_path / file_path.relative_to(input_directory_path)
         down_sample_frame_rate_of_video(
             input_file=file_path,
             output_file=output_file_path,

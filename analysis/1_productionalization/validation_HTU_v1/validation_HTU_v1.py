@@ -28,19 +28,9 @@ if __name__ == "__main__":
                 text=True,
             )
             print(output.stdout)
-            print(
-                "\n\n"
-                + dt.datetime.now().strftime("%y-%m-%d__%H-%M-%S")
-                + " -------- processed: "
-                + file
-                + "\n\n"
-            )
+            print("\n\n" + dt.datetime.now().strftime("%y-%m-%d__%H-%M-%S") + " -------- processed: " + file + "\n\n")
         except subprocess.CalledProcessError as e:
-            print(
-                "\n\n"
-                + dt.datetime.now().strftime("%y-%m-%d__%H-%M-%S")
-                + " -------- ERROR: \n"
-            )
+            print("\n\n" + dt.datetime.now().strftime("%y-%m-%d__%H-%M-%S") + " -------- ERROR: \n")
             print("File: " + file)
             print("Command: " + command)
             print("Output of subprocess: \n")

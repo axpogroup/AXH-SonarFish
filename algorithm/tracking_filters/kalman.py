@@ -33,9 +33,7 @@ class KalmanFilter(object):
         """
         self.conf = conf
         # adapt the initial velocity to the river velocity
-        self.obj_velocity_initalization = [
-            v / 4.0 for v in self.conf["river_pixel_velocity"]
-        ]
+        self.obj_velocity_initalization = [v / 4.0 for v in self.conf["river_pixel_velocity"]]
 
         ndim, dt = 4, 1.0
 
@@ -68,11 +66,7 @@ class KalmanFilter(object):
             * self.conf["kalman_std_obj_initialization_factor"]
         )
         bbox_height_scaling_selection = np.array([1, 1, 0, 1, 1, 1, 0, 1])
-        std_trace = std_trace * (
-            bbox_height_scaling_selection * measurement[3]
-            + 1
-            - bbox_height_scaling_selection
-        )
+        std_trace = std_trace * (bbox_height_scaling_selection * measurement[3] + 1 - bbox_height_scaling_selection)
         covariance = np.diag(np.square(std_trace))
         return _sanitizing_mean(mean), covariance
 
@@ -93,20 +87,14 @@ class KalmanFilter(object):
             state. Unobserved velocities are initialized to 0 mean.
         """
         std_trace = (
-            np.array(self.conf["kalman_std_process_noise_trace"])
-            * self.conf["kalman_std_obj_initialization_factor"]
+            np.array(self.conf["kalman_std_process_noise_trace"]) * self.conf["kalman_std_obj_initialization_factor"]
         )
         bbox_height_scaling_selection = np.array([1, 1, 0, 1, 1, 1, 0, 1])
-        std_trace = std_trace * (
-            bbox_height_scaling_selection * mean[3] + 1 - bbox_height_scaling_selection
-        )
+        std_trace = std_trace * (bbox_height_scaling_selection * mean[3] + 1 - bbox_height_scaling_selection)
         motion_cov = np.diag(np.square(std_trace))
 
         mean = np.dot(self._motion_mat, mean)
-        covariance = (
-            np.linalg.multi_dot((self._motion_mat, covariance, self._motion_mat.T))
-            + motion_cov
-        )
+        covariance = np.linalg.multi_dot((self._motion_mat, covariance, self._motion_mat.T)) + motion_cov
 
         return _sanitizing_mean(mean), covariance
 
@@ -125,13 +113,10 @@ class KalmanFilter(object):
             estimate.
         """
         std_trace = (
-            np.array(self.conf["kalman_std_mmt_noise_trace"])
-            * self.conf["kalman_std_obj_initialization_factor"]
+            np.array(self.conf["kalman_std_mmt_noise_trace"]) * self.conf["kalman_std_obj_initialization_factor"]
         )
         bbox_height_scaling_selection = np.array([1, 1, 0, 1])
-        std_trace = std_trace * (
-            bbox_height_scaling_selection * mean[3] + 1 - bbox_height_scaling_selection
-        )
+        std_trace = std_trace * (bbox_height_scaling_selection * mean[3] + 1 - bbox_height_scaling_selection)
         # rotate the measurement covariance matrix into the river flow direction
         if self.conf["kalman_rotate_mmt_noise_in_river_direction"]:
             xy_std = np.dot(self.rot_mat.T, np.diag(std_trace[:2]) ** 2)
@@ -141,9 +126,7 @@ class KalmanFilter(object):
             innovation_cov = np.diag(std_trace) ** 2
 
         mean = np.dot(self._update_mat, mean)
-        covariance = np.linalg.multi_dot(
-            (self._update_mat, covariance, self._update_mat.T)
-        )
+        covariance = np.linalg.multi_dot((self._update_mat, covariance, self._update_mat.T))
         return _sanitizing_mean(mean), covariance + innovation_cov
 
     def update(self, mean, covariance, measurement):
@@ -165,9 +148,7 @@ class KalmanFilter(object):
         """
         projected_mean, projected_cov = self.project(mean, covariance)
 
-        chol_factor, lower = scipy.linalg.cho_factor(
-            projected_cov, lower=True, check_finite=False
-        )
+        chol_factor, lower = scipy.linalg.cho_factor(projected_cov, lower=True, check_finite=False)
         kalman_gain = scipy.linalg.cho_solve(
             (chol_factor, lower),
             np.dot(covariance, self._update_mat.T).T,
@@ -183,9 +164,7 @@ class KalmanFilter(object):
             v = v / v_norm * 2 * np.linalg.norm(self.conf["river_pixel_velocity"])
             new_mean[4:6] = v
 
-        new_covariance = covariance - np.linalg.multi_dot(
-            (kalman_gain, projected_cov, kalman_gain.T)
-        )
+        new_covariance = covariance - np.linalg.multi_dot((kalman_gain, projected_cov, kalman_gain.T))
         return _sanitizing_mean(new_mean), new_covariance
 
     def gating_distance(self, mean, covariance, measurements, only_position=False):
@@ -220,9 +199,7 @@ class KalmanFilter(object):
 
         cholesky_factor = np.linalg.cholesky(covariance)
         d = measurements - mean
-        z = scipy.linalg.solve_triangular(
-            cholesky_factor, d.T, lower=True, check_finite=False, overwrite_b=True
-        )
+        z = scipy.linalg.solve_triangular(cholesky_factor, d.T, lower=True, check_finite=False, overwrite_b=True)
         squared_maha = np.sum(z * z, axis=0)
         return squared_maha
 
@@ -340,17 +317,13 @@ class Tracker:
             features = [dets[i].feature for i in detection_indices]
             targets = np.array([tracks[i].track_id for i in track_indices])
             cost_matrix = self.metric.distance(features, targets)
-            cost_matrix = gate_cost_matrix(
-                self.kf, cost_matrix, tracks, dets, track_indices, detection_indices
-            )
+            cost_matrix = gate_cost_matrix(self.kf, cost_matrix, tracks, dets, track_indices, detection_indices)
 
             return cost_matrix
 
         # Split track set into confirmed and unconfirmed tracks.
         confirmed_tracks = [i for i, t in enumerate(self.tracks) if t.is_confirmed()]
-        unconfirmed_tracks = [
-            i for i, t in enumerate(self.tracks) if not t.is_confirmed()
-        ]
+        unconfirmed_tracks = [i for i, t in enumerate(self.tracks) if not t.is_confirmed()]
 
         # Associate confirmed tracks using appearance features.
         matches_a, unmatched_tracks_a, unmatched_detections = matching_cascade(
@@ -367,9 +340,7 @@ class Tracker:
         iou_track_candidates = unconfirmed_tracks + [
             k for k in unmatched_tracks_a if self.tracks[k].time_since_update == 1
         ]
-        unmatched_tracks_a = [
-            k for k in unmatched_tracks_a if self.tracks[k].time_since_update != 1
-        ]
+        unmatched_tracks_a = [k for k in unmatched_tracks_a if self.tracks[k].time_since_update != 1]
         matches_b, unmatched_tracks_b, unmatched_detections = min_cost_matching(
             iou_matching.iou_cost,
             self.max_iou_distance,
