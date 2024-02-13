@@ -18,9 +18,7 @@ from algorithm.validation import mot16_metrics
 load_dotenv()
 
 
-def read_labels_into_dataframe(
-    labels_path: Path, filename: str
-) -> Optional[pd.DataFrame]:
+def read_labels_into_dataframe(labels_path: Path, filename: str) -> Optional[pd.DataFrame]:
     labels_path = Path(labels_path) / Path(filename + "_ground_truth.csv")
     if not labels_path.exists():
         print("No labels file found.")
@@ -50,19 +48,10 @@ def extract_labels_history(
 def compute_metrics(settings_dict):
     if settings_dict.get("ground_truth_directory"):
         file_name_prefix = Path(settings_dict["file_name"]).stem
-        ground_truth_source = (
-            Path(settings_dict["ground_truth_directory"])
-            / f"{file_name_prefix}_ground_truth.csv"
-        )
-        test_source = Path(settings_dict["output_directory"]) / Path(
-            file_name_prefix + ".csv"
-        )
-        ground_truth_source, test_source = mot16_metrics.prepare_data_for_mot_metrics(
-            ground_truth_source, test_source
-        )
-        mot16_metrics_dict = mot16_metrics.mot_metrics_enhanced_calculator(
-            ground_truth_source, test_source
-        )
+        ground_truth_source = Path(settings_dict["ground_truth_directory"]) / f"{file_name_prefix}_ground_truth.csv"
+        test_source = Path(settings_dict["output_directory"]) / Path(file_name_prefix + ".csv")
+        ground_truth_source, test_source = mot16_metrics.prepare_data_for_mot_metrics(ground_truth_source, test_source)
+        mot16_metrics_dict = mot16_metrics.mot_metrics_enhanced_calculator(ground_truth_source, test_source)
         return mot16_metrics_dict
 
 
@@ -78,13 +67,9 @@ def main(settings_dict: dict):
     label_history = {}
 
     while input_output_handler.get_new_frame():
-        detections, processed_frame_dict, runtimes = detector.detect_objects(
-            input_output_handler.current_raw_frame
-        )
+        detections, processed_frame_dict, runtimes = detector.detect_objects(input_output_handler.current_raw_frame)
         object_history = detector.associate_detections(detections, object_history)
-        label_history = extract_labels_history(
-            label_history, labels_df, input_output_handler.frame_no
-        )
+        label_history = extract_labels_history(label_history, labels_df, input_output_handler.frame_no)
         input_output_handler.handle_output(
             processed_frame=processed_frame_dict,
             object_history=object_history,
@@ -100,12 +85,8 @@ def main(settings_dict: dict):
 
 
 if __name__ == "__main__":
-    argParser = argparse.ArgumentParser(
-        description="Run the fish detection algorithm with a settings .yaml file."
-    )
-    argParser.add_argument(
-        "-yf", "--yaml_file", help="path to the YAML settings file", required=True
-    )
+    argParser = argparse.ArgumentParser(description="Run the fish detection algorithm with a settings .yaml file.")
+    argParser.add_argument("-yf", "--yaml_file", help="path to the YAML settings file", required=True)
     argParser.add_argument("-if", "--input_file", help="path to the input video file")
 
     args = argParser.parse_args()

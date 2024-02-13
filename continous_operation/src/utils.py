@@ -35,12 +35,8 @@ class DetectionHandler:
             detections, processed_frame_dict, runtimes = self.detector.detect_objects(
                 input_output_handler.current_raw_frame
             )
-            object_history = self.detector.associate_detections(
-                detections, object_history
-            )
-            input_output_handler.handle_output(
-                processed_frame_dict, object_history, runtimes, detector=self.detector
-            )
+            object_history = self.detector.associate_detections(detections, object_history)
+            input_output_handler.handle_output(processed_frame_dict, object_history, runtimes, detector=self.detector)
 
         detections = input_output_handler.get_detections_pd(object_history)
         detections = self.detector.classify_detections(detections)
@@ -48,11 +44,7 @@ class DetectionHandler:
 
 
 def get_logger(log_directory, nametag):
-    logfolder_name = (
-        nametag
-        + "_logs_session_"
-        + dt.datetime.now(dt.timezone.utc).isoformat(timespec="milliseconds")
-    )
+    logfolder_name = nametag + "_logs_session_" + dt.datetime.now(dt.timezone.utc).isoformat(timespec="milliseconds")
     logfolder_name = logfolder_name.replace(":", "-")
     os.makedirs(os.path.join(log_directory, logfolder_name), exist_ok=True)
     logger = logging.getLogger(f"{nametag}_logger")
