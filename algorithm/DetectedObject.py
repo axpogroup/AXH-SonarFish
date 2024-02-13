@@ -71,11 +71,11 @@ class DetectedObject(Detection):
 
     @property
     def mean_pixel_intensity(self):
-        return self.means_of_pixels_intensity[-1][0]
+        return self.means_of_pixels_intensity[-1]
 
     @property
     def stddev_of_pixel_intensity(self):
-        return self.stddevs_of_pixels_intensity[-1][0]
+        return self.stddevs_of_pixels_intensity[-1]
 
     def update_object(self, detection: Detection):
         self.frames_observed.append(detection.frames_observed[-1])
@@ -140,5 +140,5 @@ class DetectedObject(Detection):
             print("detection_box is empty")
             return
         mean, stddev = cv.meanStdDev(detection_box)
-        self.means_of_pixels_intensity.append(mean)
-        self.stddevs_of_pixels_intensity.append(stddev)
+        self.means_of_pixels_intensity.append(mean[0])
+        self.stddevs_of_pixels_intensity.append(stddev[0])

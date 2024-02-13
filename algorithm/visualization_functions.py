@@ -112,7 +112,7 @@ def _draw_detections_and_labels(
     processed_frame: dict[str, np.ndarray],
     color: tuple,
     truth_color: tuple,
-    **kwargs
+    **kwargs,
 ):
     disp = _draw_detector_output(
         object_history, detector, processed_frame, color=color, **kwargs
@@ -213,8 +213,8 @@ def _draw_detector_output(
         if annotate:
             text = ""
             if len(obj.means_of_pixels_intensity) > 0:
-                mean, stdd = obj.mean_pixel_intensity, obj.stddev_of_pixel_intensity
-                text = "mean: " + str(mean) + ", stdd: " + str(stdd)
+                mean, stddev = obj.mean_pixel_intensity, obj.stddev_of_pixel_intensity
+                text = f"mean: {mean}, stddev: {stddev}"
                 if len(obj.velocities) > 0:
                     text += (
                         ", v [px/frame]: "
