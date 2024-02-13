@@ -37,13 +37,12 @@ class DetectedObject(Detection):
 
     @property
     def feature(self):
-        feature_dict = {
+        return {
             "center_pos": self.center_pos,
             "contour": self.contour,
             "area": self.area,
             "sift": self.sift_features,
         }
-        return feature_dict
 
     @property
     def center_pos(self):
