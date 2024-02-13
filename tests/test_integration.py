@@ -105,6 +105,7 @@ class TestIntegration:
 
         detections_csv = pd.read_csv(f"{model_output_directory}/trimmed_video.csv")
         assert list(detections_csv.columns)[:6] == relevant_csv_columns
+        assert len(detections_csv) > 0
 
         metrics = compute_metrics(detection_settings)
         assert len(metrics) > 0
