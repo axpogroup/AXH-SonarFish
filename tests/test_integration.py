@@ -105,6 +105,6 @@ class TestIntegration:
         detections_csv = pd.read_csv(f"{model_output_directory}/trimmed_video.csv")
         assert list(detections_csv.columns)[:6] == relevant_csv_columns
 
+        # metrics = compute_metrics(detection_settings)
         # todo: add test for metrics
         # todo: actually have trackings in the video, to properly tes
-        # todo: clean up the code using pytest.fixtures
