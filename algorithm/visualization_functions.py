@@ -222,15 +222,6 @@ def _draw_detector_output(
                         + ", "
                         + str(obj.velocities[-1][1] * scale)
                     )
-            if annotate == "velocities":
-                pass
-                text = (
-                    "v [px/frame]: "
-                    + "{:.2f}".format(obj.velocities[-1][0] * scale)
-                    + ", "
-                    + "{:.2f}".format(obj.velocities[-1][1] * scale)
-                )
-
             cv.putText(
                 img,
                 text,
