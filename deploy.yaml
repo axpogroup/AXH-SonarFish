@@ -32,3 +32,21 @@ stages:
           flake8 .
         displayName: flake8
 
+- stage: Tests
+  dependsOn: [ ]
+  displayName: Tests
+  jobs:
+  - job:
+    displayName: Pytest
+    steps:
+      - task: UsePythonVersion@0
+        displayName: Use Python 3.10
+        inputs:
+          versionSpec: 3.10
+      - bash: |
+          pip install -r requirements.txt
+        displayName: Install dependencies
+      - script: |
+          pytest
+        displayName: Run tests
+
