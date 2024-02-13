@@ -23,18 +23,10 @@ def _area_cost(
         Each entry (i, j) is defined as max(A1 / A2, A2 / A1) where A1 and A2 are the areas of the
         bounding boxes of the i-th track and j-th detection.
     """
-    target_dets_idx = (
-        target_dets_idx if target_dets_idx is not None else range(len(target_dets))
-    )
-    feature_dets_idx = (
-        feature_dets_idx if feature_dets_idx is not None else range(len(feature_dets))
-    )
-    target_area = np.array(
-        [cv.contourArea(target_dets[tidx]) for tidx in target_dets_idx]
-    )
-    feature_area = np.array(
-        [cv.contourArea(feature_dets[fidx]) for fidx in feature_dets_idx]
-    )
+    target_dets_idx = target_dets_idx if target_dets_idx is not None else range(len(target_dets))
+    feature_dets_idx = feature_dets_idx if feature_dets_idx is not None else range(len(feature_dets))
+    target_area = np.array([cv.contourArea(target_dets[tidx]) for tidx in target_dets_idx])
+    feature_area = np.array([cv.contourArea(feature_dets[fidx]) for fidx in feature_dets_idx])
 
     target_area = target_area[:, np.newaxis]  # reshape for broadcasting
     feature_area = feature_area[np.newaxis, :]  # reshape for broadcasting
