@@ -6,10 +6,12 @@ import yaml
 
 from algorithm.extract_labels_from_videos import main as label_extraction_main
 from algorithm.preprocess_raw_videos import main as preprocess_main
+from algorithm.run_algorithm import main as run_algorithm_main
 
 
 @pytest.fixture(scope="session", autouse=True)
 def setup():
+    # extract those file paths into fixtures
     assert_directory_empty(directory="data/labels")
     assert_directory_empty(directory="data/intermediate/videos")
     assert_directory_empty(directory="data/intermediate/labels")
@@ -52,3 +54,16 @@ class TestIntegration:
 
         labels_csv = pd.read_csv("data/labels/trimmed_video_ground_truth.csv")
         assert len(labels_csv) > 0
+
+        with open("../analysis/demo/demo_settings.yaml") as f:
+            detection_settings = yaml.load(f, Loader=yaml.SafeLoader)
+        detection_settings["file_name"] = "trimmed_video.mp4"
+        detection_settings["mask_directory"] = "../analysis/demo/masks"
+
+        run_algorithm_main(detection_settings)
+
+        # detections_csv = pd.read_csv(
+        #    "data/model_output/2024-02-13T11-51+00-00_label/trimmed_video.csv"
+        # )
+        # assert detections_csv.columns == ["frame", "id", "x", "y", "w", "h", "v_x", "v_y", "contour_area",
+        #                                  "v_xr", "v_yr"]
