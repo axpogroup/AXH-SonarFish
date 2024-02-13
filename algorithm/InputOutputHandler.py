@@ -270,13 +270,6 @@ class InputOutputHandler:
         if self.settings_dict["record_processing_frame"] != "raw":
             fps = fps // 2
 
-        self.output_dir_name = os.path.join(
-            self.settings_dict["output_directory"],
-            self.input_filename.stem,
-            # + self.settings_dict["tag"],
-        )
-        self.output_dir_name = self.output_dir_name.replace(":", "-")
-        os.makedirs(name=self.output_dir_name, exist_ok=True)
         output_video_name = f"{self.input_filename.stem}_{self.settings_dict['record_processing_frame']}_output.mp4"
 
         # initialize the FourCC and a video writer object
@@ -299,24 +292,3 @@ class InputOutputHandler:
         if "record_output_video" in self.settings_dict.keys():
             self.video_writer.release()
         cv.destroyAllWindows()
-
-        if self.output_dir_name is not None:
-            with open(os.path.join(self.output_dir_name, "settings.txt"), "w") as f:
-                for key, setting in self.settings_dict.items():
-                    f.write(f"{key}: {setting}")
-                    f.write("\n")
-            import zipfile
-
-            filenames = [
-                "algorithm/run_algorithm.py",
-                "algorithm/FishDetector.py",
-                "algorithm/InputOutputHandler.py",
-                "algorithm/DetectedObject.py",
-                "algorithm/visualization_functions.py",
-                "algorithm/utils.py",
-            ]
-            with zipfile.ZipFile(
-                os.path.join(self.output_dir_name, "code.zip"), mode="w"
-            ) as archive:
-                for filename in filenames:
-                    archive.write(filename)
