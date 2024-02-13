@@ -15,10 +15,12 @@ def setup():
     assert_directory_empty(directory="data/labels")
     assert_directory_empty(directory="data/intermediate/videos")
     assert_directory_empty(directory="data/intermediate/labels")
+    assert_directory_empty(directory="data/model_output")
     yield
     clear_directory(directory="data/labels")
     clear_directory(directory="data/intermediate/videos")
     clear_directory(directory="data/intermediate/labels")
+    clear_directory(directory="data/model_output")
 
 
 def clear_directory(directory):
@@ -60,6 +62,7 @@ class TestIntegration:
             detection_settings = yaml.load(f, Loader=yaml.SafeLoader)
         detection_settings["file_name"] = "trimmed_video.mp4"
         detection_settings["mask_directory"] = "../analysis/demo/masks"
+        detection_settings["display_output_video"] = False
 
         run_algorithm_main(detection_settings)
 
