@@ -54,6 +54,7 @@ class TestIntegration:
 
         labels_csv = pd.read_csv("data/labels/trimmed_video_ground_truth.csv")
         assert len(labels_csv) > 0
+        assert list(labels_csv.columns)[:6] == ["frame", "id", "x", "y", "w", "h"]
 
         with open("../analysis/demo/demo_settings.yaml") as f:
             detection_settings = yaml.load(f, Loader=yaml.SafeLoader)
@@ -62,8 +63,5 @@ class TestIntegration:
 
         run_algorithm_main(detection_settings)
 
-        # detections_csv = pd.read_csv(
-        #    "data/model_output/2024-02-13T11-51+00-00_label/trimmed_video.csv"
-        # )
-        # assert detections_csv.columns == ["frame", "id", "x", "y", "w", "h", "v_x", "v_y", "contour_area",
-        #                                  "v_xr", "v_yr"]
+        detections_csv = pd.read_csv("data/model_output/trimmed_video.csv")
+        assert list(detections_csv.columns)[:6] == ["frame", "id", "x", "y", "w", "h"]

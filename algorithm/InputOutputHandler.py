@@ -1,4 +1,3 @@
-import datetime as dt
 import os
 from pathlib import Path
 
@@ -29,14 +28,7 @@ class InputOutputHandler:
             and self.settings_dict["record_output_csv"]
         ):
             if self.output_dir_name is None:
-                self.output_dir_name = os.path.join(
-                    self.settings_dict["output_directory"],
-                    dt.datetime.now(dt.timezone.utc).isoformat(timespec="minutes")
-                    + "_"
-                    + self.settings_dict["tag"],
-                )
-                self.output_dir_name = self.output_dir_name.replace(":", "-")
-                os.makedirs(name=self.output_dir_name, exist_ok=True)
+                self.output_dir_name = self.settings_dict["output_directory"]
 
             self.output_csv_name = os.path.join(
                 self.output_dir_name, (self.input_filename.stem + ".csv")
