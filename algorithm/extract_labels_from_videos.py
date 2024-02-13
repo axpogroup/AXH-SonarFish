@@ -134,7 +134,6 @@ def main(settings_dict: dict):
 
 
 if __name__ == "__main__":
-    # Specify the output folders, possibly ADJUST
     with open("settings/tracking_box_settings.yaml") as f:
         settings = yaml.load(f, Loader=yaml.SafeLoader)
         print(settings)
