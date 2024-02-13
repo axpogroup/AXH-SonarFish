@@ -14,6 +14,8 @@ class DetectedObject(Detection):
         frame_dict_history: Optional[dict[int, dict[str, np.array]]] = None,
         confidence: float = 0.9,
     ):
+        self.stddevs_of_pixels_intensity = []
+        self.means_of_pixels_intensity = []
         self.ID = identifier
         self.frame_dict_history = frame_dict_history
         self.frames_observed = [frame_number]
@@ -24,15 +26,15 @@ class DetectedObject(Detection):
         self.midpoints = [(int(x + w / 2), int(y + h / 2))]
         self.bounding_boxes = [(w, h)]
         self.areas = [w * h if contour.shape == (4,) else cv.contourArea(contour)]
-        self.velocities = [np.array([np.NAN, np.NAN])]
-
+        self.velocities = []
         self.tlwh = np.array([x, y, w, h], dtype=float)
         self.confidence = confidence
-        self.update_object(self)
+        self.calculate_speed()
         if frame_dict_history:
             self.calculate_average_pixel_intensity(
                 frame_dict_history.get(frame_number)["median_filter"], x, y, w, h
             )
+        self.update_object(self)
 
     def _get_feature_patch(self, processing_step: str):
         x, y, w, h = self.tlwh.astype(int)
@@ -67,6 +69,14 @@ class DetectedObject(Detection):
         patch = self._get_feature_patch("difference_thresholded")
         return cv.SIFT_create().detectAndCompute(patch, None)
 
+    @property
+    def mean_pixel_intensity(self):
+        return self.means_of_pixels_intensity[-1][0]
+
+    @property
+    def stddev_of_pixel_intensity(self):
+        return self.stddevs_of_pixels_intensity[-1][0]
+
     def update_object(self, detection: Detection):
         self.frames_observed.append(detection.frames_observed[-1])
         self.midpoints.append(detection.midpoints[-1])
@@ -88,7 +98,7 @@ class DetectedObject(Detection):
     def calculate_speed(self):
         # For the speed to be sensible (e.g. non-zero) it must be taken over a longer period of time
         # Find a past observation that is at least ~2 seconds ago
-        past_observation_id = -2
+        past_observation_id = -1
         while (
             float(self.frames_observed[-1] - self.frames_observed[past_observation_id])
             < 20
@@ -101,23 +111,25 @@ class DetectedObject(Detection):
             frame_diff = float(
                 self.frames_observed[-1] - self.frames_observed[past_observation_id]
             )
-            v_x = (
-                float(self.midpoints[-1][0] - self.midpoints[past_observation_id][0])
-                / frame_diff
-            )
-            v_y = (
-                float(self.midpoints[-1][1] - self.midpoints[past_observation_id][1])
-                / frame_diff
-            )
-            self.velocities.append(np.array([v_x, v_y]))
+            if frame_diff > 0:
+                v_x = (
+                    float(
+                        self.midpoints[-1][0] - self.midpoints[past_observation_id][0]
+                    )
+                    / frame_diff
+                )
+                v_y = (
+                    float(
+                        self.midpoints[-1][1] - self.midpoints[past_observation_id][1]
+                    )
+                    / frame_diff
+                )
+                self.velocities.append(np.array([v_x, v_y]))
 
     def calculate_average_pixel_intensity(
         self, reference_frames: np.ndarray, x, y, w, h
     ):
-        y = int(round(y))
-        x = int(round(x))
-        w = int(round(w))
-        h = int(round(h))
+        x, y, w, h = self.tlwh.astype(int)
         detection_box = reference_frames[y : y + h, x : x + w]  # noqa 4
         if len(detection_box) == 0:
             print("detection_box is empty")
