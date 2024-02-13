@@ -388,10 +388,16 @@ def tracks_to_object_history(
     tracks: list[Track],
     object_history: dict[int, DetectedObject],
     frame_number: int,
+    frame_dict: dict,
 ) -> dict[int, DetectedObject]:
     for track in tracks:
         if track.is_confirmed():
-            obj = DetectedObject(track.track_id, track.to_tlwh(), frame_number)
+            obj = DetectedObject(
+                track.track_id,
+                track.to_tlwh(),
+                frame_number,
+                frame_dict_history=frame_dict,
+            )
             if track.track_id not in object_history.keys():
                 object_history[track.track_id] = obj
             else:
