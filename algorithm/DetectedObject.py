@@ -44,7 +44,9 @@ class DetectedObject(Detection):
             "center_pos": self.center_pos,
             "contour": self.contour,
             "area": self.area,
+            "patch": self._get_feature_patch("difference_thresholded"),
             "sift": self.sift_features,
+            "histogram": self.histogram,
         }
 
     @property
@@ -58,6 +60,17 @@ class DetectedObject(Detection):
     @property
     def area(self):
         return self.areas[-1]
+
+    @property
+    def histogram(self):
+        hist_raw = cv.calcHist(
+            self._get_feature_patch("difference_thresholded"),
+            [0],
+            None,
+            [256],
+            [0, 256],
+        )
+        return cv.normalize(hist_raw, hist_raw, alpha=0, beta=1, norm_type=cv.NORM_MINMAX)
 
     @property
     def sift_features(self):

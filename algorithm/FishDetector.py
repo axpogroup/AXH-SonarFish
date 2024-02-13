@@ -150,7 +150,7 @@ class FishDetector:
                 else:
                     metric = DistanceMetric(
                         self.conf["filter_blob_matching_metric"],
-                        1 - self.conf["filter_area_ratio_threshold"],
+                        self.conf["filter_association_thresh"],
                         budget=self.conf["kalman_trace_history_matching_budget"],
                     )
                 self.object_filter = kalman.Tracker(metric, self.conf)
