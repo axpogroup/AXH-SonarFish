@@ -244,14 +244,12 @@ def _sanitizing_mean(mean: np.ndarray):
         Returns the corrected mean of the object.
     """
     # Check if the object is within the frame
-    if mean[0] < 0:
-        mean[0] = mean[0] * -1
-    if mean[1] < 0:
-        mean[1] = mean[1] * -1
-    if mean[2] < 0:
-        mean[2] = mean[2] * -1
-    if mean[3] < 0:
-        mean[3] = mean[3] * -1
+    mean[0] = max(mean[0], 0)
+    mean[1] = max(mean[1], 0)
+    # Check if the aspect ratio is physically plausible
+    mean[2] = max(mean[2], 0)
+    # Check if the height is physically plausible
+    mean[3] = max(mean[3], 0)
     return mean
 
 
