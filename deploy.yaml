@@ -46,10 +46,7 @@ stages:
       - bash: |
           pip install -r requirements.txt
         displayName: Install dependencies
-      - bash: |
-          export PYTHONPATH="${PYTHONPATH}:$(pwd)"
-        displayName: Append PYTHONPATH
       - script: |
-          cd tests; pytest
+          pytest tests
         displayName: Run tests
 
