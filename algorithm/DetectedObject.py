@@ -84,7 +84,6 @@ class DetectedObject(Detection):
         self.top_lefts_y.append(detection.top_lefts_y[-1])
         self.bounding_boxes.append(detection.bounding_boxes[-1])
         self.areas.append(detection.areas[-1])
-        self.calculate_speed()
         if len(detection.velocities) > 0:
             self.velocities.append(detection.velocities[-1])
         if len(detection.stddevs_of_pixels_intensity) > 0:
@@ -98,13 +97,16 @@ class DetectedObject(Detection):
     def calculate_speed(self):
         # For the speed to be sensible (e.g. non-zero) it must be taken over a longer period of time
         # Find a past observation that is at least ~2 seconds ago
-        past_observation_id = -1
+        past_observation_id = -2
+        if len(self.frames_observed) == 1:
+            self.velocities.append(np.array([1, 1]))
+            return
         while (
             float(self.frames_observed[-1] - self.frames_observed[past_observation_id])
             < 20
         ):
             if -past_observation_id + 1 > len(self.frames_observed):
-                self.velocities.append(np.array([np.NAN, np.NAN]))
+                self.velocities.append(np.array([9, 9]))
                 return
             past_observation_id -= 1
 

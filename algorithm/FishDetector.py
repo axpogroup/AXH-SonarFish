@@ -147,7 +147,6 @@ class FishDetector:
                 contour=contour,
                 frame_dict_history=self.frame_dict_history,
             )
-            new_object.calculate_speed()
             detections[new_object.ID] = new_object
             self.latest_obj_index += 1
         return detections
