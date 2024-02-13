@@ -16,6 +16,7 @@ class FishDetector:
     def __init__(self, settings_dict):
         self.object_filter = None
         self.conf = settings_dict
+        self.frame_dict_history = {}
         self.frame_number = 0
         self.latest_obj_index = 0
 
@@ -122,15 +123,18 @@ class FishDetector:
             # )
 
             # Extract keypoints
-            contours, hier = cv.findContours(
+            contours, _ = cv.findContours(
                 frame_dict["dilated"], cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE
             )
+
+            self.frame_dict_history[self.frame_number] = frame_dict
             detections: Dict[int, DetectedObject] = {}
             for contour in contours:
                 new_object = DetectedObject(
                     identifier=self.latest_obj_index,
                     frame_number=self.frame_number,
                     contour=contour,
+                    frame_dict_history=self.frame_dict_history,
                 )
                 detections[new_object.ID] = new_object
                 self.latest_obj_index += 1

@@ -1,3 +1,5 @@
+from typing import Optional
+
 import cv2 as cv
 import numpy as np
 from deepsort.detection import Detection
@@ -9,10 +11,13 @@ class DetectedObject(Detection):
         identifier: int,
         contour: np.ndarray,
         frame_number: int,
+        frame_dict_history: Optional[dict[int, dict[str, np.array]]] = None,
         confidence: float = 0.9,
     ):
         self.ID = identifier
+        self.frame_dict_history = frame_dict_history
         self.frames_observed = [frame_number]
+        self._contour = contour
         x, y, w, h = contour if contour.shape == (4,) else cv.boundingRect(contour)
         self.top_lefts_x = [x]
         self.top_lefts_y = [y]
@@ -23,11 +28,39 @@ class DetectedObject(Detection):
 
         self.tlwh = np.array([x, y, w, h], dtype=float)
         self.confidence = confidence
-        self.feature = {
-            "center_pos": self.midpoints[-1],
-            "contour": contour,
-            "area": self.areas[-1],
+
+    def _get_feature_patch(self, processing_step: str):
+        x, y, w, h = self.tlwh.astype(int)
+        return self.frame_dict_history[self.frames_observed[-1]][processing_step][
+            y : y + h, x : x + w
+        ]
+
+    @property
+    def feature(self):
+        feature_dict = {
+            "center_pos": self.center_pos,
+            "contour": self.contour,
+            "area": self.area,
+            "sift": self.sift_features,
         }
+        return feature_dict
+
+    @property
+    def center_pos(self):
+        return self.midpoints[-1]
+
+    @property
+    def contour(self):
+        return self._contour
+
+    @property
+    def area(self):
+        return self.areas[-1]
+
+    @property
+    def sift_features(self):
+        patch = self._get_feature_patch("difference_thresholded")
+        return cv.SIFT_create().detectAndCompute(patch, None)
 
     def update_object(self, detection: Detection):
         self.frames_observed.append(detection.frames_observed[-1])
