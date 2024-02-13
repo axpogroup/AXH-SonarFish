@@ -4,6 +4,20 @@ import cv2
 import yaml
 
 
+def main(settings_dict: dict):
+    input_directory_path = Path(settings_dict["input_directory"])
+    output_directory_path = Path(settings_dict["output_directory"])
+    input_video_file_paths = input_directory_path.glob("**/*.mp4")
+
+    for file_path in input_video_file_paths:
+        output_file_path = output_directory_path / file_path.relative_to(
+            input_directory_path
+        )
+        down_sample_frame_rate_of_video(
+            input_file=file_path, output_file=output_file_path, fps_out=10
+        )
+
+
 # Stackoverflow:
 # https://stackoverflow.com/questions/69306191/how-to-change-frame-per-second-fps-while-using-cv2-when-converting-video-to
 def down_sample_frame_rate_of_video(input_file: Path, output_file: Path, fps_out: int):
@@ -46,14 +60,4 @@ def down_sample_frame_rate_of_video(input_file: Path, output_file: Path, fps_out
 if __name__ == "__main__":
     with open("settings/preprocessing_settings.yaml") as f:
         settings_dict = yaml.load(f, Loader=yaml.SafeLoader)
-    input_directory_path = Path(settings_dict["input_directory"])
-    output_directory_path = Path(settings_dict["output_directory"])
-    input_video_file_paths = input_directory_path.glob("**/*.mp4")
-
-    for file_path in input_video_file_paths:
-        output_file_path = output_directory_path / file_path.relative_to(
-            input_directory_path
-        )
-        down_sample_frame_rate_of_video(
-            input_file=file_path, output_file=output_file_path, fps_out=10
-        )
+    main(settings_dict)
