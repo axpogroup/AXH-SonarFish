@@ -18,14 +18,10 @@ class InputOutputHandler:
             str(Path(self.settings_dict["input_directory"]) / self.settings_dict["file_name"])
         )
         self.input_filename = Path(self.settings_dict["file_name"])
-        self.output_dir_name = None
+        self.output_dir_name = self.settings_dict["output_directory"]
         self.output_csv_name = None
 
-        if "record_output_csv" in settings_dict.keys() and self.settings_dict["record_output_csv"]:
-            if self.output_dir_name is None:
-                self.output_dir_name = self.settings_dict["output_directory"]
-
-            self.output_csv_name = os.path.join(self.output_dir_name, (self.input_filename.stem + ".csv"))
+        self.output_csv_name = os.path.join(self.output_dir_name, (self.input_filename.stem + ".csv"))
 
         self.playback_paused = False
         self.usr_input = None

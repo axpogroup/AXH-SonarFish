@@ -7,7 +7,6 @@ output_directory: "analysis/1_productionalization/raspberry_pi_first_try/output"
 
 tag: "fast_v2_runtime_test_rpi"
 #record_output_video: True
-record_output_csv: True
 
 #display_output_video: True
 #display_mode_rich: True
