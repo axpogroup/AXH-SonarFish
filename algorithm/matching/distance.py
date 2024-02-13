@@ -71,7 +71,7 @@ class DistanceMetric(object):
         Update the distance metric with new data.
 
         Args:
-            features: An NxM matrix of N features of dimensionality M.
+            features: A list of DetectedObject feature dictionaries.
             targets: An integer array of associated target identities.
             active_targets: A list of targets that are currently present in the scene.
         """
