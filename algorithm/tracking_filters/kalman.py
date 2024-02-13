@@ -74,7 +74,7 @@ class KalmanFilter(object):
             - bbox_height_scaling_selection
         )
         covariance = np.diag(np.square(std_trace))
-        return mean, covariance
+        return _sanitizing_mean(mean), covariance
 
     def predict(self, mean: np.ndarray, covariance: np.ndarray):
         """Run Kalman filter prediction step.
@@ -108,7 +108,7 @@ class KalmanFilter(object):
             + motion_cov
         )
 
-        return mean, covariance
+        return _sanitizing_mean(mean), covariance
 
     def project(self, mean: np.ndarray, covariance: np.ndarray):
         """Project state distribution to measurement space.
@@ -144,7 +144,7 @@ class KalmanFilter(object):
         covariance = np.linalg.multi_dot(
             (self._update_mat, covariance, self._update_mat.T)
         )
-        return mean, covariance + innovation_cov
+        return _sanitizing_mean(mean), covariance + innovation_cov
 
     def update(self, mean, covariance, measurement):
         """Run Kalman filter correction step.
@@ -186,7 +186,7 @@ class KalmanFilter(object):
         new_covariance = covariance - np.linalg.multi_dot(
             (kalman_gain, projected_cov, kalman_gain.T)
         )
-        return new_mean, new_covariance
+        return _sanitizing_mean(new_mean), new_covariance
 
     def gating_distance(self, mean, covariance, measurements, only_position=False):
         """Compute gating distance between state distribution and measurements.
@@ -229,6 +229,28 @@ class KalmanFilter(object):
     @property
     def rot_mat(self):
         return rot_mat_from_river_velocity(self.conf)
+
+
+def _sanitizing_mean(mean: np.ndarray):
+    """Test if the mean of the object is physically plausible and correct it if necessary.
+    Parameters
+    ----------
+    mean : ndarray
+        The state's mean vector (8 dimensional).
+
+    Returns
+    -------
+    ndarray
+        Returns the corrected mean of the object.
+    """
+    # Check if the object is within the frame
+    mean[0] = max(mean[0], 0)
+    mean[1] = max(mean[1], 0)
+    # Check if the aspect ratio is physically plausible
+    mean[2] = max(mean[2], 0)
+    # Check if the height is physically plausible
+    mean[3] = max(mean[3], 0)
+    return mean
 
 
 class Tracker:
@@ -388,10 +410,16 @@ def tracks_to_object_history(
     tracks: list[Track],
     object_history: dict[int, DetectedObject],
     frame_number: int,
+    frame_dict: dict,
 ) -> dict[int, DetectedObject]:
     for track in tracks:
         if track.is_confirmed():
-            obj = DetectedObject(track.track_id, track.to_tlwh(), frame_number)
+            obj = DetectedObject(
+                track.track_id,
+                track.to_tlwh(),
+                frame_number,
+                frame_dict_history=frame_dict,
+            )
             if track.track_id not in object_history.keys():
                 object_history[track.track_id] = obj
             else:

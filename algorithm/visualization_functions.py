@@ -112,7 +112,7 @@ def _draw_detections_and_labels(
     processed_frame: dict[str, np.ndarray],
     color: tuple,
     truth_color: tuple,
-    **kwargs
+    **kwargs,
 ):
     disp = _draw_detector_output(
         object_history, detector, processed_frame, color=color, **kwargs
@@ -158,7 +158,7 @@ def _draw_detector_output(
     paths=False,
     fullres=False,
     association_dist=False,
-    annotate=False,
+    annotate=True,
     color=(255, 200, 200),
 ):
     for ID, obj in object_history.items():
@@ -211,23 +211,23 @@ def _draw_detector_output(
             )
 
         if annotate:
-            if annotate == "velocities":
-                pass
-                text = (
-                    "v [px/frame]: "
-                    + "{:.2f}".format(obj.velocities[-1][0] * scale)
-                    + ", "
-                    + "{:.2f}".format(obj.velocities[-1][1] * scale)
-                )
-            else:
-                text = str(annotate)
-
+            text = ""
+            if len(obj.means_of_pixels_intensity) > 0:
+                mean, stddev = obj.mean_pixel_intensity, obj.stddev_of_pixel_intensity
+                text = f"mean: {mean}, stddev: {stddev}"
+                if len(obj.velocities) > 0:
+                    text += (
+                        ", v [px/frame]: "
+                        + str(obj.velocities[-1][0] * scale)
+                        + ", "
+                        + str(obj.velocities[-1][1] * scale)
+                    )
             cv.putText(
                 img,
                 text,
                 (x - int(w / 2), y - int(h / 2) - 2 * scale),
                 cv.FONT_HERSHEY_SIMPLEX,
-                0.7,
+                0.5,
                 color,
                 2,
             )
