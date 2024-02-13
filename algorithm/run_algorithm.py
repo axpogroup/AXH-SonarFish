@@ -54,10 +54,8 @@ def compute_metrics(settings_dict):
             Path(settings_dict["ground_truth_directory"])
             / f"{file_name_prefix}_ground_truth.csv"
         )
-        test_source = (
-            Path(settings_dict["output_directory"])
-            / file_name_prefix
-            / Path(file_name_prefix + ".csv")
+        test_source = Path(settings_dict["output_directory"]) / Path(
+            file_name_prefix + ".csv"
         )
         ground_truth_source, test_source = mot16_metrics.prepare_data_for_mot_metrics(
             ground_truth_source, test_source
