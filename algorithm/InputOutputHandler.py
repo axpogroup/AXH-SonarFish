@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 
 import cv2 as cv
+import numpy as np
 import pandas as pd
 
 from algorithm import visualization_functions
@@ -82,8 +83,8 @@ class InputOutputHandler:
                         obj.top_lefts_y[i],
                         obj.bounding_boxes[i][0],
                         obj.bounding_boxes[i][1],
-                        obj.velocities[i][0],
-                        obj.velocities[i][1],
+                        obj.velocities[i][0] if len(obj.velocities) > i else np.nan,
+                        obj.velocities[i][1] if len(obj.velocities) > i else np.nan,
                         obj.areas[i],
                     ]
                 )

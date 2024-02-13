@@ -6,6 +6,7 @@ import yaml
 
 from algorithm.extract_labels_from_videos import main as label_extraction_main
 from algorithm.preprocess_raw_videos import main as preprocess_main
+from algorithm.run_algorithm import compute_metrics
 from algorithm.run_algorithm import main as run_algorithm_main
 
 
@@ -105,6 +106,5 @@ class TestIntegration:
         detections_csv = pd.read_csv(f"{model_output_directory}/trimmed_video.csv")
         assert list(detections_csv.columns)[:6] == relevant_csv_columns
 
-        # metrics = compute_metrics(detection_settings)
-        # todo: add test for metrics
-        # todo: actually have trackings in the video, to properly tes
+        metrics = compute_metrics(detection_settings)
+        assert len(metrics) > 0
