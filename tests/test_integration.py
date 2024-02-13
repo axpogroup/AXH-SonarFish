@@ -34,7 +34,7 @@ def assert_directory_empty(directory: str):
     files = os.listdir(directory)
     assert (
         len(files) == 1 and files[0] == ".gitkeep"
-    ), f"The {directory} directory should be empty before running the test."
+    ), f"The {directory} directory should be empty before running the test, but it has {files=}"
 
 
 class TestIntegration:
