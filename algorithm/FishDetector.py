@@ -40,32 +40,16 @@ class FishDetector:
     def detect_objects(self, raw_frame):
         start = cv.getTickCount()
         runtimes_ms = {}
-        frame_dict = {}
-        frame_dict["raw"] = raw_frame
-
-        # Image enhancement
-        if self.conf["downsample"]:
-            frame_dict["raw_downsampled"] = resize_img(
-                raw_frame, self.conf["downsample"]
-            )
-            frame_dict["gray"] = self.rgb_to_gray(frame_dict["raw_downsampled"])
-        else:
-            frame_dict["gray"] = self.rgb_to_gray(frame_dict["raw"])
-
-        enhanced_temp = self.mask_regions(frame_dict["gray"], area="sonar_controls")
-        enhanced_temp = cv.convertScaleAbs(
-            enhanced_temp, alpha=self.conf["contrast"], beta=self.conf["brightness"]
-        )
-        self.update_buffers_calculate_means(enhanced_temp)
-        frame_dict["gray_boosted"] = enhanced_temp
-
+        frame_dict = {"raw": raw_frame}
+        self.enhance_image(frame_dict)
+        self.frame_number += 1
         if self.long_mean_float is None:
             runtimes_ms["enhance"] = get_elapsed_ms(start)
             runtimes_ms["detection_tracking"] = (
                 get_elapsed_ms(start) - runtimes_ms["enhance"]
             )
             runtimes_ms["total"] = get_elapsed_ms(start)
-            self.frame_number += 1
+
             return {}, frame_dict, runtimes_ms
         else:
             enhanced_temp = (self.short_mean_float - self.long_mean_float).astype(
@@ -122,30 +106,50 @@ class FishDetector:
             #     frame_dict["dilated"] - frame_dict["raw_binary"]
             # )
 
-            # Extract keypoints
-            contours, _ = cv.findContours(
-                frame_dict["dilated"], cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE
-            )
-
-            self.frame_dict_history[self.frame_number] = frame_dict
-            detections: Dict[int, DetectedObject] = {}
-            for contour in contours:
-                new_object = DetectedObject(
-                    identifier=self.latest_obj_index,
-                    frame_number=self.frame_number,
-                    contour=contour,
-                    frame_dict_history=self.frame_dict_history,
-                )
-                detections[new_object.ID] = new_object
-                self.latest_obj_index += 1
+            detections = self.extract_keypoints(frame_dict)
 
             runtimes_ms["detection_tracking"] = (
                 get_elapsed_ms(start) - runtimes_ms["enhance"]
             )
 
         runtimes_ms["total"] = get_elapsed_ms(start)
-        self.frame_number += 1
         return detections, frame_dict, runtimes_ms
+
+    def enhance_image(self, frame_dict):
+        # Image enhancement
+        if self.conf["downsample"]:
+            frame_dict["raw_downsampled"] = resize_img(
+                frame_dict["raw"], self.conf["downsample"]
+            )
+            frame_dict["gray"] = self.rgb_to_gray(frame_dict["raw_downsampled"])
+        else:
+            frame_dict["gray"] = self.rgb_to_gray(frame_dict["raw"])
+        enhanced_temp = self.mask_regions(frame_dict["gray"], area="sonar_controls")
+        enhanced_temp = cv.convertScaleAbs(
+            enhanced_temp, alpha=self.conf["contrast"], beta=self.conf["brightness"]
+        )
+        self.update_buffers_calculate_means(enhanced_temp)
+        frame_dict["gray_boosted"] = enhanced_temp
+        return frame_dict
+
+    def extract_keypoints(self, frame_dict) -> Dict[int, DetectedObject]:
+        # Extract keypoints
+        contours, _ = cv.findContours(
+            frame_dict["dilated"], cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE
+        )
+
+        self.frame_dict_history[self.frame_number] = frame_dict
+        detections: Dict[int, DetectedObject] = {}
+        for contour in contours:
+            new_object = DetectedObject(
+                identifier=self.latest_obj_index,
+                frame_number=self.frame_number,
+                contour=contour,
+                frame_dict_history=self.frame_dict_history,
+            )
+            detections[new_object.ID] = new_object
+            self.latest_obj_index += 1
+        return detections
 
     def associate_detections(
         self, detections, object_history
@@ -176,7 +180,10 @@ class FishDetector:
                 self.object_filter = kalman.Tracker(metric, self.conf)
             kalman.filter_detections(detections, self.object_filter)
             return kalman.tracks_to_object_history(
-                self.object_filter.tracks, object_history, self.frame_number
+                self.object_filter.tracks,
+                object_history,
+                self.frame_number,
+                frame_dict=self.frame_dict_history,
             )
         else:
             raise ValueError(f"Invalid tracking method: {self.conf['tracking_method']}")
