@@ -1,6 +1,6 @@
 # Input / Output
 file_name: "start_2023-11-21T17-37-01.696+00-00.mp4"
-input_directory:  "data/intermediate/videos/"
+input_directory:  "data/raw/videos/"
 mask_directory: "analysis/demo/masks"
 output_directory: "data/model_output/"
 ground_truth_directory: "data/labels/"
@@ -15,7 +15,7 @@ record_processing_frame: "raw" # one of ['raw', 'raw_downsampled', 'gray', 'gray
 draw_detections_on_saved_video: False
 
 display_output_video: True
-display_mode_extensive: False
+display_mode_extensive: True
 display_trackbars: False
 
 # Size
@@ -47,8 +47,8 @@ kalman_max_iou_distance: 0.5 # basically (1 - iou_min)
 kalman_max_age: 30
 kalman_n_init: 35
 filter_nearest_neighbor:
-filter_blob_matching_metric: "euclidean_distance" # one of ['euclidean_distance', 'blob_area']
-filter_area_ratio_threshold: 0.97
+filter_blob_matching_metric: "histogram" # one of ['euclidean_distance', 'blob_area', 'histogram']
+filter_association_thresh: 0.05
 
 
 # Classification
