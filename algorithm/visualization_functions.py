@@ -158,7 +158,7 @@ def _draw_detector_output(
     paths=False,
     fullres=False,
     association_dist=False,
-    annotate=False,
+    annotate=True,
     color=(255, 200, 200),
 ):
     for ID, obj in object_history.items():
