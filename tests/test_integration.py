@@ -9,18 +9,47 @@ from algorithm.preprocess_raw_videos import main as preprocess_main
 from algorithm.run_algorithm import main as run_algorithm_main
 
 
+@pytest.fixture(scope="session")
+def labels_directory():
+    return "data/labels"
+
+
+@pytest.fixture(scope="session")
+def intermediate_videos_directory():
+    return "data/intermediate/videos"
+
+
+@pytest.fixture(scope="session")
+def intermediate_labels_directory():
+    return "data/intermediate/labels"
+
+
+@pytest.fixture(scope="session")
+def model_output_directory():
+    return "data/model_output"
+
+
 @pytest.fixture(scope="session", autouse=True)
-def setup():
-    # extract those file paths into fixtures
-    assert_directory_empty(directory="data/labels")
-    assert_directory_empty(directory="data/intermediate/videos")
-    assert_directory_empty(directory="data/intermediate/labels")
-    assert_directory_empty(directory="data/model_output")
+def setup(
+    labels_directory,
+    intermediate_videos_directory,
+    intermediate_labels_directory,
+    model_output_directory,
+):
+    assert_directory_empty(directory=labels_directory)
+    assert_directory_empty(directory=intermediate_videos_directory)
+    assert_directory_empty(directory=intermediate_labels_directory)
+    assert_directory_empty(directory=model_output_directory)
     yield
-    clear_directory(directory="data/labels")
-    clear_directory(directory="data/intermediate/videos")
-    clear_directory(directory="data/intermediate/labels")
-    clear_directory(directory="data/model_output")
+    clear_directory(directory=labels_directory)
+    clear_directory(directory=intermediate_videos_directory)
+    clear_directory(directory=intermediate_labels_directory)
+    clear_directory(directory=model_output_directory)
+
+
+@pytest.fixture
+def relevant_csv_columns():
+    return ["frame", "id", "x", "y", "w", "h"]
 
 
 def clear_directory(directory):
@@ -39,7 +68,14 @@ def assert_directory_empty(directory: str):
 
 class TestIntegration:
 
-    def test_integration(self):
+    def test_integration(
+        self,
+        model_output_directory,
+        intermediate_labels_directory,
+        intermediate_videos_directory,
+        labels_directory,
+        relevant_csv_columns,
+    ):
         with open("../settings/preprocessing_settings.yaml") as f:
             preprocess_settings = yaml.load(f, Loader=yaml.SafeLoader)
 
@@ -49,14 +85,14 @@ class TestIntegration:
             label_extraction_settings = yaml.load(f, Loader=yaml.SafeLoader)
         label_extraction_main(label_extraction_settings)
 
-        intermediate_labels = os.listdir("data/intermediate/labels")
-        intermediate_videos = os.listdir("data/intermediate/videos")
+        intermediate_labels = os.listdir(intermediate_labels_directory)
+        intermediate_videos = os.listdir(intermediate_videos_directory)
         assert len(intermediate_labels) == 2
         assert len(intermediate_videos) == 2
 
-        labels_csv = pd.read_csv("data/labels/trimmed_video_ground_truth.csv")
+        labels_csv = pd.read_csv(f"{labels_directory}/trimmed_video_ground_truth.csv")
         assert len(labels_csv) > 0
-        assert list(labels_csv.columns)[:6] == ["frame", "id", "x", "y", "w", "h"]
+        assert list(labels_csv.columns)[:6] == relevant_csv_columns
 
         with open("../analysis/demo/demo_settings.yaml") as f:
             detection_settings = yaml.load(f, Loader=yaml.SafeLoader)
@@ -66,8 +102,8 @@ class TestIntegration:
 
         run_algorithm_main(detection_settings)
 
-        detections_csv = pd.read_csv("data/model_output/trimmed_video.csv")
-        assert list(detections_csv.columns)[:6] == ["frame", "id", "x", "y", "w", "h"]
+        detections_csv = pd.read_csv(f"{model_output_directory}/trimmed_video.csv")
+        assert list(detections_csv.columns)[:6] == relevant_csv_columns
 
         # todo: add test for metrics
         # todo: actually have trackings in the video, to properly tes
