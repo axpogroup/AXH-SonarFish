@@ -211,6 +211,17 @@ def _draw_detector_output(
             )
 
         if annotate:
+            text = ""
+            if len(obj.means_of_pixels_intensity) > 0:
+                mean, stdd = obj.mean_pixel_intensity, obj.stddev_of_pixel_intensity
+                text = "mean: " + str(mean) + ", stdd: " + str(stdd)
+                if len(obj.velocities) > 0:
+                    text += (
+                        ", v [px/frame]: "
+                        + str(obj.velocities[-1][0] * scale)
+                        + ", "
+                        + str(obj.velocities[-1][1] * scale)
+                    )
             if annotate == "velocities":
                 pass
                 text = (
@@ -219,15 +230,13 @@ def _draw_detector_output(
                     + ", "
                     + "{:.2f}".format(obj.velocities[-1][1] * scale)
                 )
-            else:
-                text = str(annotate)
 
             cv.putText(
                 img,
                 text,
                 (x - int(w / 2), y - int(h / 2) - 2 * scale),
                 cv.FONT_HERSHEY_SIMPLEX,
-                0.7,
+                0.5,
                 color,
                 2,
             )

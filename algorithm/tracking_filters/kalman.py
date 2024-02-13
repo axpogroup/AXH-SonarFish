@@ -74,7 +74,7 @@ class KalmanFilter(object):
             - bbox_height_scaling_selection
         )
         covariance = np.diag(np.square(std_trace))
-        return mean, covariance
+        return _sanitizing_mean(mean), covariance
 
     def predict(self, mean: np.ndarray, covariance: np.ndarray):
         """Run Kalman filter prediction step.
@@ -108,7 +108,7 @@ class KalmanFilter(object):
             + motion_cov
         )
 
-        return mean, covariance
+        return _sanitizing_mean(mean), covariance
 
     def project(self, mean: np.ndarray, covariance: np.ndarray):
         """Project state distribution to measurement space.
@@ -144,7 +144,7 @@ class KalmanFilter(object):
         covariance = np.linalg.multi_dot(
             (self._update_mat, covariance, self._update_mat.T)
         )
-        return mean, covariance + innovation_cov
+        return _sanitizing_mean(mean), covariance + innovation_cov
 
     def update(self, mean, covariance, measurement):
         """Run Kalman filter correction step.
@@ -186,7 +186,7 @@ class KalmanFilter(object):
         new_covariance = covariance - np.linalg.multi_dot(
             (kalman_gain, projected_cov, kalman_gain.T)
         )
-        return new_mean, new_covariance
+        return _sanitizing_mean(new_mean), new_covariance
 
     def gating_distance(self, mean, covariance, measurements, only_position=False):
         """Compute gating distance between state distribution and measurements.
@@ -229,6 +229,30 @@ class KalmanFilter(object):
     @property
     def rot_mat(self):
         return rot_mat_from_river_velocity(self.conf)
+
+
+def _sanitizing_mean(mean: np.ndarray):
+    """Test if the mean of the object is physically plausible and correct it if necessary.
+    Parameters
+    ----------
+    mean : ndarray
+        The state's mean vector (8 dimensional).
+
+    Returns
+    -------
+    ndarray
+        Returns the corrected mean of the object.
+    """
+    # Check if the object is within the frame
+    if mean[0] < 0:
+        mean[0] = mean[0] * -1
+    if mean[1] < 0:
+        mean[1] = mean[1] * -1
+    if mean[2] < 0:
+        mean[2] = mean[2] * -1
+    if mean[3] < 0:
+        mean[3] = mean[3] * -1
+    return mean
 
 
 class Tracker:
