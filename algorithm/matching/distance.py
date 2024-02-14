@@ -32,7 +32,7 @@ def feature_extractor(func, feature_to_extract: str):
 
 class DistanceMetric(object):
     metric_options = {
-        "euclidean": feature_extractor(_nn_euclidean_distance, "center_pos"),
+        "euclidean_distance": feature_extractor(_nn_euclidean_distance, "center_pos"),
         "cosine": feature_extractor(_nn_cosine_distance, "center_pos"),
         "blob_area": feature_extractor(_area_cost, "contour"),
         "histogram": feature_extractor(_histogram_cost, "histogram"),
