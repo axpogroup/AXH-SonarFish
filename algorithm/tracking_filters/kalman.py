@@ -5,6 +5,7 @@ from deepsort.tracker import Track
 
 from algorithm.DetectedObject import DetectedObject
 from algorithm.flow_conditions import rot_mat_from_river_velocity
+from algorithm.matching.distance import DistanceMetric
 from algorithm.matching.linear_assignment import (
     gate_cost_matrix,
     matching_cascade,
@@ -235,7 +236,7 @@ class Tracker:
     This is the multi-target tracker.
     Parameters
     ----------
-    metric : nn_matching.NearestNeighborDistanceMetric
+    metric_dict : dict[str, DistanceMetric]
         A distance metric for measurement-to-track association.
     max_age : int
         Maximum number of missed misses before a track is deleted.
@@ -247,7 +248,7 @@ class Tracker:
         Initialization of velocity of objects in x and y direction.
     Attributes
     ----------
-    metric : nn_matching.NearestNeighborDistanceMetric
+    metric_dict : dict[str, DistanceMetric]
         The distance metric used for measurement to track association.
     max_age : int
         Maximum number of missed misses before a track is deleted.
@@ -261,10 +262,10 @@ class Tracker:
 
     def __init__(
         self,
-        metric,
+        metric_dict: dict[str, DistanceMetric],
         conf: dict,
     ) -> None:
-        self.metric = metric
+        self.metric_dict = metric_dict
         self.conf = conf
         self.max_iou_distance = self.conf["kalman_max_iou_distance"]
         self.max_age = self.conf["kalman_max_age"]
@@ -309,15 +310,30 @@ class Tracker:
             features += track.features
             targets += [track.track_id for _ in track.features]
             track.features = []
-        self.metric.partial_fit(features, targets, active_targets)
+        self.metric_dict["metric"].partial_fit(features, targets, active_targets)
 
     def _match(self, detections: dict[int, DetectedObject]):
 
         def gated_metric(tracks, dets, track_indices, detection_indices):
             features = [dets[i].feature for i in detection_indices]
             targets = np.array([tracks[i].track_id for i in track_indices])
-            cost_matrix = self.metric.distance(features, targets)
-            cost_matrix = gate_cost_matrix(self.kf, cost_matrix, tracks, dets, track_indices, detection_indices)
+            cost_matrix = self.metric_dict["metric"].distance(features, targets)
+            cost_matrix = gate_cost_matrix(
+                self.kf,
+                cost_matrix,
+                tracks,
+                dets,
+                track_indices,
+                detection_indices,
+                only_position=True,
+            )
+            if "filter_blob_elimination_metric" in self.conf:
+                if self.conf["filter_blob_elimination_metric"] == "euclidean_distance":
+                    self.metric_dict["elimination_metric"].samples = self.metric_dict["metric"].samples
+                    eucl_dist_cost_matrix = self.metric_dict["elimination_metric"].distance(features, targets)
+                    cost_matrix[eucl_dist_cost_matrix >= self.metric_dict["elimination_metric"].matching_threshold] = (
+                        1e5
+                    )
 
             return cost_matrix
 
@@ -328,7 +344,7 @@ class Tracker:
         # Associate confirmed tracks using appearance features.
         matches_a, unmatched_tracks_a, unmatched_detections = matching_cascade(
             gated_metric,
-            self.metric.matching_threshold,
+            self.metric_dict["metric"].matching_threshold,
             self.max_age,
             self.tracks,
             detections,

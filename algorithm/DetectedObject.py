@@ -63,13 +63,9 @@ class DetectedObject(Detection):
 
     @property
     def histogram(self):
-        hist_raw = cv.calcHist(
-            self._get_feature_patch("difference_thresholded"),
-            [0],
-            None,
-            [256],
-            [0, 256],
-        )
+        img = self._get_feature_patch("difference_thresholded")
+        hist_raw = np.histogram(img, bins=range(257))[0].reshape(-1, 1).astype(np.float32)
+
         return cv.normalize(hist_raw, hist_raw, alpha=0, beta=1, norm_type=cv.NORM_MINMAX)
 
     @property
@@ -119,7 +115,7 @@ class DetectedObject(Detection):
     def calculate_average_pixel_intensity(self, reference_frames: np.ndarray, x, y, w, h):
         x, y, w, h = self.tlwh.astype(int)
         detection_box = reference_frames[y : y + h, x : x + w]  # noqa 4
-        if len(detection_box) == 0:
+        if 0 in detection_box.shape:
             print("detection_box is empty")
             return
         mean, stddev = cv.meanStdDev(detection_box)

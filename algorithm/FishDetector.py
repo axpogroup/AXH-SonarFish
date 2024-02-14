@@ -145,15 +145,21 @@ class FishDetector:
             )
         elif self.conf["tracking_method"] == "kalman":
             if not self.object_filter:
+                metric_dict = {}
                 if self.conf["filter_blob_matching_metric"] == "euclidean_distance":
-                    metric = DistanceMetric("euclidean", max_association_distance_px)
+                    metric_dict["metric"] = DistanceMetric("euclidean", max_association_distance_px)
                 else:
-                    metric = DistanceMetric(
+                    metric_dict["metric"] = DistanceMetric(
                         self.conf["filter_blob_matching_metric"],
                         self.conf["filter_association_thresh"],
                         budget=self.conf["kalman_trace_history_matching_budget"],
                     )
-                self.object_filter = kalman.Tracker(metric, self.conf)
+                    if "filter_blob_elimination_metric" in self.conf:
+                        metric_dict["elimination_metric"] = DistanceMetric(
+                            self.conf["filter_blob_elimination_metric"],
+                            max_association_distance_px,
+                        )
+                self.object_filter = kalman.Tracker(metric_dict, self.conf)
             kalman.filter_detections(detections, self.object_filter)
             return kalman.tracks_to_object_history(
                 self.object_filter.tracks,
