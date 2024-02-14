@@ -54,6 +54,11 @@ This is a high-level overview of the steps needed to run the continous operation
 5. Monitor the recording and the outputs using the commands in continous_operation/src/controller.py. They should be 
    accessible via an alias, e.g., "control check_status". 
 
+# Running Tests
+- For now, tests have to be executed from the tests folder.
+  - This is due to the fact that the algorithm relies on relative paths, and this behaviour should be tested in the tests
+- use this to run it: ```export PYTHONPATH=${PYTHONPATH}:$(pwd); cd tests; pytest```
+
 # Running Locally
 - Install Requirements from requirements.txt
 - Add .env file with the following contents in the top level folder:

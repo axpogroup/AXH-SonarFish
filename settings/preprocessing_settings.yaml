@@ -5,4 +5,4 @@ input_directory: "data/raw/"
 output_directory: "data/intermediate/"
 
 # Downsampling
-fps: 20
+target_fps: 10
