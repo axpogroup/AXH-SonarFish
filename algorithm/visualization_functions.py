@@ -1,5 +1,5 @@
 import copy
-from typing import Dict
+from typing import Optional
 
 import cv2 as cv
 import numpy as np
@@ -17,13 +17,14 @@ SECOND_ROW = ["difference_thresholded", "median_filter", "binary", "dilated"]
 
 
 def get_visual_output(
-    object_history: Dict[int, DetectedObject],
-    truth_history: Dict[int, DetectedObject],
+    object_history: dict[int, DetectedObject],
+    label_history: Optional[dict[int, DetectedObject]],
     detector: FishDetector,
-    processed_frame: Dict[str, np.ndarray],
+    processed_frame: dict[str, np.ndarray],
     extensive=False,
     color=(255, 200, 200),
     truth_color=(57, 255, 20),
+    save_frame: str = "raw",
 ):
     if extensive:
         first_row_images = np.ndarray(shape=(270, 0, 3), dtype="uint8")
@@ -46,26 +47,22 @@ def get_visual_output(
                 axis=1,
             )
 
-        third_row_binary = _draw_detections_and_truth(
+        third_row_binary = _draw_detections_and_labels(
             object_history=object_history,
-            truth_history=truth_history,
+            label_history=label_history,
             detector=detector,
-            processed_frame=_retrieve_frame(
-                "binary", processed_frame, puttext="detections"
-            ),
+            processed_frame=_retrieve_frame("binary", processed_frame, puttext="detections"),
             paths=True,
             association_dist=True,
             color=color,
             truth_color=truth_color,
         )
 
-        third_row_raw = _draw_detections_and_truth(
+        third_row_raw = _draw_detections_and_labels(
             object_history=object_history,
-            truth_history=truth_history,
+            label_history=label_history,
             detector=detector,
-            processed_frame=_retrieve_frame(
-                "raw_downsampled", processed_frame, puttext="Final"
-            ),
+            processed_frame=_retrieve_frame("raw_downsampled", processed_frame, puttext="Final"),
             truth_color=truth_color,
             color=color,
         )
@@ -73,9 +70,7 @@ def get_visual_output(
         third_row_images = np.concatenate(
             (
                 third_row_raw,
-                _retrieve_frame(
-                    "internal_external", processed_frame, puttext="internal_external"
-                ),
+                _retrieve_frame("internal_external", processed_frame, puttext="internal_external"),
                 third_row_binary,
                 _retrieve_frame("closed", processed_frame, puttext="closed"),
             ),
@@ -84,38 +79,38 @@ def get_visual_output(
         disp = np.concatenate((first_row_images, second_row_images, third_row_images))
 
     else:
-        disp = _draw_detections_and_truth(
-            detector=detector,
-            object_history=object_history,
-            truth_history=truth_history,
-            processed_frame=_retrieve_frame("raw", processed_frame),
-            color=color,
-            truth_color=truth_color,
-            paths=True,
-            fullres=True,
-            association_dist=True,
-            annotate="velocities",
-        )
+        img = _retrieve_frame(save_frame, processed_frame)
+        if _draw_detections_and_labels:
+            disp = _draw_detections_and_labels(
+                detector=detector,
+                object_history=object_history,
+                label_history=label_history,
+                processed_frame=_retrieve_frame("raw", processed_frame),
+                color=color,
+                truth_color=truth_color,
+                paths=True,
+                fullres=True,
+                association_dist=True,
+                annotate="velocities",
+            )
+        else:
+            disp = img
 
     return disp
 
 
-def _draw_detections_and_truth(
-    detector,
-    object_history,
-    truth_history,
-    processed_frame,
-    color,
-    truth_color,
-    **kwargs
+def _draw_detections_and_labels(
+    detector: FishDetector,
+    object_history: dict[int, DetectedObject],
+    label_history: Optional[dict[int, DetectedObject]],
+    processed_frame: dict[str, np.ndarray],
+    color: tuple,
+    truth_color: tuple,
+    **kwargs,
 ):
-    disp = _draw_detector_output(
-        object_history, detector, processed_frame, color=color, **kwargs
-    )
-    if truth_history is not None:
-        disp = _draw_detector_output(
-            truth_history, detector, disp, color=truth_color, **kwargs
-        )
+    disp = _draw_detector_output(object_history, detector, processed_frame, color=color, **kwargs)
+    if label_history is not None:
+        disp = _draw_detector_output(label_history, detector, disp, color=truth_color, **kwargs)
     return disp
 
 
@@ -153,14 +148,11 @@ def _draw_detector_output(
     paths=False,
     fullres=False,
     association_dist=False,
-    annotate=False,
+    annotate=True,
     color=(255, 200, 200),
 ):
     for ID, obj in object_history.items():
-        if (
-            detector.frame_number - obj.frames_observed[-1]
-            > detector.conf["no_more_show_after_x_frames"]
-        ):
+        if detector.frame_number - obj.frames_observed[-1] > detector.conf["no_more_show_after_x_frames"]:
             continue
 
         if fullres:
@@ -198,31 +190,29 @@ def _draw_detector_output(
             cv.circle(
                 img,
                 (obj.midpoints[-1][0] * scale, obj.midpoints[-1][1] * scale),
-                int(
-                    detector.mm_to_px(detector.conf["max_association_dist_mm"]) * scale
-                ),
+                int(detector.mm_to_px(detector.conf["max_association_dist_mm"]) * scale),
                 (0, 0, 255),
                 1 * scale,
             )
 
         if annotate:
-            if annotate == "velocities":
-                pass
-                text = (
-                    "v [px/frame]: "
-                    + "{:.2f}".format(obj.velocities[-1][0] * scale)
-                    + ", "
-                    + "{:.2f}".format(obj.velocities[-1][1] * scale)
-                )
-            else:
-                text = str(annotate)
-
+            text = ""
+            if len(obj.means_of_pixels_intensity) > 0:
+                mean, stddev = obj.mean_pixel_intensity, obj.stddev_of_pixel_intensity
+                text = f"mean: {mean}, stddev: {stddev}"
+                if len(obj.velocities) > 0:
+                    text += (
+                        ", v [px/frame]: "
+                        + str(obj.velocities[-1][0] * scale)
+                        + ", "
+                        + str(obj.velocities[-1][1] * scale)
+                    )
             cv.putText(
                 img,
                 text,
                 (x - int(w / 2), y - int(h / 2) - 2 * scale),
                 cv.FONT_HERSHEY_SIMPLEX,
-                0.7,
+                0.5,
                 color,
                 2,
             )

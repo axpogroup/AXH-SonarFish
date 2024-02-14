@@ -7,13 +7,22 @@ pymsteams==0.2.2
 # Algorithms
 opencv-python==4.6.0.66
 # opencv-contrib-python==4.6.0.66 # only for tracking prototyping
-opencv-contrib-python-rolling==5.0.0.20221015
+# opencv-contrib-python-rolling==5.0.0.20221015
 matplotlib==3.6.2
 pyyaml==6.0
 pandas==1.5.3
+deepsort==0.0.5
+numpy==1.25.2
 
 # MOT16 metrics
 motmetrics==1.4.0
+
+
+# Azure
+azureml-core==1.55.0
+azureml-mlflow==1.55.0
+mlflow==2.10.1
+
 
 
 #Dev Dependencies
@@ -21,9 +30,11 @@ black==24.1.1
 flake8==7.0.0
 isort==5.13.2
 mypy==1.8.0
+pytest==8.0.0
+
 
 #Dev typing
 types-PyYAML==6.0.12.12
-pandas-stubs==2.1.4.231227
+pandas-stubs==1.5.3.230321
 
 

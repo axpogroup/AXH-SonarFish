@@ -7,14 +7,10 @@ import yaml
 from numpy import ndarray
 
 
-def prepare_data_for_mot_metrics(
-    ground_truth_source: Path, test_source: Path
-) -> tuple[ndarray, ndarray]:
+def prepare_data_for_mot_metrics(ground_truth_source: Path, test_source: Path) -> tuple[ndarray, ndarray]:
     df_tsource = pd.read_csv(test_source, delimiter=",")
     df_gt = pd.read_csv(ground_truth_source, delimiter=",")
-    df_tsource.drop(
-        df_tsource[df_tsource["classification"] != "fish"].index, inplace=True
-    )
+    df_tsource.drop(df_tsource[df_tsource["classification"] != "fish"].index, inplace=True)
     df_tsource.drop(columns=["classification", "v_yr"], inplace=True)
     df_tsource["v_x"] = -1
     df_tsource["v_y"] = -1
@@ -23,7 +19,7 @@ def prepare_data_for_mot_metrics(
     return df_gt.to_numpy(), df_tsource.to_numpy()
 
 
-def mot_metrics_enhanced_calculator(ground_truth, test):
+def mot_metrics_enhanced_calculator(ground_truth: ndarray, test: ndarray) -> dict:
 
     # Create an accumulator that will be updated during each frame
     acc = mm.MOTAccumulator(auto_id=True)
@@ -35,9 +31,7 @@ def mot_metrics_enhanced_calculator(ground_truth, test):
         # select id, x, y, width, height for current frame
         # required format for distance calculation is X, Y, Width, Height \
         # We already have this format
-        ground_truth_detections = ground_truth[
-            ground_truth[:, 0] == frame, 1:6
-        ]  # select all detections in gt
+        ground_truth_detections = ground_truth[ground_truth[:, 0] == frame, 1:6]  # select all detections in gt
         test_detections = test[test[:, 0] == frame, 1:6]  # select all detections in t
 
         C = mm.distances.iou_matrix(
@@ -99,15 +93,12 @@ def mot_metrics_enhanced_calculator(ground_truth, test):
         },
     )
     print(strsummary)
+    return summary.to_dict("records")[0]
 
 
 if __name__ == "__main__":
-    argParser = argparse.ArgumentParser(
-        description="Run the fish detection algorithm with a settings .yaml file."
-    )
-    argParser.add_argument(
-        "-yf", "--yaml_file", help="path to the YAML settings file", required=True
-    )
+    argParser = argparse.ArgumentParser(description="Run the fish detection algorithm with a settings .yaml file.")
+    argParser.add_argument("-yf", "--yaml_file", help="path to the YAML settings file", required=True)
     argParser.add_argument("-if", "--input_file", help="path to the input video file")
 
     args = argParser.parse_args()
@@ -117,18 +108,9 @@ if __name__ == "__main__":
         if args.input_file is not None:
             print("replacing input file.")
             settings_dict["file_name"] = args.input_file
-
     file_name_prefix = Path(settings_dict["file_name"]).stem
-    ground_truth_source = Path(settings_dict["ground_truth_directory"]) / Path(
-        file_name_prefix + "_labels_ground_truth.csv"
-    )
-    test_source = (
-        Path(settings_dict["test_directory"])
-        / file_name_prefix
-        / Path(file_name_prefix + ".csv")
-    )
+    ground_truth_source = Path(settings_dict["ground_truth_directory"]) / Path(file_name_prefix + "_ground_truth.csv")
+    test_source = Path(settings_dict["test_directory"]) / file_name_prefix / Path(file_name_prefix + ".csv")
 
-    ground_truth_source, test_source = prepare_data_for_mot_metrics(
-        ground_truth_source, test_source
-    )
+    ground_truth_source, test_source = prepare_data_for_mot_metrics(ground_truth_source, test_source)
     mot_metrics_enhanced_calculator(ground_truth_source, test_source)

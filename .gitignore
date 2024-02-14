@@ -107,6 +107,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+.vscode/
 
 # Spyder project settings
 .spyderproject
@@ -132,3 +133,12 @@ obj
 appsettings.json
 local.settings.json
 .python_packages
+
+*.pyc
+output/
+labeling/
+*.mp4
+demo_*
+.venv
+.vscode
+.env
