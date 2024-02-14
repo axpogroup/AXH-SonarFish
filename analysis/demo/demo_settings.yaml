@@ -16,7 +16,7 @@ record_processing_frame: "raw" # one of ['raw', 'raw_downsampled', 'gray', 'gray
 draw_detections_on_saved_video: False
 
 display_output_video: True
-display_mode_extensive: False
+display_mode_extensive: True
 display_trackbars: False
 
 # Size

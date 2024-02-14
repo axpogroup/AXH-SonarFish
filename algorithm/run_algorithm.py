@@ -29,7 +29,10 @@ def read_labels_into_dataframe(
 
 
 def extract_labels_history(
-    label_history: dict, labels: Optional[pd.DataFrame], current_frame: int
+    label_history: dict,
+    labels: Optional[pd.DataFrame],
+    current_frame: int,
+    processed_frame_dict: dict,
 ) -> Optional[dict[int, DetectedObject]]:
     if labels is None:
         return None
@@ -39,6 +42,7 @@ def extract_labels_history(
             identifier=row["id"],
             frame_number=row["frame"],
             contour=np.array(row[["x", "y", "w", "h"]]),
+            frame_dict_history={row["frame"]: processed_frame_dict},
         )
         if row["id"] not in label_history:
             label_history[row["id"]] = truth_detected
@@ -90,7 +94,10 @@ if __name__ == "__main__":
             )
             object_history = detector.associate_detections(detections, object_history)
             label_history = extract_labels_history(
-                label_history, labels_df, input_output_handler.frame_no
+                label_history,
+                labels_df,
+                input_output_handler.frame_no,
+                processed_frame_dict,
             )
             input_output_handler.handle_output(
                 processed_frame=processed_frame_dict,
