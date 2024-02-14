@@ -59,9 +59,7 @@ class BoxDetector:
         self.detection_tracking_time_ms = None
         self.max_association_dist = settings_dict["max_association_dist"]
         self.phase_out_after_x_frames = settings_dict["phase_out_after_x_frames"]
-        self.min_occurences_in_last_x_frames = settings_dict[
-            "min_occurences_in_last_x_frames"
-        ]
+        self.min_occurences_in_last_x_frames = settings_dict["min_occurences_in_last_x_frames"]
 
         # Classification
         self.river_pixel_velocity = settings_dict["river_pixel_velocity"]
@@ -71,11 +69,7 @@ class BoxDetector:
         green = copy.deepcopy(current_raw[:, :, 1])
         np.place(  # blue higher 150, more red than green
             green,
-            (
-                (current_raw[:, :, 1] < 200)
-                | (current_raw[:, :, 0] > 150)
-                | (current_raw[:, :, 2] > 150)
-            ),
+            ((current_raw[:, :, 1] < 200) | (current_raw[:, :, 0] > 150) | (current_raw[:, :, 2] > 150)),
             0,
         )
 
@@ -115,23 +109,18 @@ class BoxDetector:
             self.current_blue,
         ) = self.extract_green_red_blue_no_background(self.current_raw)
 
-        self.enhance_time_ms = int(
-            (cv.getTickCount() - start) / cv.getTickFrequency() * 1000
-        )
+        self.enhance_time_ms = int((cv.getTickCount() - start) / cv.getTickFrequency() * 1000)
 
         self.detect_and_track(self.current_blue, color="blue")
         self.detect_and_track(self.current_green, color="green")
         self.detect_and_track(self.current_red, color="red")
 
         self.detection_tracking_time_ms = (
-            int((cv.getTickCount() - start) / cv.getTickFrequency() * 1000)
-            - self.enhance_time_ms
+            int((cv.getTickCount() - start) / cv.getTickFrequency() * 1000) - self.enhance_time_ms
         )
 
         self.frame_number += 1
-        self.total_runtime_ms = int(
-            (cv.getTickCount() - start) / cv.getTickFrequency() * 1000
-        )
+        self.total_runtime_ms = int((cv.getTickCount() - start) / cv.getTickFrequency() * 1000)
 
         return
 
@@ -153,9 +142,7 @@ class BoxDetector:
             enhanced_temp[abs(enhanced_temp) < 20] = 0
         else:
             enhanced_temp = self.calc_difference_from_buffer()
-            enhanced_temp = self.threshold_diff(
-                enhanced_temp, threshold=self.std_dev_threshold
-            )
+            enhanced_temp = self.threshold_diff(enhanced_temp, threshold=self.std_dev_threshold)
 
         self.current_long_mean_uint8 = self.long_mean.astype("uint8")
 
@@ -266,18 +253,13 @@ class BoxDetector:
                 continue
 
             # Delete if it hasn't been observed in the last x frames
-            if (
-                self.frame_number - obj.frames_observed[-1]
-                >= self.phase_out_after_x_frames
-            ):
+            if self.frame_number - obj.frames_observed[-1] >= self.phase_out_after_x_frames:
                 to_delete.append(ID)
                 continue
 
             # Show if x occurences in the last y frames
             if (
-                obj.occurences_in_last_x(
-                    self.frame_number, self.min_occurences_in_last_x_frames[1]
-                )
+                obj.occurences_in_last_x(self.frame_number, self.min_occurences_in_last_x_frames[1])
                 >= self.min_occurences_in_last_x_frames[0]
             ):
                 obj.show[-1] = True
@@ -307,9 +289,7 @@ class BoxDetector:
             if existing_object.classifications[-1] == color
         ]
         object_ids = [
-            ID
-            for ID, existing_object in self.current_objects.items()
-            if existing_object.classifications[-1] == color
+            ID for ID, existing_object in self.current_objects.items() if existing_object.classifications[-1] == color
         ]
 
         new_objects = []
@@ -321,9 +301,7 @@ class BoxDetector:
 
         else:
             for detection_id, detection in detections.items():
-                min_id, min_dist = self.closest_point(
-                    detection.midpoints[-1], object_midpoints
-                )
+                min_id, min_dist = self.closest_point(detection.midpoints[-1], object_midpoints)
                 max_association_dist = self.max_association_dist
                 if min_dist < max_association_dist:
                     self.associations.append(
@@ -361,9 +339,7 @@ class BoxDetector:
 
             self.current_threshold = thres
 
-            contours, hier = cv.findContours(
-                thres, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE
-            )
+            contours, hier = cv.findContours(thres, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE)
             detections = {}
             for contour in contours:
                 new_object = BoxObject(self.get_new_id(), contour, self.frame_number)
@@ -388,9 +364,7 @@ class BoxDetector:
         if self.framebuffer is None:
             self.framebuffer = img[:, :, np.newaxis]
         else:
-            self.framebuffer = np.concatenate(
-                (img[..., np.newaxis], self.framebuffer), axis=2
-            )
+            self.framebuffer = np.concatenate((img[..., np.newaxis], self.framebuffer), axis=2)
 
         if self.framebuffer.shape[2] > self.current_mean_frames:
             self.framebuffer = self.framebuffer[:, :, : self.current_mean_frames]
@@ -399,9 +373,7 @@ class BoxDetector:
         if self.framebuffer is None:
             self.framebuffer = img[:, :, np.newaxis]
         else:
-            self.framebuffer = np.concatenate(
-                (img[..., np.newaxis], self.framebuffer), axis=2
-            )
+            self.framebuffer = np.concatenate((img[..., np.newaxis], self.framebuffer), axis=2)
 
         if self.framebuffer.shape[2] > self.long_mean_frames:
             self.framebuffer = self.framebuffer[:, :, : self.long_mean_frames]
@@ -414,15 +386,9 @@ class BoxDetector:
             self.mean_buffer_counter = 1
             self.long_mean = np.mean(self.mean_buffer, axis=2).astype("int16")
         elif self.mean_buffer_counter % self.current_mean_frames == 0:
-            self.mean_buffer = np.concatenate(
-                (self.current_mean[..., np.newaxis], self.mean_buffer), axis=2
-            )
-            if self.mean_buffer.shape[2] > int(
-                self.long_mean_frames / self.current_mean_frames
-            ):
-                self.mean_buffer = self.mean_buffer[
-                    :, :, : int(self.long_mean_frames / self.current_mean_frames)
-                ]
+            self.mean_buffer = np.concatenate((self.current_mean[..., np.newaxis], self.mean_buffer), axis=2)
+            if self.mean_buffer.shape[2] > int(self.long_mean_frames / self.current_mean_frames):
+                self.mean_buffer = self.mean_buffer[:, :, : int(self.long_mean_frames / self.current_mean_frames)]
 
             # if self.mean_buffer_counter % self.long_mean_frames == 0:
             self.long_mean = np.mean(self.mean_buffer, axis=2).astype("int16")
@@ -436,9 +402,7 @@ class BoxDetector:
 
     def calc_difference_from_buffer(self):
         self.long_mean = np.mean(self.framebuffer, axis=2).astype("int16")
-        self.current_mean = np.mean(
-            self.framebuffer[:, :, : self.current_mean_frames], axis=2
-        ).astype("uint8")
+        self.current_mean = np.mean(self.framebuffer[:, :, : self.current_mean_frames], axis=2).astype("uint8")
         return self.current_mean.astype("int16") - self.long_mean
 
     def threshold_diff(
@@ -514,10 +478,7 @@ class BoxDetector:
     def is_duplicate(self, img, threshold=25):
         if self.framebuffer is None:
             return False
-        elif (
-            np.mean(abs(img - self.framebuffer[:, :, self.framebuffer.shape[2]]))
-            < threshold
-        ):
+        elif np.mean(abs(img - self.framebuffer[:, :, self.framebuffer.shape[2]])) < threshold:
             print("Duplicate frame.")
             return True
 

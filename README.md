@@ -20,19 +20,26 @@ The codebase is structured into the following sections:
 The data structure is as follows:
 
     - data
-        - annotated
-            - labeled_videos
-            - labels
+        - labels
         - model_output
+        - intermediate
+          - videos
+          - labels
         - raw
+          - videos
+          - labels 
 
-- *annotated* : contains the labeled videos and the labels. The labeled videos are the raw videos with the fish 
-    detections drawn on top. The labels are the .csv files containing the fish detections.
-  - *labeled_videos* : contains the labeled videos.
-  - *labels*: this is where the output of *extract_labels_from_videos.py* is stored.
+
+
+- *labeled_videos* : contains the labeled videos.
+- *labels*: this is where the output of *extract_labels_from_videos.py* is stored.
 - *model_output* : contains the output of the fish detection algorithm. This includes a folder for each video file 
     containing the .csv file with the fish detections and the visual output.
 - *raw*: contains the raw video files.
+  - videos: contains the raw video files.
+  - labels: contains the labels video files
+- *intermediate*: cotaions the output of the *reduce_frame_rate.py* script. This includes a folder for each video file 
+    containing the reduced frame rate video file.
 
 # Continuous operation
 This is a high-level overview of the steps needed to run the continous operation.
@@ -47,26 +54,37 @@ This is a high-level overview of the steps needed to run the continous operation
 5. Monitor the recording and the outputs using the commands in continous_operation/src/controller.py. They should be 
    accessible via an alias, e.g., "control check_status". 
 
+# Running Tests
+- For now, tests have to be executed from the tests folder.
+  - This is due to the fact that the algorithm relies on relative paths, and this behaviour should be tested in the tests
+- use this to run it: ```export PYTHONPATH=${PYTHONPATH}:$(pwd); cd tests; pytest```
+
+# Running Locally
+- Install Requirements from requirements.txt
+- Add .env file with the following contents in the top level folder:
+    ```
+        RESOURCE_GROUP=axsa-lab-appl-fishsonar-rg
+        WORKSPACE_NAME=axsa-lab-appl-fishsonar-ml
+        SUBSCRIPTION_ID=your-azure-subscription-id
+  ```
+
 # Running the algorithm on an individual file
 This is a short guide to run the fish detection algorithm on a sample video.
-1.	Install the requirements specified in requirements_mac.txt
-2.	Download the sample sonar video from here: [demo_sample_sonar_recording.mp4 - Sharepoint](https://axpogrp.sharepoint.com/:v:/s/DEPTHTD-A/ESdKpDEWDEBDqYR6KVFZ0D8BJrxKcDi6F8JaenjD0YhWWw?e=5jNCLF) 
-3.	Place the video in the following folder: _"analysis/demo/"_
-4. Specify the desired settings for the algorithm and the output in _"analysis/demo/demo_settings.yaml"_
-5. Run the algorithm using _"algorithm/run_algorithm.py"_. E.g.: _"python3 algorithm/run_algorithm.py -yf 
+1. Download the sample sonar video from here: [demo_sample_sonar_recording.mp4 - Sharepoint](https://axpogrp.sharepoint.com/:v:/s/DEPTHTD-A/ESdKpDEWDEBDqYR6KVFZ0D8BJrxKcDi6F8JaenjD0YhWWw?e=5jNCLF) 
+2. Place the video in the following folder: _"data/raw/videos/"_
+3. Specify the desired settings for the algorithm and the output in _"analysis/demo/demo_settings.yaml"_
+4. Run the algorithm using _"algorithm/run_algorithm.py"_. E.g.: _"python3 algorithm/run_algorithm.py -yf 
    analysis/demo/demo_settings.yaml"_
-6. Use the settings "display_output_video: True" and "display_mode_extensive: True" to tune the settings in an 
+4. Use the settings "display_output_video: True" and "display_mode_extensive: True" to tune the settings in an 
    interactive window and "display_mode_extensive: False" to read the velocity of the river.
 
 # Running the algorithm on a batch of files and evaluating the output
 
-1. Store your prelabeled videos in the folder _"data/annotated/labeled_videos"_
-2. If you want to reduce the frame rate of the videos, run the script _"analysis/reduce_frame_rate.py"_. This script needs _"settings/preprocessing_settings.yaml"_ file where you have to choose: 
-    1. input_directory:("data/raw") for the raw videos or input directory:("annotated/labeled_videos") for the labeled videos
-    2. output_directory:("data/intermediate") for the raw videos or output directory:("annotated/labeled_videos") for the labeled videos
-    3. fps: the desired frame rate
+1. Store your prelabeled videos in the folder _"data/raw/labels"_
+2. If you want to reduce the frame rate of the videos, run the script _"analysis/reduce_frame_rate.py"_. This script needs _"settings/preprocessing_settings.yaml"_ file where you have to choose:
+   1. fps: the desired frame rate
 3. To extract the labels in csv run _"algorithm/extract_labels_from_videos.py"_ with settings file tracking_box_settings.yaml.
-   in the folder _"data/annotated/labels"_
+   in the folder _"data/intermediate//labels"_
 4. Run the algorithm for one video using _"algorithm/run_algorithm.py"_. E.g.: _"python3 algorithm/run_algorithm.py -yf 
    analysis/demo/demo_settings.yaml"_. Specify the name of the video file in the settings file. 
 5. Evaluate the output using the script _"algorithm/validation/mot16_metrics.py"_.

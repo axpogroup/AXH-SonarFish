@@ -1,11 +1,10 @@
 # Code written by Leiv Andresen, HTD-A, leiv.andresen@axpo.com
 
 # Input
-input_directory: "data/annotated/labeled_videos/"
+input_directory: "data/intermediate/labels/"
 
 # Output
-output_video_dir: "output/videos/"
-csv_output_directory: "data/annotated/labels/"
+csv_output_directory: "data/labels/"
 csv_output_suffix: "_ground_truth.csv"
 
 # Enhancement
