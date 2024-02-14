@@ -213,9 +213,9 @@ def _draw_detector_output(
         if annotate:
             text = ""
             if len(obj.means_of_pixels_intensity) > 0:
-                mean, stddev = obj.mean_pixel_intensity, obj.stddev_of_pixel_intensity
-                text = f"mean: {mean}, stddev: {stddev}"
-                if len(obj.velocities) > 0:
+                stddev = obj.stddev_of_pixel_intensity
+                text = f"ID: {obj.ID}, stddev: {stddev}"
+                if len(obj.velocities) > 100:
                     text += (
                         ", v [px/frame]: "
                         + str(obj.velocities[-1][0] * scale)

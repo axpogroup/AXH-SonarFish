@@ -82,6 +82,13 @@ class InputOutputHandler:
         rows = []
         for _, obj in object_history.items():
             for i in range(len(obj.frames_observed)):
+                if len(obj.velocities) >= i:
+                    if len(obj.velocities[i]) > 0:
+                        vel_a = obj.velocities[i][0]
+                        vel_b = obj.velocities[i][1]
+                else:
+                    vel_a = 0
+                    vel_b = 0
                 rows.append(
                     [
                         obj.frames_observed[i],
@@ -90,8 +97,8 @@ class InputOutputHandler:
                         obj.top_lefts_y[i],
                         obj.bounding_boxes[i][0],
                         obj.bounding_boxes[i][1],
-                        obj.velocities[i][0],
-                        obj.velocities[i][1],
+                        vel_a,
+                        vel_b,
                         obj.areas[i],
                     ]
                 )

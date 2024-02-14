@@ -30,9 +30,12 @@ class DetectedObject(Detection):
         self.tlwh = np.array([x, y, w, h], dtype=float)
         self.confidence = confidence
         self.calculate_speed()
-        if frame_dict_history:
+        if (
+            frame_dict_history
+            and "difference" in frame_dict_history.get(frame_number).keys()
+        ):
             self.calculate_average_pixel_intensity(
-                frame_dict_history.get(frame_number)["median_filter"], x, y, w, h
+                frame_dict_history.get(frame_number)["difference"],
             )
         self.update_object(self)
 
@@ -131,9 +134,7 @@ class DetectedObject(Detection):
                     )
                     self.velocities.append(np.array([v_x, v_y]))
 
-    def calculate_average_pixel_intensity(
-        self, reference_frames: np.ndarray, x, y, w, h
-    ):
+    def calculate_average_pixel_intensity(self, reference_frames: np.ndarray):
         x, y, w, h = self.tlwh.astype(int)
         detection_box = reference_frames[y : y + h, x : x + w]  # noqa 4
         if len(detection_box) == 0:
