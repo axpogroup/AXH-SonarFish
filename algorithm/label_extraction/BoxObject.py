@@ -41,13 +41,7 @@ class BoxObject:
 
         cv.putText(
             img,
-            (
-                self.classifications[-1]
-                + " "
-                + str(self.persistent_id)
-                + " Area: "
-                + str(self.area[-1])
-            ),
+            (self.classifications[-1] + " " + str(self.persistent_id) + " Area: " + str(self.area[-1])),
             (x, y - 10),
             cv.FONT_HERSHEY_SIMPLEX,
             0.75,
