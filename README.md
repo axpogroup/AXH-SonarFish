@@ -83,6 +83,7 @@ This is a short guide to run the fish detection algorithm on a sample video.
 1. Store your prelabeled videos in the folder _"data/raw/labels"_
 2. If you want to reduce the frame rate of the videos, run the script _"analysis/reduce_frame_rate.py"_. This script needs _"settings/preprocessing_settings.yaml"_ file where you have to choose:
    1. fps: the desired frame rate
+   You will need to do this both for the raw videos and the labeled videos in order for the labels to match.
 3. To extract the labels in csv run _"algorithm/extract_labels_from_videos.py"_ with settings file tracking_box_settings.yaml.
    in the folder _"data/intermediate//labels"_
 4. Run the algorithm for one video using _"algorithm/run_algorithm.py"_. E.g.: _"python3 algorithm/run_algorithm.py -yf 
