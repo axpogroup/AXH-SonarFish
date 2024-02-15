@@ -248,5 +248,5 @@ def draw_associations(associations, detections, object_history, img, color):
 def is_detection_outdated_or_not_confirmed(obj, detector):
     return (
         detector.frame_number - obj.frames_observed[-1] > detector.conf["no_more_show_after_x_frames"]
-        or obj.detection_is_confirmed is False  # or obj.bbox_size_to_stddev_ratio > 120
+        or obj.detection_is_confirmed is False
     )
