@@ -21,11 +21,11 @@ class DetectedObject(Detection):
         self.means_of_pixels_intensity = []
         self.ID = identifier
         self.detection_is_confirmed = track_is_confirmed
+        self.ellipse_angles = [ellipse_angle]
+        self.ellipse_axes_lengths_pairs = [ellipse_axes_lengths]
         self.frame_dict_history = frame_dict_history
         self.frames_observed = [frame_number]
         self._contour = contour
-        self.ellipse_angles = [ellipse_angle]
-        self.ellipse_axes_lengths_pairs = [ellipse_axes_lengths]
         x, y, w, h = contour if contour.shape == (4,) else cv.boundingRect(contour)
         self.top_lefts_x = [x]
         self.top_lefts_y = [y]
@@ -83,14 +83,14 @@ class DetectedObject(Detection):
 
     def update_object(self, detection: Detection):
         self.detection_is_confirmed = detection.detection_is_confirmed
+        self.ellipse_angles.append(detection.ellipse_angles[-1])
+        self.ellipse_axes_lengths_pairs.append(detection.ellipse_axes_lengths_pairs[-1])
         self.frames_observed.append(detection.frames_observed[-1])
         self.midpoints.append(detection.midpoints[-1])
         self.top_lefts_x.append(detection.top_lefts_x[-1])
         self.top_lefts_y.append(detection.top_lefts_y[-1])
         self.bounding_boxes.append(detection.bounding_boxes[-1])
         self.areas.append(detection.areas[-1])
-        self.ellipse_angles.append(detection.ellipse_angles[-1])
-        self.ellipse_axes_lengths_pairs.append(detection.ellipse_axes_lengths_pairs[-1])
         self.calculate_speed()
         if len(detection.velocities) > 0:
             self.velocities.append(detection.velocities[-1])
