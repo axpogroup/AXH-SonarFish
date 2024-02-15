@@ -49,7 +49,7 @@ kalman_n_init: 60
 filter_nearest_neighbor:
 filter_blob_matching_metric: "histogram" # one of ['euclidean_distance', 'blob_area', 'histogram']
 filter_association_thresh: 0.25
-filter_blob_elimination_metric: "euclidean_distance" # one of ['euclidean_distance', 'blob_area', 'histogram']
+filter_blob_elimination_metric: "euclidean_distance" # one of ['euclidean_distance']
 
 
 # Classification
