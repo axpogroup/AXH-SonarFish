@@ -95,7 +95,6 @@ class KalmanFilter(object):
 
         mean = np.dot(self._motion_mat, mean)
         covariance = np.linalg.multi_dot((self._motion_mat, covariance, self._motion_mat.T)) + motion_cov
-
         return _sanitizing_mean(mean), covariance
 
     def project(self, mean: np.ndarray, covariance: np.ndarray):
@@ -304,11 +303,9 @@ class Tracker:
         active_targets = [t.track_id for t in self.tracks if t.is_confirmed()]
         features, targets = [], []
         for track in self.tracks:
-            if not track.is_confirmed():
-                continue
-            features += track.features
-            targets += [track.track_id for _ in track.features]
-            track.features = []
+            if track.is_confirmed():
+                features += track.features
+                targets += [track.track_id for _ in track.features]
         self.metric.partial_fit(features, targets, active_targets)
 
     def _match(self, detections: dict[int, DetectedObject]):
@@ -384,15 +381,27 @@ def tracks_to_object_history(
     frame_dict: dict,
 ) -> dict[int, DetectedObject]:
     for track in tracks:
-        if track.is_confirmed():
-            obj = DetectedObject(
-                track.track_id,
-                track.to_tlwh(),
-                frame_number,
-                frame_dict_history=frame_dict,
-            )
-            if track.track_id not in object_history.keys():
-                object_history[track.track_id] = obj
-            else:
-                object_history[track.track_id].update_object(obj)
+        angle_with_x_axis, sqrt_of_lamdas = get_confidence_ellipse_attributes(track)
+        obj = DetectedObject(
+            track.track_id,
+            track.to_tlwh(),
+            frame_number,
+            frame_dict_history=frame_dict,
+            ellipse_angle=angle_with_x_axis,
+            ellipse_axes_lengths=sqrt_of_lamdas,
+            track_is_confirmed=track.is_confirmed(),
+        )
+        if track.track_id not in object_history.keys():
+            object_history[track.track_id] = obj
+        else:
+            object_history[track.track_id].update_object(obj)
     return object_history
+
+
+def get_confidence_ellipse_attributes(track):
+    cov = track.covariance[:2, :2]
+    eigenvalues, eigenvectors = np.linalg.eig(cov)
+    sqrt_of_lamdas = np.sqrt(eigenvalues)
+    selected_eigenvector = eigenvectors[:, 0]
+    angle_with_x_axis = np.arctan2(selected_eigenvector[1], selected_eigenvector[0])
+    return angle_with_x_axis, sqrt_of_lamdas
