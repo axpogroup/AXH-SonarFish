@@ -68,17 +68,10 @@ This is a high-level overview of the steps needed to run the continous operation
         SUBSCRIPTION_ID=your-azure-subscription-id
   ```
 
-# Running the algorithm on an individual file
-This is a short guide to run the fish detection algorithm on a sample video.
-1. Download the sample sonar video from here: [demo_sample_sonar_recording.mp4 - Sharepoint](https://axpogrp.sharepoint.com/:v:/s/DEPTHTD-A/ESdKpDEWDEBDqYR6KVFZ0D8BJrxKcDi6F8JaenjD0YhWWw?e=5jNCLF) 
-2. Place the video in the following folder: _"data/raw/videos/"_
-3. Specify the desired settings for the algorithm and the output in _"analysis/demo/demo_settings.yaml"_
-4. Run the algorithm using _"algorithm/run_algorithm.py"_. E.g.: _"python3 algorithm/run_algorithm.py -yf 
-   analysis/demo/demo_settings.yaml"_
-4. Use the settings "display_output_video: True" and "display_mode_extensive: True" to tune the settings in an 
-   interactive window and "display_mode_extensive: False" to read the velocity of the river.
 
-# Running the algorithm on a batch of files and evaluating the output
+# Running the algorithm
+
+## Run on a batch of files and evaluating the output
 
 1. Store your prelabeled videos in the folder _"data/raw/labels"_
 2. If you want to reduce the frame rate of the videos, run the script _"analysis/reduce_frame_rate.py"_. This script needs _"settings/preprocessing_settings.yaml"_ file where you have to choose:
@@ -88,7 +81,15 @@ This is a short guide to run the fish detection algorithm on a sample video.
    in the folder _"data/intermediate//labels"_
 4. Run the algorithm for one video using _"algorithm/run_algorithm.py"_. E.g.: _"python3 algorithm/run_algorithm.py -yf 
    analysis/demo/demo_settings.yaml"_. Specify the name of the video file in the settings file. 
-5. Evaluate the output using the script _"algorithm/validation/mot16_metrics.py"_.
+5. Use the settings "display_output_video: True" and "display_mode_extensive: True" to tune the settings in an 
+   interactive window and "display_mode_extensive: False" to read the velocity of the river. 
+6. Evaluate the output using the script _"algorithm/validation/mot16_metrics.py"_.
+
+
+## Run on a sample video
+1. Download the sample sonar video from here: [demo_sample_sonar_recording.mp4 - Sharepoint](https://axpogrp.sharepoint.com/:v:/s/DEPTHTD-A/ESdKpDEWDEBDqYR6KVFZ0D8BJrxKcDi6F8JaenjD0YhWWw?e=5jNCLF) 
+2. Place the video in the following folder: _"data/raw/videos/"_
+3. Do the same steps as in the previous section and comment out the ground_truth_directory in the settings file. This will cause the algorithm to not compare the output with the ground truth.
 
 # Comments
 Tested with Python 3.10, 
