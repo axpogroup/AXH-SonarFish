@@ -152,10 +152,7 @@ def _draw_detector_output(
     color=(255, 200, 200),
 ):
     for ID, obj in object_history.items():
-        if (
-            detector.frame_number - obj.frames_observed[-1] > detector.conf["no_more_show_after_x_frames"]
-            or obj.detection_is_confirmed is False
-        ):
+        if is_detection_outdated_or_not_confirmed(obj, detector):
             continue
         if fullres:
             scale = int(100 / detector.conf["downsample"])
@@ -169,7 +166,6 @@ def _draw_detector_output(
             w * scale,
             h * scale,
         )
-
         cv.rectangle(
             img,
             (x - int(w / 2), y - int(h / 2)),
@@ -197,7 +193,6 @@ def _draw_detector_output(
                     color,
                     thickness=-1,
                 )
-
         if association_dist:
             cv.circle(
                 img,
@@ -206,7 +201,6 @@ def _draw_detector_output(
                 (0, 0, 255),
                 1 * scale,
             )
-
         if annotate:
             text = ""
             if len(obj.means_of_pixels_intensity) > 0:
@@ -228,7 +222,6 @@ def _draw_detector_output(
                 color,
                 2,
             )
-
     return img
 
 
@@ -251,3 +244,10 @@ def draw_associations(associations, detections, object_history, img, color):
             2,
         )
     return img
+
+
+def is_detection_outdated_or_not_confirmed(obj, detector):
+    return (
+        detector.frame_number - obj.frames_observed[-1] > detector.conf["no_more_show_after_x_frames"]
+        or obj.detection_is_confirmed is False
+    )
