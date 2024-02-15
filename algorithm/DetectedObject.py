@@ -81,6 +81,12 @@ class DetectedObject(Detection):
     def stddev_of_pixel_intensity(self):
         return self.stddevs_of_pixels_intensity[-1]
 
+    @property
+    def bbox_size_to_stddev_ratio(self):
+        if len(self.stddevs_of_pixels_intensity) == 0 or len(self.areas) == 0:
+            return None
+        return self.areas[-1] / self.stddevs_of_pixels_intensity[-1]
+
     def update_object(self, detection: Detection):
         self.detection_is_confirmed = detection.detection_is_confirmed
         self.ellipse_angles.append(detection.ellipse_angles[-1])
