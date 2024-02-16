@@ -4,7 +4,9 @@ import numpy as np
 from deepsort.nn_matching import _nn_cosine_distance, _nn_euclidean_distance
 
 from algorithm.matching.area_matching import _area_cost
+from algorithm.matching.fft_matching import _fft_cost
 from algorithm.matching.histogram_matching import _histogram_cost
+from algorithm.matching.mutual_information_matching import _mutual_information_cost
 
 
 def feature_extractor(func, feature_to_extract: str):
@@ -36,6 +38,8 @@ class DistanceMetric(object):
         "cosine": feature_extractor(_nn_cosine_distance, "center_pos"),
         "blob_area": feature_extractor(_area_cost, "contour"),
         "histogram": feature_extractor(_histogram_cost, "histogram"),
+        "mutual_information": feature_extractor(_mutual_information_cost, "patch"),
+        "fft": feature_extractor(_fft_cost, "fft"),
     }
 
     def __init__(self, metric: str, matching_threshold: float, budget: int = None):
