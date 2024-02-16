@@ -379,6 +379,7 @@ def tracks_to_object_history(
     object_history: dict[int, DetectedObject],
     frame_number: int,
     frame_dict: dict,
+    bbox_size_to_stddev_ratio_threshold: int,
 ) -> dict[int, DetectedObject]:
     for track in tracks:
         angle_with_x_axis, sqrt_of_lamdas = get_confidence_ellipse_attributes(track)
@@ -391,10 +392,11 @@ def tracks_to_object_history(
             ellipse_axes_lengths=sqrt_of_lamdas,
             track_is_confirmed=track.is_confirmed(),
         )
-        if track.track_id not in object_history.keys():
-            object_history[track.track_id] = obj
-        else:
-            object_history[track.track_id].update_object(obj)
+        if obj.bbox_size_to_stddev_ratio and obj.bbox_size_to_stddev_ratio < bbox_size_to_stddev_ratio_threshold:
+            if track.track_id not in object_history.keys():
+                object_history[track.track_id] = obj
+            else:
+                object_history[track.track_id].update_object(obj)
     return object_history
 
 
