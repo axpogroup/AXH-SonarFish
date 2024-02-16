@@ -134,26 +134,32 @@ class FishDetector:
     def associate_detections(self, detections, object_history) -> Dict[int, DetectedObject]:
         if len(detections) == 0:
             return object_history
-        max_association_distance_px = self.mm_to_px(self.conf["max_association_dist_mm"])
+
         if self.conf["tracking_method"] == "nearest_neighbor":
             return nearest_neighbor.associate_detections(
                 detections,
                 object_history,
                 self.frame_number,
                 self.conf,
-                max_association_distance_px,
+                self.max_association_distance_px,
             )
         elif self.conf["tracking_method"] == "kalman":
+            primary_metric = DistanceMetric(
+                self.conf["filter_blob_matching_metric"],
+                self.kf_metric_matching_thresh,
+                budget=self.conf["kalman_trace_history_matching_budget"],
+            )
+            if "filter_blob_elimination_metric" in self.conf:
+                elimination_metric = DistanceMetric(
+                    self.conf["filter_blob_elimination_metric"],
+                    self.max_association_distance_px,
+                )
+            else:
+                elimination_metric = None
+
             if not self.object_filter:
-                if self.conf["filter_blob_matching_metric"] == "euclidean_distance":
-                    metric = DistanceMetric("euclidean", max_association_distance_px)
-                else:
-                    metric = DistanceMetric(
-                        self.conf["filter_blob_matching_metric"],
-                        1 - self.conf["filter_area_ratio_threshold"],
-                        budget=self.conf["kalman_trace_history_matching_budget"],
-                    )
-                self.object_filter = kalman.Tracker(metric, self.conf)
+                self.object_filter = kalman.Tracker(primary_metric, elimination_metric, self.conf)
+
             kalman.filter_detections(detections, self.object_filter)
             return kalman.tracks_to_object_history(
                 self.object_filter.tracks,
@@ -290,3 +296,15 @@ class FishDetector:
                 df.loc[df.id == ID, "classification"] = "object"
 
         return df
+
+    @property
+    def max_association_distance_px(self):
+        return self.mm_to_px(self.conf["max_association_dist_mm"])
+
+    @property
+    def kf_metric_matching_thresh(self):
+        if self.conf["filter_blob_matching_metric"] == "euclidean_distance":
+            matching_threshold = self.max_association_distance_px
+        else:
+            matching_threshold = self.conf["filter_association_thresh"]
+        return matching_threshold

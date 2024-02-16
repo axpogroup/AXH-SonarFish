@@ -48,13 +48,15 @@ class DetectedObject(Detection):
 
     @property
     def feature(self):
-        feature_dict = {
+        return {
             "center_pos": self.center_pos,
             "contour": self.contour,
             "area": self.area,
+            "patch": self._get_feature_patch("difference_thresholded"),
             "sift": self.sift_features,
+            "histogram": self.histogram,
+            "fft": self.fft,
         }
-        return feature_dict
 
     @property
     def center_pos(self):
@@ -69,9 +71,22 @@ class DetectedObject(Detection):
         return self.areas[-1]
 
     @property
+    def histogram(self):
+        img = self._get_feature_patch("difference_thresholded")
+        hist_raw = np.histogram(img, bins=range(257))[0].reshape(-1, 1).astype(np.float32)
+
+        return cv.normalize(hist_raw, hist_raw, alpha=0, beta=1, norm_type=cv.NORM_MINMAX)
+
+    @property
     def sift_features(self):
         patch = self._get_feature_patch("difference_thresholded")
         return cv.SIFT_create().detectAndCompute(patch, None)
+
+    @property
+    def fft(self):
+        patch = self._get_feature_patch("difference_thresholded")
+        patch_resized = cv.resize(patch, (64, 64))
+        return np.fft.fft2(patch_resized)
 
     @property
     def mean_pixel_intensity(self):
@@ -124,7 +139,7 @@ class DetectedObject(Detection):
     def calculate_average_pixel_intensity(self, reference_frames: np.ndarray):
         x, y, w, h = self.tlwh.astype(int)
         detection_box = reference_frames[y : y + h, x : x + w]  # noqa 4
-        if len(detection_box) == 0:
+        if 0 in detection_box.shape:
             print("detection_box is empty")
             return
         mean, stddev = cv.meanStdDev(detection_box)
