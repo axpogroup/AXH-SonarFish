@@ -278,7 +278,6 @@ class FishDetector:
         return px
 
     def classify_detections(self, df):
-
         rotated_velocities = rotate_velocity_vectors(df[["v_x", "v_y"]], conf=self.conf)
         df = pd.concat([df, rotated_velocities], axis=1)
 
