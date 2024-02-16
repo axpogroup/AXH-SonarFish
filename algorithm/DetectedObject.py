@@ -47,6 +47,7 @@ class DetectedObject(Detection):
             "patch": self._get_feature_patch("difference_thresholded"),
             "sift": self.sift_features,
             "histogram": self.histogram,
+            "fft": self.fft,
         }
 
     @property
@@ -72,6 +73,12 @@ class DetectedObject(Detection):
     def sift_features(self):
         patch = self._get_feature_patch("difference_thresholded")
         return cv.SIFT_create().detectAndCompute(patch, None)
+
+    @property
+    def fft(self):
+        patch = self._get_feature_patch("difference_thresholded")
+        patch_resized = cv.resize(patch, (64, 64))
+        return np.fft.fft2(patch_resized)
 
     @property
     def mean_pixel_intensity(self):

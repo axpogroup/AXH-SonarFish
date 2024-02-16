@@ -47,8 +47,8 @@ kalman_max_iou_distance: 0.5 # basically (1 - iou_min)
 kalman_max_age: 35
 kalman_n_init: 60
 filter_nearest_neighbor:
-filter_blob_matching_metric: "histogram" # one of ['euclidean_distance', 'blob_area', 'histogram']
-filter_association_thresh: 0.25
+filter_blob_matching_metric: "fft" # one of ['euclidean_distance', 'blob_area', 'histogram', 'mutual_information', 'fft']
+filter_association_thresh: 0.3
 filter_blob_elimination_metric: "euclidean_distance" # one of ['euclidean_distance']
 
 
