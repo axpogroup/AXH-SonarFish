@@ -109,7 +109,7 @@ def _draw_detections_and_labels(
 ):
     disp = _draw_detector_output(object_history, detector, processed_frame, color=color, **kwargs)
     if label_history is not None:
-        disp = _draw_detector_output(label_history, detector, disp, color=truth_color, **kwargs)
+        disp = _draw_detector_output(label_history, detector, disp, annotate=False, color=truth_color, **kwargs)
     return disp
 
 
@@ -203,8 +203,8 @@ def _draw_detector_output(
         if annotate:
             text = ""
             if len(obj.means_of_pixels_intensity) > 0:
-                stddev = obj.stddev_of_pixel_intensity
-                text = f"ID: {obj.ID}, stddev: {stddev}"
+                ratio = obj.bbox_size_to_stddev_ratio
+                text = f"ID:{obj.ID}, ratio: {ratio}"
                 if len(obj.velocities) > 100:
                     text += (
                         ", v [px/frame]: "

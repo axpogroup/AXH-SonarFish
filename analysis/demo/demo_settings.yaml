@@ -15,7 +15,7 @@ record_processing_frame: "raw" # one of ['raw', 'raw_downsampled', 'gray', 'gray
 draw_detections_on_saved_video: False
 
 display_output_video: True
-display_mode_extensive: False
+display_mode_extensive: True
 display_trackbars: False
 
 # Size
@@ -49,7 +49,7 @@ kalman_n_init: 35
 filter_nearest_neighbor:
 filter_blob_matching_metric: "euclidean_distance" # one of ['euclidean_distance', 'blob_area']
 filter_area_ratio_threshold: 0.97
-
+bbox_size_to_stddev_ratio_threshold: 120
 
 # Classification
 river_pixel_velocity: [2.35, -0.9] # At full resolution
