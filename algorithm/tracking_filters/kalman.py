@@ -5,6 +5,7 @@ from deepsort.tracker import Track
 
 from algorithm.DetectedObject import DetectedObject
 from algorithm.flow_conditions import rot_mat_from_river_velocity
+from algorithm.matching.distance import DistanceMetric
 from algorithm.matching.linear_assignment import (
     gate_cost_matrix,
     matching_cascade,
@@ -14,14 +15,38 @@ from algorithm.matching.linear_assignment import (
 
 class KalmanFilter(object):
     """
-    A simple Kalman filter for tracking bounding boxes in image space.
+    A Kalman filter for tracking bounding boxes in image space.
+
     The 8-dimensional state space
         x, y, a, h, vx, vy, va, vh
     contains the bounding box center position (x, y), aspect ratio a, height h,
     and their respective velocities.
+
     Object motion follows a constant velocity model. The bounding box location
     (x, y, a, h) is taken as direct observation of the state space (linear
     observation model).
+
+    The filter also adapts the initial velocity to the river velocity and
+    provides functionality to create new tracks from unassociated measurements,
+    predict the state of the object, project the state distribution to measurement space,
+    update the state with measurements, and compute gating distance between state
+    distribution and measurements.
+
+    Parameters
+    ----------
+    conf : dict
+        Configuration parameters for the Kalman filter.
+
+    Attributes
+    ----------
+    conf : dict
+        Configuration parameters for the Kalman filter.
+    obj_velocity_initalization : list
+        Initialization of velocity of objects in x and y direction.
+    _motion_mat : ndarray
+        Kalman filter model motion matrix.
+    _update_mat : ndarray
+        Kalman filter model update matrix.
     """
 
     def __init__(self, conf: dict):
@@ -231,39 +256,47 @@ def _sanitizing_mean(mean: np.ndarray):
 
 class Tracker:
     """
-    This is the multi-target tracker.
+    Multi target tracker for object tracking.
+
     Parameters
     ----------
-    metric : nn_matching.NearestNeighborDistanceMetric
-        A distance metric for measurement-to-track association.
-    max_age : int
-        Maximum number of missed misses before a track is deleted.
-    n_init : int
-        Number of consecutive detections before the track is confirmed. The
-        track state is set to `Deleted` if a miss occurs within the first
-        `n_init` frames.
-    obj_velocity_initalization : tuple[float, float]
-        Initialization of velocity of objects in x and y direction.
+    primary_metric : DistanceMetric
+        The primary distance metric used for measurement-to-track association.
+    elimination_metric : DistanceMetric
+        The secondary distance metric used for eliminating unlikely associations.
+    conf : dict
+        Configuration parameters for the tracker.
+
     Attributes
     ----------
-    metric : nn_matching.NearestNeighborDistanceMetric
-        The distance metric used for measurement to track association.
+    primary_metric : DistanceMetric
+        The primary distance metric used for measurement-to-track association.
+    elimination_metric : DistanceMetric
+        The secondary distance metric used for eliminating unlikely associations.
+    conf : dict
+        Configuration parameters for the tracker.
+    max_iou_distance : float
+        Maximum IOU distance for association of detections with tracks.
     max_age : int
-        Maximum number of missed misses before a track is deleted.
+        Maximum number of consecutive misses before a track is deleted.
     n_init : int
-        Number of frames that a track remains in initialization phase.
-    kf : kalman_filter.KalmanFilter
+        Number of consecutive detections before the track is confirmed.
+    kf : KalmanFilter
         A Kalman filter to filter target trajectories in image space.
     tracks : List[Track]
         The list of active tracks at the current time step.
+    _next_id : int
+        The next available ID for new track initialization.
     """
 
     def __init__(
         self,
-        metric,
+        primary_metric: DistanceMetric,
+        elimination_metric: DistanceMetric,
         conf: dict,
     ) -> None:
-        self.metric = metric
+        self.primary_metric = primary_metric
+        self.elimination_metric = elimination_metric
         self.conf = conf
         self.max_iou_distance = self.conf["kalman_max_iou_distance"]
         self.max_age = self.conf["kalman_max_age"]
@@ -306,15 +339,27 @@ class Tracker:
             if track.is_confirmed():
                 features += track.features
                 targets += [track.track_id for _ in track.features]
-        self.metric.partial_fit(features, targets, active_targets)
+        self.primary_metric.partial_fit(features, targets, active_targets)
 
     def _match(self, detections: dict[int, DetectedObject]):
 
         def gated_metric(tracks, dets, track_indices, detection_indices):
             features = [dets[i].feature for i in detection_indices]
             targets = np.array([tracks[i].track_id for i in track_indices])
-            cost_matrix = self.metric.distance(features, targets)
-            cost_matrix = gate_cost_matrix(self.kf, cost_matrix, tracks, dets, track_indices, detection_indices)
+            cost_matrix = self.primary_metric.distance(features, targets)
+            cost_matrix = gate_cost_matrix(
+                self.kf,
+                cost_matrix,
+                tracks,
+                dets,
+                track_indices,
+                detection_indices,
+                only_position=True,
+            )
+            if self.elimination_metric:
+                self.elimination_metric.samples = self.primary_metric.samples
+                el_cost_matrix = self.elimination_metric.distance(features, targets)
+                cost_matrix[el_cost_matrix >= self.elimination_metric.matching_threshold] = 1e5
 
             return cost_matrix
 
@@ -325,7 +370,7 @@ class Tracker:
         # Associate confirmed tracks using appearance features.
         matches_a, unmatched_tracks_a, unmatched_detections = matching_cascade(
             gated_metric,
-            self.metric.matching_threshold,
+            self.primary_metric.matching_threshold,
             self.max_age,
             self.tracks,
             detections,
