@@ -166,6 +166,7 @@ class FishDetector:
                 object_history,
                 self.frame_number,
                 frame_dict=self.frame_dict_history,
+                bbox_size_to_stddev_ratio_threshold=self.conf.get("bbox_size_to_stddev_ratio_threshold"),
             )
         else:
             raise ValueError(f"Invalid tracking method: {self.conf['tracking_method']}")

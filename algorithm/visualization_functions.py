@@ -90,7 +90,6 @@ def get_visual_output(
                 truth_color=truth_color,
                 paths=True,
                 fullres=True,
-                association_dist=True,
                 annotate="velocities",
             )
         else:
@@ -110,7 +109,7 @@ def _draw_detections_and_labels(
 ):
     disp = _draw_detector_output(object_history, detector, processed_frame, color=color, **kwargs)
     if label_history is not None:
-        disp = _draw_detector_output(label_history, detector, disp, color=truth_color, **kwargs)
+        disp = _draw_detector_output(label_history, detector, disp, annotate=False, color=truth_color, **kwargs)
     return disp
 
 
@@ -152,9 +151,8 @@ def _draw_detector_output(
     color=(255, 200, 200),
 ):
     for ID, obj in object_history.items():
-        if detector.frame_number - obj.frames_observed[-1] > detector.conf["no_more_show_after_x_frames"]:
+        if is_detection_outdated_or_not_confirmed(obj, detector):
             continue
-
         if fullres:
             scale = int(100 / detector.conf["downsample"])
         else:
@@ -167,7 +165,6 @@ def _draw_detector_output(
             w * scale,
             h * scale,
         )
-
         cv.rectangle(
             img,
             (x - int(w / 2), y - int(h / 2)),
@@ -175,7 +172,17 @@ def _draw_detector_output(
             color,
             thickness=1 * scale,
         )
-
+        if obj.ellipse_angles[-1] is not None and obj.ellipse_axes_lengths_pairs[-1] is not None:
+            cv.ellipse(
+                img,
+                (obj.midpoints[-1][0], obj.midpoints[-1][1]),
+                (int(obj.ellipse_axes_lengths_pairs[-1][0]), int(obj.ellipse_axes_lengths_pairs[-1][1])),
+                obj.ellipse_angles[-1],
+                0,
+                360,
+                color,
+                1 * scale,
+            )
         if paths:
             for point in obj.midpoints:
                 cv.circle(
@@ -185,7 +192,6 @@ def _draw_detector_output(
                     color,
                     thickness=-1,
                 )
-
         if association_dist:
             cv.circle(
                 img,
@@ -194,13 +200,12 @@ def _draw_detector_output(
                 (0, 0, 255),
                 1 * scale,
             )
-
         if annotate:
             text = ""
             if len(obj.means_of_pixels_intensity) > 0:
-                mean, stddev = obj.mean_pixel_intensity, obj.stddev_of_pixel_intensity
-                text = f"mean: {mean}, stddev: {stddev}"
-                if len(obj.velocities) > 0:
+                ratio = obj.bbox_size_to_stddev_ratio
+                text = f"ID:{obj.ID}, ratio: {ratio}"
+                if len(obj.velocities) > 100:
                     text += (
                         ", v [px/frame]: "
                         + str(obj.velocities[-1][0] * scale)
@@ -216,7 +221,6 @@ def _draw_detector_output(
                 color,
                 2,
             )
-
     return img
 
 
@@ -239,3 +243,10 @@ def draw_associations(associations, detections, object_history, img, color):
             2,
         )
     return img
+
+
+def is_detection_outdated_or_not_confirmed(obj, detector):
+    return (
+        detector.frame_number - obj.frames_observed[-1] > detector.conf["no_more_show_after_x_frames"]
+        or obj.detection_is_confirmed is False
+    )

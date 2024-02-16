@@ -13,10 +13,16 @@ class DetectedObject(Detection):
         frame_number: int,
         frame_dict_history: Optional[dict[int, dict[str, np.array]]] = None,
         confidence: float = 0.9,
+        ellipse_angle: Optional[float] = None,
+        ellipse_axes_lengths: Optional[tuple[int, int]] = None,
+        track_is_confirmed: bool = True,
     ):
         self.stddevs_of_pixels_intensity = []
         self.means_of_pixels_intensity = []
         self.ID = identifier
+        self.detection_is_confirmed = track_is_confirmed
+        self.ellipse_angles = [ellipse_angle]
+        self.ellipse_axes_lengths_pairs = [ellipse_axes_lengths]
         self.frame_dict_history = frame_dict_history
         self.frames_observed = [frame_number]
         self._contour = contour
@@ -30,8 +36,10 @@ class DetectedObject(Detection):
         self.tlwh = np.array([x, y, w, h], dtype=float)
         self.confidence = confidence
         self.calculate_speed()
-        if frame_dict_history:
-            self.calculate_average_pixel_intensity(frame_dict_history.get(frame_number)["median_filter"], x, y, w, h)
+        if frame_dict_history and "difference" in frame_dict_history.get(frame_number).keys():
+            self.calculate_average_pixel_intensity(
+                frame_dict_history.get(frame_number)["difference"],
+            )
         self.update_object(self)
 
     def _get_feature_patch(self, processing_step: str):
@@ -88,7 +96,16 @@ class DetectedObject(Detection):
     def stddev_of_pixel_intensity(self):
         return self.stddevs_of_pixels_intensity[-1]
 
+    @property
+    def bbox_size_to_stddev_ratio(self):
+        if len(self.stddevs_of_pixels_intensity) == 0 or len(self.areas) == 0:
+            return None
+        return self.areas[-1] / self.stddevs_of_pixels_intensity[-1]
+
     def update_object(self, detection: Detection):
+        self.detection_is_confirmed = detection.detection_is_confirmed
+        self.ellipse_angles.append(detection.ellipse_angles[-1])
+        self.ellipse_axes_lengths_pairs.append(detection.ellipse_axes_lengths_pairs[-1])
         self.frames_observed.append(detection.frames_observed[-1])
         self.midpoints.append(detection.midpoints[-1])
         self.top_lefts_x.append(detection.top_lefts_x[-1])
@@ -119,7 +136,7 @@ class DetectedObject(Detection):
                     v_y = float(self.midpoints[-1][1] - self.midpoints[past_observation_id][1]) / frame_diff
                     self.velocities.append(np.array([v_x, v_y]))
 
-    def calculate_average_pixel_intensity(self, reference_frames: np.ndarray, x, y, w, h):
+    def calculate_average_pixel_intensity(self, reference_frames: np.ndarray):
         x, y, w, h = self.tlwh.astype(int)
         detection_box = reference_frames[y : y + h, x : x + w]  # noqa 4
         if 0 in detection_box.shape:
