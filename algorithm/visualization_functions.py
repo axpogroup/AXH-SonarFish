@@ -4,7 +4,7 @@ from typing import Optional
 import cv2 as cv
 import numpy as np
 
-from algorithm.DetectedObject import DetectedObject
+from algorithm.DetectedObject import BoundingBox, DetectedBoundingBox
 from algorithm.FishDetector import FishDetector
 
 FIRST_ROW = [
@@ -17,8 +17,8 @@ SECOND_ROW = ["difference_thresholded", "median_filter", "binary", "dilated"]
 
 
 def get_visual_output(
-    object_history: dict[int, DetectedObject],
-    label_history: Optional[dict[int, DetectedObject]],
+    object_history: dict[int, DetectedBoundingBox],
+    label_history: Optional[dict[int, BoundingBox]],
     detector: FishDetector,
     processed_frame: dict[str, np.ndarray],
     extensive=False,
@@ -100,8 +100,8 @@ def get_visual_output(
 
 def _draw_detections_and_labels(
     detector: FishDetector,
-    object_history: dict[int, DetectedObject],
-    label_history: Optional[dict[int, DetectedObject]],
+    object_history: dict[int, DetectedBoundingBox],
+    label_history: Optional[dict[int, BoundingBox]],
     processed_frame: dict[str, np.ndarray],
     color: tuple,
     truth_color: tuple,
@@ -172,17 +172,17 @@ def _draw_detector_output(
             color,
             thickness=1 * scale,
         )
-        if obj.ellipse_angles[-1] is not None and obj.ellipse_axes_lengths_pairs[-1] is not None:
-            cv.ellipse(
-                img,
-                (obj.midpoints[-1][0], obj.midpoints[-1][1]),
-                (int(obj.ellipse_axes_lengths_pairs[-1][0]), int(obj.ellipse_axes_lengths_pairs[-1][1])),
-                obj.ellipse_angles[-1],
-                0,
-                360,
-                color,
-                1 * scale,
-            )
+        # if obj.ellipse_angles[-1] is not None and obj.ellipse_axes_lengths_pairs[-1] is not None:
+        #     cv.ellipse(
+        #         img,
+        #         (obj.midpoints[-1][0], obj.midpoints[-1][1]),
+        #         (int(obj.ellipse_axes_lengths_pairs[-1][0]), int(obj.ellipse_axes_lengths_pairs[-1][1])),
+        #         obj.ellipse_angles[-1],
+        #         0,
+        #         360,
+        #         color,
+        #         1 * scale,
+        #     )
         if paths:
             for point in obj.midpoints:
                 cv.circle(

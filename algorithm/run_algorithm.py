@@ -10,7 +10,7 @@ import yaml
 from azureml.core import Workspace
 from dotenv import load_dotenv
 
-from algorithm.DetectedObject import DetectedObject
+from algorithm.DetectedObject import BoundingBox
 from algorithm.FishDetector import FishDetector
 from algorithm.InputOutputHandler import InputOutputHandler
 from algorithm.validation import mot16_metrics
@@ -30,17 +30,16 @@ def extract_labels_history(
     label_history: dict,
     labels: Optional[pd.DataFrame],
     current_frame: int,
-    processed_frame_dict: dict,
-) -> Optional[dict[int, DetectedObject]]:
+) -> Optional[dict[int, BoundingBox]]:
     if labels is None:
         return None
     current_frame_df = labels[labels["frame"] == current_frame]
     for _, row in current_frame_df.iterrows():
-        truth_detected = DetectedObject(
+        truth_detected = BoundingBox(
             identifier=row["id"],
             frame_number=row["frame"],
             contour=np.array(row[["x", "y", "w", "h"]]),
-            frame_dict_history={row["frame"]: processed_frame_dict},
+            detection_is_confirmed=True,
         )
         if row["id"] not in label_history:
             label_history[row["id"]] = truth_detected
@@ -69,15 +68,16 @@ def main(settings_dict: dict):
     detector = FishDetector(settings_dict)
     object_history = {}
     label_history = {}
-
     while input_output_handler.get_new_frame():
         detections, processed_frame_dict, runtimes = detector.detect_objects(input_output_handler.current_raw_frame)
-        object_history = detector.associate_detections(detections, object_history)
+        object_history = detector.associate_detections(
+            detections,
+            object_history,
+        )
         label_history = extract_labels_history(
             label_history,
             labels_df,
             input_output_handler.frame_no,
-            processed_frame_dict,
         )
         input_output_handler.handle_output(
             processed_frame=processed_frame_dict,

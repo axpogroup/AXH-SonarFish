@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 from algorithm import visualization_functions
-from algorithm.DetectedObject import DetectedObject
+from algorithm.DetectedObject import DetectedBoundingBox
 from algorithm.utils import get_elapsed_ms
 
 
@@ -59,7 +59,7 @@ class InputOutputHandler:
             return False
 
     @staticmethod
-    def get_detections_pd(object_history: dict[int, DetectedObject]) -> pd.DataFrame:
+    def get_detections_pd(object_history: dict[int, DetectedBoundingBox]) -> pd.DataFrame:
         rows = []
         for _, obj in object_history.items():
             for i in range(len(obj.frames_observed)):

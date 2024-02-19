@@ -5,7 +5,7 @@ import cv2 as cv
 import numpy as np
 import pandas as pd
 
-from algorithm.DetectedObject import DetectedObject
+from algorithm.DetectedObject import DetectedBoundingBox
 from algorithm.flow_conditions import rotate_velocity_vectors
 from algorithm.matching.distance import DistanceMetric
 from algorithm.tracking_filters import kalman, nearest_neighbor
@@ -37,7 +37,7 @@ class FishDetector:
         self.short_mean_float = None
         self.long_mean_float = None
 
-    def detect_objects(self, raw_frame):
+    def detect_objects(self, raw_frame) -> (Dict[int, DetectedBoundingBox], dict, dict):
         start = cv.getTickCount()
         runtimes_ms = {}
         frame_dict = {"raw": raw_frame}
@@ -114,14 +114,14 @@ class FishDetector:
         frame_dict["gray_boosted"] = enhanced_temp
         return frame_dict
 
-    def extract_keypoints(self, frame_dict) -> Dict[int, DetectedObject]:
+    def extract_keypoints(self, frame_dict) -> Dict[int, DetectedBoundingBox]:
         # Extract keypoints
         contours, _ = cv.findContours(frame_dict["dilated"], cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
 
         self.frame_dict_history[self.frame_number] = frame_dict
-        detections: Dict[int, DetectedObject] = {}
+        detections: list[DetectedBoundingBox] = {}
         for contour in contours:
-            new_object = DetectedObject(
+            new_object = DetectedBoundingBox(
                 identifier=self.latest_obj_index,
                 frame_number=self.frame_number,
                 contour=contour,
@@ -131,7 +131,11 @@ class FishDetector:
             self.latest_obj_index += 1
         return detections
 
-    def associate_detections(self, detections, object_history) -> Dict[int, DetectedObject]:
+    def associate_detections(
+        self,
+        detections: dict[int, DetectedBoundingBox],
+        object_history,
+    ) -> Dict[int, DetectedBoundingBox]:
         if len(detections) == 0:
             return object_history
 
