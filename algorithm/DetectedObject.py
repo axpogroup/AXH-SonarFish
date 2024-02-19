@@ -2,61 +2,98 @@ from typing import Optional
 
 import cv2 as cv
 import numpy as np
-from deepsort.detection import Detection
 
 
-class DetectedObject(Detection):
+class BoundingBox:
+    def __init__(
+        self,
+        identifier: int,
+        contour: np.ndarray,
+        frame_number: int,
+        detection_is_confirmed: bool = False,
+    ):
+        self.frames_observed = [frame_number]
+        self.x, self.y, self.w, self.h = contour if contour.shape == (4,) else cv.boundingRect(contour)
+        self.x = int(self.x)
+        self.y = int(self.y)
+        self.w = int(self.w)
+        self.h = int(self.h)
+        self.bounding_boxes = [(self.w, self.h)]
+        self.top_lefts_y = [self.y]
+        self.top_lefts_x = [self.x]
+        self.midpoints = [(int(self.x + self.w / 2), int(self.y + self.h / 2))]
+        self._contour = contour
+        self.frame_number = frame_number
+        self.ID = identifier
+        self.detection_is_confirmed = detection_is_confirmed
+
+    def update_object(self, detection_box):
+        self.frames_observed.append(detection_box.frames_observed[-1])
+        self.midpoints.append(detection_box.midpoints[-1])
+        self.top_lefts_x.append(detection_box.top_lefts_x[-1])
+        self.top_lefts_y.append(detection_box.top_lefts_y[-1])
+        self.bounding_boxes.append(detection_box.bounding_boxes[-1])
+
+
+class DetectedBoundingBox(BoundingBox):
     def __init__(
         self,
         identifier: int,
         contour: np.ndarray,
         frame_number: int,
         frame_dict_history: Optional[dict[int, dict[str, np.array]]] = None,
-        confidence: float = 0.9,
-        ellipse_angle: Optional[float] = None,
-        ellipse_axes_lengths: Optional[tuple[int, int]] = None,
-        track_is_confirmed: bool = True,
     ):
+        super().__init__(
+            identifier,
+            contour,
+            frame_number,
+        )
         self.stddevs_of_pixels_intensity = []
         self.means_of_pixels_intensity = []
-        self.ID = identifier
-        self.detection_is_confirmed = track_is_confirmed
-        self.ellipse_angles = [ellipse_angle]
-        self.ellipse_axes_lengths_pairs = [ellipse_axes_lengths]
+        self.areas = [self.w * self.h if contour.shape == (4,) else cv.contourArea(contour)]
         self.frame_dict_history = frame_dict_history
-        self.frames_observed = [frame_number]
-        self._contour = contour
-        x, y, w, h = contour if contour.shape == (4,) else cv.boundingRect(contour)
-        self.top_lefts_x = [x]
-        self.top_lefts_y = [y]
-        self.midpoints = [(int(x + w / 2), int(y + h / 2))]
-        self.bounding_boxes = [(w, h)]
-        self.areas = [w * h if contour.shape == (4,) else cv.contourArea(contour)]
-        self.velocities = []
-        self.tlwh = np.array([x, y, w, h], dtype=float)
-        self.confidence = confidence
-        self.calculate_speed()
         if frame_dict_history and "difference" in frame_dict_history.get(frame_number).keys():
             self.calculate_average_pixel_intensity(
                 frame_dict_history.get(frame_number)["difference"],
             )
-        self.update_object(self)
+
+    def calculate_average_pixel_intensity(self, reference_frames: np.ndarray):
+        detection_box = reference_frames[self.y : self.y + self.h, self.x : self.x + self.w]
+        if 0 in detection_box.shape:
+            print("detection_box is empty")
+            return
+        mean, stddev = cv.meanStdDev(detection_box)
+        self.means_of_pixels_intensity.append(mean[0])
+        self.stddevs_of_pixels_intensity.append(stddev[0])
+
+    def to_xyah(self):
+        """Convert bounding box to format `(center x, center y, aspect ratio,
+        height)`, where the aspect ratio is `width / height`.
+        """
+        ret = np.array([self.x, self.y, self.w, self.h], dtype=float)
+        ret[:2] += ret[2:] / 2
+        ret[2] /= ret[3]
+        return ret
 
     def _get_feature_patch(self, processing_step: str):
-        x, y, w, h = self.tlwh.astype(int)
-        return self.frame_dict_history[self.frames_observed[-1]][processing_step][y : y + h, x : x + w]
+        return self.frame_dict_history[self.frames_observed[-1]][processing_step][
+            self.y : self.y + self.h, self.x : self.x + self.w
+        ]
 
     @property
     def feature(self):
-        return {
+        feature = {
             "center_pos": self.center_pos,
             "contour": self.contour,
+            "detection_id": self.ID,
             "area": self.area,
             "patch": self._get_feature_patch("difference_thresholded"),
             "sift": self.sift_features,
             "histogram": self.histogram,
             "fft": self.fft,
+            "bbox_size_to_stddev_ratio": self.bbox_size_to_stddev_ratio,
         }
+        return feature
 
     @property
     def center_pos(self):
@@ -97,21 +134,40 @@ class DetectedObject(Detection):
         return self.stddevs_of_pixels_intensity[-1]
 
     @property
+    def tlwh(self):
+        return np.array([self.x, self.y, self.w, self.h])
+
+    @property
     def bbox_size_to_stddev_ratio(self):
         if len(self.stddevs_of_pixels_intensity) == 0 or len(self.areas) == 0:
             return None
         return self.areas[-1] / self.stddevs_of_pixels_intensity[-1]
 
-    def update_object(self, detection: Detection):
+
+class TrackedDetectedBoundingBox(DetectedBoundingBox):
+    def __init__(
+        self,
+        identifier: int,
+        frame_number: int,
+        contour: np.ndarray,
+        ellipse_angle: Optional[float] = None,
+        ellipse_axes_lengths: Optional[tuple[int, int]] = None,
+        track_is_confirmed: bool = False,
+    ):
+        super().__init__(identifier=identifier, contour=contour, frame_number=frame_number)
+        self.detection_is_confirmed = track_is_confirmed
+        self.ellipse_angles = [ellipse_angle]
+        self.ellipse_axes_lengths_pairs = [ellipse_axes_lengths]
+        self.velocities = []
+        self.detection_is_confirmed = track_is_confirmed
+        self.calculate_speed()
+        self.update_object(self)
+
+    def update_object(self, detection):
+        super().update_object(detection)
         self.detection_is_confirmed = detection.detection_is_confirmed
         self.ellipse_angles.append(detection.ellipse_angles[-1])
         self.ellipse_axes_lengths_pairs.append(detection.ellipse_axes_lengths_pairs[-1])
-        self.frames_observed.append(detection.frames_observed[-1])
-        self.midpoints.append(detection.midpoints[-1])
-        self.top_lefts_x.append(detection.top_lefts_x[-1])
-        self.top_lefts_y.append(detection.top_lefts_y[-1])
-        self.bounding_boxes.append(detection.bounding_boxes[-1])
-        self.areas.append(detection.areas[-1])
         self.calculate_speed()
         if len(detection.velocities) > 0:
             self.velocities.append(detection.velocities[-1])
@@ -135,13 +191,3 @@ class DetectedObject(Detection):
                     v_x = float(self.midpoints[-1][0] - self.midpoints[past_observation_id][0]) / frame_diff
                     v_y = float(self.midpoints[-1][1] - self.midpoints[past_observation_id][1]) / frame_diff
                     self.velocities.append(np.array([v_x, v_y]))
-
-    def calculate_average_pixel_intensity(self, reference_frames: np.ndarray):
-        x, y, w, h = self.tlwh.astype(int)
-        detection_box = reference_frames[y : y + h, x : x + w]  # noqa 4
-        if 0 in detection_box.shape:
-            print("detection_box is empty")
-            return
-        mean, stddev = cv.meanStdDev(detection_box)
-        self.means_of_pixels_intensity.append(mean[0])
-        self.stddevs_of_pixels_intensity.append(stddev[0])
