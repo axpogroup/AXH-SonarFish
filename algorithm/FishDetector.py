@@ -2,8 +2,10 @@ import os
 from typing import Dict
 
 import cv2 as cv
+import matplotlib.cm as cm
 import numpy as np
 import pandas as pd
+import scipy.cluster.vq as scv
 
 from algorithm.DetectedObject import DetectedObject
 from algorithm.flow_conditions import rotate_velocity_vectors
@@ -103,7 +105,7 @@ class FishDetector:
 
     def enhance_image(self, frame_dict):
         # Image enhancement
-        if self.conf["downsample"]:
+        if self.conf.get("downsample"):
             frame_dict["raw_downsampled"] = resize_img(frame_dict["raw"], self.conf["downsample"])
             frame_dict["gray"] = self.rgb_to_gray(frame_dict["raw_downsampled"])
         else:
@@ -264,9 +266,13 @@ class FishDetector:
                 np.place(img, self.sonar_controls_mask < 100, 0)
         return img
 
-    @staticmethod
-    def rgb_to_gray(img):
-        return cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+    def rgb_to_gray(self, img):
+        if self.conf["colormap"] == "red":
+            return cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+        elif self.conf["colormap"] == "jet":
+            return colormap2arr(img)
+        else:
+            raise ValueError(f"Invalid colormap: {self.settings_dict['colormap']}, must be 'red' or 'jet'")
 
     @staticmethod
     def ceil_to_odd_int(number):
@@ -308,3 +314,25 @@ class FishDetector:
         else:
             matching_threshold = self.conf["filter_association_thresh"]
         return matching_threshold
+
+
+def colormap2arr(arr, cmap=cm.jet):
+    # http://stackoverflow.com/questions/3720840/how-to-reverse-color-map-image-to-scalar-values/3722674#3722674
+    gradient = cmap(np.linspace(0.0, 1.0, 255))[:, 0:3]  # Exclude alpha channel
+
+    # Reshape arr to something like (240*240, 4), all the 4-tuples in a long list...
+    arr2 = arr[:, :, ::-1].reshape((arr.shape[0] * arr.shape[1], arr.shape[2]))
+
+    # Use vector quantization to shift the values in arr2 to the nearest point in
+    # the code book (gradient).
+    code, dist = scv.vq(arr2, gradient)
+
+    # code is an array of length arr2 (240*240), holding the code book index for
+    # each observation. (arr2 are the "observations".)
+    # Scale the values so they are from 0 to 1.
+    values = code.astype("uint8")
+
+    # Reshape values back to (240,240)
+    values = values.reshape(arr.shape[0], arr.shape[1])
+    # plt.imshow(values, cmap='jet')
+    return values
