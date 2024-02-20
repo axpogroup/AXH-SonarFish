@@ -4,6 +4,9 @@ import numpy as np
 from deepsort.nn_matching import _nn_cosine_distance, _nn_euclidean_distance
 
 from algorithm.matching.area_matching import _area_cost
+from algorithm.matching.fft_matching import _fft_cost
+from algorithm.matching.histogram_matching import _histogram_cost
+from algorithm.matching.mutual_information_matching import _mutual_information_cost
 
 
 def feature_extractor(func, feature_to_extract: str):
@@ -31,9 +34,12 @@ def feature_extractor(func, feature_to_extract: str):
 
 class DistanceMetric(object):
     metric_options = {
-        "euclidean": feature_extractor(_nn_euclidean_distance, "center_pos"),
+        "euclidean_distance": feature_extractor(_nn_euclidean_distance, "center_pos"),
         "cosine": feature_extractor(_nn_cosine_distance, "center_pos"),
         "blob_area": feature_extractor(_area_cost, "contour"),
+        "histogram": feature_extractor(_histogram_cost, "histogram"),
+        "mutual_information": feature_extractor(_mutual_information_cost, "patch"),
+        "fft": feature_extractor(_fft_cost, "fft"),
     }
 
     def __init__(self, metric: str, matching_threshold: float, budget: int = None):
@@ -69,7 +75,7 @@ class DistanceMetric(object):
         Update the distance metric with new data.
 
         Args:
-            features: An NxM matrix of N features of dimensionality M.
+            features: A list of DetectedObject feature dictionaries.
             targets: An integer array of associated target identities.
             active_targets: A list of targets that are currently present in the scene.
         """
