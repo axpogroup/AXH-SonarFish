@@ -76,6 +76,7 @@ class TestIntegration:
         intermediate_videos_directory,
         labels_directory,
         relevant_csv_columns,
+        snapshot,
     ):
         with open("../settings/preprocessing_settings.yaml") as f:
             preprocess_settings = yaml.load(f, Loader=yaml.SafeLoader)
@@ -102,8 +103,9 @@ class TestIntegration:
         detection_settings["display_output_video"] = False
 
         run_algorithm_main(detection_settings)
-
         detections_csv = pd.read_csv(f"{model_output_directory}/trimmed_video.csv")
+        snapshot.snapshot_dir = "snapshots"  # This line is optional.
+        snapshot.assert_match(detections_csv.to_string(), "trimmed_video.txt")
         assert list(detections_csv.columns)[:6] == relevant_csv_columns
         assert len(detections_csv) > 0
 
