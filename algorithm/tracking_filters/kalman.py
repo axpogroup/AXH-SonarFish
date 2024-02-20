@@ -442,6 +442,7 @@ def tracks_to_object_history(
                 object_history[track.track_id] = obj
             else:
                 object_history[track.track_id].update_object(obj)
+    frame_dict.pop(frame_number)
     return object_history
 
 
