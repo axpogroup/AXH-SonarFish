@@ -42,12 +42,9 @@ class DetectedBoundingBox(BoundingBox):
         contour: np.ndarray,
         frame_number: int,
         frame_dict_history: Optional[dict[int, dict[str, np.array]]] = None,
+        detection_is_confirmed: bool = False,
     ):
-        super().__init__(
-            identifier,
-            contour,
-            frame_number,
-        )
+        super().__init__(identifier, contour, frame_number, detection_is_confirmed)
         self.stddevs_of_pixels_intensity = []
         self.means_of_pixels_intensity = []
         self.areas = [self.w * self.h if contour.shape == (4,) else cv.contourArea(contour)]
@@ -153,13 +150,19 @@ class TrackedDetectedBoundingBox(DetectedBoundingBox):
         ellipse_angle: Optional[float] = None,
         ellipse_axes_lengths: Optional[tuple[int, int]] = None,
         track_is_confirmed: bool = False,
+        frame_dict_history: Optional[dict[int, dict[str, np.array]]] = None,
     ):
-        super().__init__(identifier=identifier, contour=contour, frame_number=frame_number)
+        super().__init__(
+            identifier=identifier,
+            contour=contour,
+            frame_number=frame_number,
+            detection_is_confirmed=track_is_confirmed,
+            frame_dict_history=frame_dict_history,
+        )
         self.detection_is_confirmed = track_is_confirmed
         self.ellipse_angles = [ellipse_angle]
         self.ellipse_axes_lengths_pairs = [ellipse_axes_lengths]
         self.velocities = []
-        self.detection_is_confirmed = track_is_confirmed
         self.calculate_speed()
         self.update_object(self)
 
