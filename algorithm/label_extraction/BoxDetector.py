@@ -5,6 +5,7 @@ import copy
 import cv2 as cv
 import numpy as np
 
+from algorithm.DetectedObject import DetectedBoundingBox
 from algorithm.label_extraction.BoxObject import BoxObject
 from algorithm.utils import resize_img
 
@@ -51,7 +52,7 @@ class BoxDetector:
 
         # Detection and Tracking
         self.detections = {}
-        self.current_objects = {}
+        self.current_objects: dict[int, DetectedBoundingBox] = {}
         self.current_threshold = None
         self.associations = []
         self.latest_obj_index = 0

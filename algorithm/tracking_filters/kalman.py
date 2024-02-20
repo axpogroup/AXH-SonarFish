@@ -421,11 +421,11 @@ def filter_detections(
 
 def tracks_to_object_history(
     tracks: list[Track],
-    object_history: dict[int, DetectedBoundingBox],
+    object_history: dict[int, TrackedDetectedBoundingBox],
     frame_number: int,
-    frame_dict: dict,
+    processed_frame_dict: dict,
     bbox_size_to_stddev_ratio_threshold: int,
-) -> dict[int, DetectedBoundingBox]:
+) -> dict[int, TrackedDetectedBoundingBox]:
     for track in tracks:
         angle_with_x_axis, sqrt_of_lamdas = get_confidence_ellipse_attributes(track)
         obj = TrackedDetectedBoundingBox(
@@ -435,14 +435,13 @@ def tracks_to_object_history(
             ellipse_angle=angle_with_x_axis,
             ellipse_axes_lengths=sqrt_of_lamdas,
             track_is_confirmed=track.is_confirmed(),
-            frame_dict_history=frame_dict,
+            frame=processed_frame_dict,
         )
         if obj.bbox_size_to_stddev_ratio and obj.bbox_size_to_stddev_ratio < bbox_size_to_stddev_ratio_threshold:
             if track.track_id not in object_history.keys():
                 object_history[track.track_id] = obj
             else:
                 object_history[track.track_id].update_object(obj)
-    frame_dict.pop(frame_number)
     return object_history
 
 

@@ -4,7 +4,11 @@ from typing import Optional
 import cv2 as cv
 import numpy as np
 
-from algorithm.DetectedObject import BoundingBox, DetectedBoundingBox
+from algorithm.DetectedObject import (
+    BoundingBox,
+    DetectedBoundingBox,
+    TrackedDetectedBoundingBox,
+)
 from algorithm.FishDetector import FishDetector
 
 FIRST_ROW = [
@@ -100,7 +104,7 @@ def get_visual_output(
 
 def _draw_detections_and_labels(
     detector: FishDetector,
-    object_history: dict[int, DetectedBoundingBox],
+    object_history: dict[int, TrackedDetectedBoundingBox],
     label_history: Optional[dict[int, BoundingBox]],
     processed_frame: dict[str, np.ndarray],
     color: tuple,

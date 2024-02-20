@@ -10,7 +10,7 @@ import yaml
 from azureml.core import Workspace
 from dotenv import load_dotenv
 
-from algorithm.DetectedObject import BoundingBox
+from algorithm.DetectedObject import BoundingBox, TrackedDetectedBoundingBox
 from algorithm.FishDetector import FishDetector
 from algorithm.InputOutputHandler import InputOutputHandler
 from algorithm.validation import mot16_metrics
@@ -27,7 +27,7 @@ def read_labels_into_dataframe(labels_path: Path, filename: str) -> Optional[pd.
 
 
 def extract_labels_history(
-    label_history: dict,
+    label_history: dict[int, BoundingBox],
     labels: Optional[pd.DataFrame],
     current_frame: int,
 ) -> Optional[dict[int, BoundingBox]]:
@@ -66,13 +66,12 @@ def main(settings_dict: dict):
 
     input_output_handler = InputOutputHandler(settings_dict)
     detector = FishDetector(settings_dict)
-    object_history = {}
+    object_history: dict[int, TrackedDetectedBoundingBox] = {}
     label_history = {}
     while input_output_handler.get_new_frame():
         detections, processed_frame_dict, runtimes = detector.detect_objects(input_output_handler.current_raw_frame)
         object_history = detector.associate_detections(
-            detections,
-            object_history,
+            detections=detections, object_history=object_history, processed_frame_dict=processed_frame_dict
         )
         label_history = extract_labels_history(
             label_history,
