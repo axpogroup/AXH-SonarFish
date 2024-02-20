@@ -13,6 +13,7 @@ pyyaml==6.0
 pandas==1.5.3
 deepsort==0.0.5
 numpy==1.25.2
+scikit-image==0.22.0
 
 # MOT16 metrics
 motmetrics==1.4.0
