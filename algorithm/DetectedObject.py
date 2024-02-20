@@ -30,6 +30,7 @@ class BoundingBox:
     def update_object(self, detection_box):
         self.frames_observed.append(detection_box.frames_observed[-1])
         self.midpoints.append(detection_box.midpoints[-1])
+        # ideally, we remove the notion of history from this class
         self.top_lefts_x.append(detection_box.top_lefts_x[-1])
         self.top_lefts_y.append(detection_box.top_lefts_y[-1])
         self.bounding_boxes.append(detection_box.bounding_boxes[-1])
@@ -41,18 +42,25 @@ class DetectedBoundingBox(BoundingBox):
         identifier: int,
         contour: np.ndarray,
         frame_number: int,
-        frame_dict_history: Optional[dict[int, dict[str, np.array]]] = None,
+        frame: dict[str, np.ndarray],
         detection_is_confirmed: bool = False,
     ):
         super().__init__(identifier, contour, frame_number, detection_is_confirmed)
         self.stddevs_of_pixels_intensity = []
         self.means_of_pixels_intensity = []
         self.areas = [self.w * self.h if contour.shape == (4,) else cv.contourArea(contour)]
-        self.frame_dict_history = frame_dict_history
-        if frame_dict_history and "difference" in frame_dict_history.get(frame_number).keys():
+        self.feature_patch = self.get_feature_patch(frame, "difference_thresholded")
+        if frame and "difference" in frame.keys():
             self.calculate_average_pixel_intensity(
-                frame_dict_history.get(frame_number)["difference"],
+                frame["difference"],
             )
+
+    def update_object(self, detection):
+        super().update_object(detection)
+        self.areas.append(detection.areas[-1])
+        self.means_of_pixels_intensity.append(detection.means_of_pixels_intensity[-1])
+        self.stddevs_of_pixels_intensity.append(detection.stddevs_of_pixels_intensity[-1])
+        self.feature_patch = detection.feature_patch
 
     def calculate_average_pixel_intensity(self, reference_frames: np.ndarray):
         detection_box = reference_frames[self.y : self.y + self.h, self.x : self.x + self.w]
@@ -60,8 +68,8 @@ class DetectedBoundingBox(BoundingBox):
             print("detection_box is empty")
             return
         mean, stddev = cv.meanStdDev(detection_box)
-        self.means_of_pixels_intensity.append(mean[0])
-        self.stddevs_of_pixels_intensity.append(stddev[0])
+        self.means_of_pixels_intensity.append(mean[0][0])
+        self.stddevs_of_pixels_intensity.append(stddev[0][0])
 
     def to_xyah(self):
         """Convert bounding box to format `(center x, center y, aspect ratio,
@@ -72,10 +80,8 @@ class DetectedBoundingBox(BoundingBox):
         ret[2] /= ret[3]
         return ret
 
-    def _get_feature_patch(self, processing_step: str):
-        return self.frame_dict_history[self.frames_observed[-1]][processing_step][
-            self.y : self.y + self.h, self.x : self.x + self.w
-        ]
+    def get_feature_patch(self, frame, processing_step: str):
+        return frame[processing_step][self.y : self.y + self.h, self.x : self.x + self.w]
 
     @property
     def feature(self):
@@ -84,7 +90,7 @@ class DetectedBoundingBox(BoundingBox):
             "contour": self.contour,
             "detection_id": self.ID,
             "area": self.area,
-            "patch": self._get_feature_patch("difference_thresholded"),
+            "patch": self.feature_patch,
             "sift": self.sift_features,
             "histogram": self.histogram,
             "fft": self.fft,
@@ -106,19 +112,19 @@ class DetectedBoundingBox(BoundingBox):
 
     @property
     def histogram(self):
-        img = self._get_feature_patch("difference_thresholded")
+        img = self.feature_patch
         hist_raw = np.histogram(img, bins=range(257))[0].reshape(-1, 1).astype(np.float32)
 
         return cv.normalize(hist_raw, hist_raw, alpha=0, beta=1, norm_type=cv.NORM_MINMAX)
 
     @property
     def sift_features(self):
-        patch = self._get_feature_patch("difference_thresholded")
+        patch = self.feature_patch
         return cv.SIFT_create().detectAndCompute(patch, None)
 
     @property
     def fft(self):
-        patch = self._get_feature_patch("difference_thresholded")
+        patch = self.feature_patch
         patch_resized = cv.resize(patch, (64, 64))
         return np.fft.fft2(patch_resized)
 
@@ -147,24 +153,23 @@ class TrackedDetectedBoundingBox(DetectedBoundingBox):
         identifier: int,
         frame_number: int,
         contour: np.ndarray,
+        frame: dict[str, np.ndarray],
         ellipse_angle: Optional[float] = None,
         ellipse_axes_lengths: Optional[tuple[int, int]] = None,
         track_is_confirmed: bool = False,
-        frame_dict_history: Optional[dict[int, dict[str, np.array]]] = None,
     ):
         super().__init__(
             identifier=identifier,
             contour=contour,
             frame_number=frame_number,
             detection_is_confirmed=track_is_confirmed,
-            frame_dict_history=frame_dict_history,
+            frame=frame,
         )
         self.detection_is_confirmed = track_is_confirmed
         self.ellipse_angles = [ellipse_angle]
         self.ellipse_axes_lengths_pairs = [ellipse_axes_lengths]
         self.velocities = []
         self.calculate_speed()
-        self.update_object(self)
 
     def update_object(self, detection):
         super().update_object(detection)

@@ -5,7 +5,7 @@ import cv2 as cv
 import numpy as np
 import pandas as pd
 
-from algorithm.DetectedObject import DetectedBoundingBox
+from algorithm.DetectedObject import DetectedBoundingBox, TrackedDetectedBoundingBox
 from algorithm.flow_conditions import rotate_velocity_vectors
 from algorithm.matching.distance import DistanceMetric
 from algorithm.tracking_filters import kalman, nearest_neighbor
@@ -16,7 +16,6 @@ class FishDetector:
     def __init__(self, settings_dict):
         self.object_filter = None
         self.conf = settings_dict
-        self.frame_dict_history = {}
         self.frame_number = 0
         self.latest_obj_index = 0
 
@@ -117,15 +116,13 @@ class FishDetector:
     def extract_keypoints(self, frame_dict) -> Dict[int, DetectedBoundingBox]:
         # Extract keypoints
         contours, _ = cv.findContours(frame_dict["dilated"], cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
-
-        self.frame_dict_history[self.frame_number] = frame_dict
         detections: list[DetectedBoundingBox] = {}
         for contour in contours:
             new_object = DetectedBoundingBox(
                 identifier=self.latest_obj_index,
                 frame_number=self.frame_number,
                 contour=contour,
-                frame_dict_history=self.frame_dict_history,
+                frame=frame_dict,
             )
             detections[new_object.ID] = new_object
             self.latest_obj_index += 1
@@ -134,8 +131,9 @@ class FishDetector:
     def associate_detections(
         self,
         detections: dict[int, DetectedBoundingBox],
-        object_history,
-    ) -> Dict[int, DetectedBoundingBox]:
+        object_history: dict[int, TrackedDetectedBoundingBox],
+        processed_frame_dict,
+    ) -> Dict[int, TrackedDetectedBoundingBox]:
         if len(detections) == 0:
             return object_history
 
@@ -166,10 +164,10 @@ class FishDetector:
 
             kalman.filter_detections(detections, self.object_filter)
             return kalman.tracks_to_object_history(
-                self.object_filter.tracks,
-                object_history,
-                self.frame_number,
-                frame_dict=self.frame_dict_history,
+                tracks=self.object_filter.tracks,
+                object_history=object_history,
+                frame_number=self.frame_number,
+                processed_frame_dict=processed_frame_dict,
                 bbox_size_to_stddev_ratio_threshold=self.conf.get("bbox_size_to_stddev_ratio_threshold"),
             )
         else:
