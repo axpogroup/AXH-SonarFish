@@ -176,17 +176,6 @@ def _draw_detector_output(
             color,
             thickness=1 * scale,
         )
-        # if obj.ellipse_angles[-1] is not None and obj.ellipse_axes_lengths_pairs[-1] is not None:
-        #     cv.ellipse(
-        #         img,
-        #         (obj.midpoints[-1][0], obj.midpoints[-1][1]),
-        #         (int(obj.ellipse_axes_lengths_pairs[-1][0]), int(obj.ellipse_axes_lengths_pairs[-1][1])),
-        #         obj.ellipse_angles[-1],
-        #         0,
-        #         360,
-        #         color,
-        #         1 * scale,
-        #     )
         if paths:
             for point in obj.midpoints:
                 cv.circle(
@@ -205,6 +194,17 @@ def _draw_detector_output(
                 1 * scale,
             )
         if annotate:
+            if obj.ellipse_angles[-1] is not None and obj.ellipse_axes_lengths_pairs[-1] is not None:
+                cv.ellipse(
+                    img,
+                    (obj.midpoints[-1][0], obj.midpoints[-1][1]),
+                    (int(obj.ellipse_axes_lengths_pairs[-1][0]), int(obj.ellipse_axes_lengths_pairs[-1][1])),
+                    obj.ellipse_angles[-1],
+                    0,
+                    360,
+                    color,
+                    1 * scale,
+                )
             text = ""
             if len(obj.means_of_pixels_intensity) > 0:
                 ratio = obj.bbox_size_to_stddev_ratio
