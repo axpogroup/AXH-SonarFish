@@ -270,7 +270,7 @@ class FishDetector:
         if self.conf["video_colormap"] == "red":
             return cv.cvtColor(img, cv.COLOR_BGR2GRAY)
         elif self.conf["video_colormap"] == "jet":
-            return colormap2arr(img)
+            return colormap_to_array(img)
         else:
             raise ValueError(f"Invalid colormap: {self.settings_dict['video_colormap']}, must be 'red' or 'jet'")
 
@@ -316,23 +316,16 @@ class FishDetector:
         return matching_threshold
 
 
-def colormap2arr(arr, cmap=cm.jet):
+def colormap_to_array(input_array, colormap=cm.jet):
     # http://stackoverflow.com/questions/3720840/how-to-reverse-color-map-image-to-scalar-values/3722674#3722674
-    gradient = cmap(np.linspace(0.0, 1.0, 255))[:, 0:3]  # Exclude alpha channel
+    colormap_mapping = colormap(np.linspace(0.0, 1.0, 255))[:, 0:3]
 
-    # Reshape arr to something like (240*240, 4), all the 4-tuples in a long list...
-    arr2 = arr[:, :, ::-1].reshape((arr.shape[0] * arr.shape[1], arr.shape[2]))
+    # We need to reverse color channels since opencv uses BGR and not RGB
+    reshaped_array = input_array[:, :, ::-1].reshape(
+        (input_array.shape[0] * input_array.shape[1], input_array.shape[2])
+    )
+    color_nearest_neighbor, _ = scv.vq(reshaped_array, colormap_mapping)
+    scaled_values = color_nearest_neighbor.astype("uint8")
+    reshaped_values = scaled_values.reshape(input_array.shape[0], input_array.shape[1])
 
-    # Use vector quantization to shift the values in arr2 to the nearest point in
-    # the code book (gradient).
-    code, dist = scv.vq(arr2, gradient)
-
-    # code is an array of length arr2 (240*240), holding the code book index for
-    # each observation. (arr2 are the "observations".)
-    # Scale the values so they are from 0 to 1.
-    values = code.astype("uint8")
-
-    # Reshape values back to (240,240)
-    values = values.reshape(arr.shape[0], arr.shape[1])
-    # plt.imshow(values, cmap='jet')
-    return values
+    return reshaped_values
