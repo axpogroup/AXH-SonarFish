@@ -88,7 +88,7 @@ class TestIntegration:
         intermediate_labels = os.listdir(intermediate_labels_directory)
         intermediate_videos = os.listdir(intermediate_videos_directory)
         assert len(intermediate_labels) == 2
-        assert len(intermediate_videos) == 2
+        assert len(intermediate_videos) == 3
 
         labels_csv = pd.read_csv(f"{labels_directory}/trimmed_video_ground_truth.csv")
         assert len(labels_csv) > 0
