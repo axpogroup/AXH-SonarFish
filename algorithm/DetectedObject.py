@@ -10,7 +10,6 @@ class BoundingBox:
         identifier: int,
         contour: np.ndarray,
         frame_number: int,
-        detection_is_confirmed: bool = False,
     ):
         self.frames_observed = [frame_number]
         self.x, self.y, self.w, self.h = contour if contour.shape == (4,) else cv.boundingRect(contour)
@@ -25,7 +24,6 @@ class BoundingBox:
         self._contour = contour
         self.frame_number = frame_number
         self.ID = identifier
-        self.detection_is_confirmed = detection_is_confirmed
 
     def update_object(self, detection_box):
         self.frames_observed.append(detection_box.frames_observed[-1])
@@ -36,16 +34,19 @@ class BoundingBox:
         self.bounding_boxes.append(detection_box.bounding_boxes[-1])
 
 
-class DetectedBoundingBox(BoundingBox):
+class DetectedBlob(BoundingBox):
     def __init__(
         self,
         identifier: int,
         contour: np.ndarray,
         frame_number: int,
         frame: dict[str, np.ndarray],
-        detection_is_confirmed: bool = False,
     ):
-        super().__init__(identifier, contour, frame_number, detection_is_confirmed)
+        super().__init__(
+            identifier,
+            contour,
+            frame_number,
+        )
         self.stddevs_of_pixels_intensity = []
         self.means_of_pixels_intensity = []
         self.areas = [self.w * self.h if contour.shape == (4,) else cv.contourArea(contour)]
@@ -62,8 +63,8 @@ class DetectedBoundingBox(BoundingBox):
         self.stddevs_of_pixels_intensity.append(detection.stddevs_of_pixels_intensity[-1])
         self.feature_patch = detection.feature_patch
 
-    def calculate_average_pixel_intensity(self, reference_frames: np.ndarray):
-        detection_box = reference_frames[self.y : self.y + self.h, self.x : self.x + self.w]
+    def calculate_average_pixel_intensity(self, reference_frame: np.ndarray):
+        detection_box = reference_frame[self.y : self.y + self.h, self.x : self.x + self.w]
         if 0 in detection_box.shape:
             print("detection_box is empty")
             return
@@ -147,7 +148,7 @@ class DetectedBoundingBox(BoundingBox):
         return self.areas[-1] / self.stddevs_of_pixels_intensity[-1]
 
 
-class TrackedDetectedBoundingBox(DetectedBoundingBox):
+class KalmanTrackedBlob(DetectedBlob):
     def __init__(
         self,
         identifier: int,
@@ -156,16 +157,15 @@ class TrackedDetectedBoundingBox(DetectedBoundingBox):
         frame: dict[str, np.ndarray],
         ellipse_angle: Optional[float] = None,
         ellipse_axes_lengths: Optional[tuple[int, int]] = None,
-        track_is_confirmed: bool = False,
+        detection_is_tracked: bool = False,
     ):
         super().__init__(
             identifier=identifier,
             contour=contour,
             frame_number=frame_number,
-            detection_is_confirmed=track_is_confirmed,
             frame=frame,
         )
-        self.detection_is_confirmed = track_is_confirmed
+        self.detection_is_tracked = detection_is_tracked
         self.ellipse_angles = [ellipse_angle]
         self.ellipse_axes_lengths_pairs = [ellipse_axes_lengths]
         self.velocities = []
@@ -173,7 +173,7 @@ class TrackedDetectedBoundingBox(DetectedBoundingBox):
 
     def update_object(self, detection):
         super().update_object(detection)
-        self.detection_is_confirmed = detection.detection_is_confirmed
+        self.detection_is_tracked = detection.detection_is_tracked
         self.ellipse_angles.append(detection.ellipse_angles[-1])
         self.ellipse_axes_lengths_pairs.append(detection.ellipse_axes_lengths_pairs[-1])
         self.calculate_speed()
