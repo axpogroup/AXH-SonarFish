@@ -267,12 +267,12 @@ class FishDetector:
         return img
 
     def rgb_to_gray(self, img):
-        if self.conf["colormap"] == "red":
+        if self.conf["video_colormap"] == "red":
             return cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-        elif self.conf["colormap"] == "jet":
+        elif self.conf["video_colormap"] == "jet":
             return colormap2arr(img)
         else:
-            raise ValueError(f"Invalid colormap: {self.settings_dict['colormap']}, must be 'red' or 'jet'")
+            raise ValueError(f"Invalid colormap: {self.settings_dict['video_colormap']}, must be 'red' or 'jet'")
 
     @staticmethod
     def ceil_to_odd_int(number):

@@ -16,7 +16,7 @@ def process_video(input_filename: str, boosting_alpha: float = 2.0, boosting_bet
     fps = cap.get(cv2.CAP_PROP_FPS)
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
-    output_filename = input_filename.rsplit(".", 1)[0] + "_jet2.mp4"
+    output_filename = input_filename.rsplit(".", 1)[0] + "_jet.mp4"
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # Use 'mp4v' codec
     out = cv2.VideoWriter(output_filename, fourcc, fps, (width, height))
 
