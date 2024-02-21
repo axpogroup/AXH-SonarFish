@@ -3,7 +3,7 @@ from deepsort.linear_assignment import kalman_filter
 from deepsort.track import Track
 from scipy.optimize import linear_sum_assignment as linear_assignment
 
-from algorithm.DetectedObject import DetectedBoundingBox
+from algorithm.DetectedObject import DetectedBlob
 
 INFTY_COST = 1e5
 
@@ -12,7 +12,7 @@ def min_cost_matching(
     distance_metric: callable,
     max_distance: float,
     tracks: list[Track],
-    detections: dict[int, DetectedBoundingBox],
+    detections: dict[int, DetectedBlob],
     track_indices: list[int] = None,
     detection_indices: list[int] = None,
 ) -> tuple[list[tuple[int, int]], list[int], list[int]]:
@@ -25,7 +25,7 @@ def min_cost_matching(
     distance_metric : Callable[List[Track], List[Detection], List[int], List[int]) -> ndarray
         The distance metric is given a list of tracks and detections as well as
         a list of N track indices and M detection indices. The metric should
-        return the NxM dimensional cost matrix, where element (i, min_cost_matchingj) is the
+        return the NxM dimensional cost matrix, where element (i, j) is the
         association cost between the i-th track in the given track indices and
         the j-th detection in the given detection_indices.
     max_distance : float
@@ -92,7 +92,7 @@ def matching_cascade(
     max_distance: float,
     cascade_depth: int,
     tracks: list[Track],
-    detections: dict[int, DetectedBoundingBox],
+    detections: dict[int, DetectedBlob],
     track_indices: list[int] = None,
     detection_indices: list[int] = None,
 ) -> tuple[list[tuple[int, int]], list[int], list[int]]:

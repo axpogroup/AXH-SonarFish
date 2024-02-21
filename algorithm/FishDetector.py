@@ -5,7 +5,7 @@ import cv2 as cv
 import numpy as np
 import pandas as pd
 
-from algorithm.DetectedObject import DetectedBoundingBox, TrackedDetectedBoundingBox
+from algorithm.DetectedObject import DetectedBlob, KalmanTrackedBlob
 from algorithm.flow_conditions import rotate_velocity_vectors
 from algorithm.matching.distance import DistanceMetric
 from algorithm.tracking_filters import kalman, nearest_neighbor
@@ -36,7 +36,7 @@ class FishDetector:
         self.short_mean_float = None
         self.long_mean_float = None
 
-    def detect_objects(self, raw_frame) -> (Dict[int, DetectedBoundingBox], dict, dict):
+    def detect_objects(self, raw_frame) -> (Dict[int, DetectedBlob], dict, dict):
         start = cv.getTickCount()
         runtimes_ms = {}
         frame_dict = {"raw": raw_frame}
@@ -113,12 +113,12 @@ class FishDetector:
         frame_dict["gray_boosted"] = enhanced_temp
         return frame_dict
 
-    def extract_keypoints(self, frame_dict) -> Dict[int, DetectedBoundingBox]:
+    def extract_keypoints(self, frame_dict) -> Dict[int, DetectedBlob]:
         # Extract keypoints
         contours, _ = cv.findContours(frame_dict["dilated"], cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
-        detections: list[DetectedBoundingBox] = {}
+        detections: list[DetectedBlob] = {}
         for contour in contours:
-            new_object = DetectedBoundingBox(
+            new_object = DetectedBlob(
                 identifier=self.latest_obj_index,
                 frame_number=self.frame_number,
                 contour=contour,
@@ -130,10 +130,10 @@ class FishDetector:
 
     def associate_detections(
         self,
-        detections: dict[int, DetectedBoundingBox],
-        object_history: dict[int, TrackedDetectedBoundingBox],
+        detections: dict[int, DetectedBlob],
+        object_history: dict[int, KalmanTrackedBlob],
         processed_frame_dict,
-    ) -> Dict[int, TrackedDetectedBoundingBox]:
+    ) -> Dict[int, KalmanTrackedBlob]:
         if len(detections) == 0:
             return object_history
 

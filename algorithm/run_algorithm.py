@@ -10,7 +10,7 @@ import yaml
 from azureml.core import Workspace
 from dotenv import load_dotenv
 
-from algorithm.DetectedObject import BoundingBox, TrackedDetectedBoundingBox
+from algorithm.DetectedObject import BoundingBox, KalmanTrackedBlob
 from algorithm.FishDetector import FishDetector
 from algorithm.InputOutputHandler import InputOutputHandler
 from algorithm.validation import mot16_metrics
@@ -66,7 +66,7 @@ def main(settings_dict: dict):
 
     input_output_handler = InputOutputHandler(settings_dict)
     detector = FishDetector(settings_dict)
-    object_history: dict[int, TrackedDetectedBoundingBox] = {}
+    object_history: dict[int, KalmanTrackedBlob] = {}
     label_history = {}
     while input_output_handler.get_new_frame():
         detections, processed_frame_dict, runtimes = detector.detect_objects(input_output_handler.current_raw_frame)
