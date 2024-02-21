@@ -174,10 +174,11 @@ def _draw_detector_output(
         )
         if annotate:
             if obj.ellipse_angles[-1] is not None and obj.ellipse_axes_lengths_pairs[-1] is not None:
+                ellipse_axes_lengths = obj.ellipse_axes_lengths_pairs[-1].astype(int)
                 cv.ellipse(
                     img,
                     (obj.midpoints[-1][0], obj.midpoints[-1][1]),
-                    (int(obj.ellipse_axes_lengths_pairs[-1][0]), int(obj.ellipse_axes_lengths_pairs[-1][1])),
+                    (ellipse_axes_lengths[0], ellipse_axes_lengths[1]),
                     obj.ellipse_angles[-1],
                     0,
                     360,
@@ -187,14 +188,9 @@ def _draw_detector_output(
             text = ""
             if len(obj.means_of_pixels_intensity) > 0:
                 ratio = obj.bbox_size_to_stddev_ratio
-                text = f"ID:{obj.ID}, ratio: {ratio}"
+                text = f"ID:{obj.ID}, ratio: {int(ratio)}"
                 if len(obj.velocities) > 100:
-                    text += (
-                        ", v [px/frame]: "
-                        + str(obj.velocities[-1][0] * scale)
-                        + ", "
-                        + str(obj.velocities[-1][1] * scale)
-                    )
+                    text += f", v [px/frame]: {obj.velocities[-1] * scale}"
             cv.putText(
                 img,
                 text,

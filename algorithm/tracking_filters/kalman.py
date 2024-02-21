@@ -434,7 +434,7 @@ def tracks_to_object_history(
             frame_number=frame_number,
             ellipse_angle=angle_with_x_axis,
             ellipse_axes_lengths=sqrt_of_lamdas,
-            track_is_confirmed=track.is_confirmed(),
+            detection_is_tracked=track.is_confirmed(),
             frame=processed_frame_dict,
         )
         if obj.bbox_size_to_stddev_ratio and obj.bbox_size_to_stddev_ratio < bbox_size_to_stddev_ratio_threshold:
