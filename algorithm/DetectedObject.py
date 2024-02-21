@@ -51,10 +51,7 @@ class DetectedBlob(BoundingBox):
         self.means_of_pixels_intensity = []
         self.areas = [self.w * self.h if contour.shape == (4,) else cv.contourArea(contour)]
         self.feature_patch = self.get_feature_patch(frame, "difference_thresholded")
-        if frame and "difference" in frame.keys():
-            self.calculate_average_pixel_intensity(
-                frame["difference"],
-            )
+        self.calculate_average_pixel_intensity(frame["difference"])
 
     def update_object(self, detection):
         super().update_object(detection)
