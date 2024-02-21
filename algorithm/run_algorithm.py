@@ -39,7 +39,6 @@ def extract_labels_history(
             identifier=row["id"],
             frame_number=row["frame"],
             contour=np.array(row[["x", "y", "w", "h"]]),
-            detection_is_confirmed=True,
         )
         if row["id"] not in label_history:
             label_history[row["id"]] = truth_detected
