@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import scipy.cluster.vq as scv
 
-from algorithm.DetectedObject import DetectedObject
+from algorithm.DetectedObject import DetectedBlob, KalmanTrackedBlob
 from algorithm.flow_conditions import rotate_velocity_vectors
 from algorithm.matching.distance import DistanceMetric
 from algorithm.tracking_filters import kalman, nearest_neighbor
@@ -18,7 +18,6 @@ class FishDetector:
     def __init__(self, settings_dict):
         self.object_filter = None
         self.conf = settings_dict
-        self.frame_dict_history = {}
         self.frame_number = 0
         self.latest_obj_index = 0
 
@@ -39,7 +38,7 @@ class FishDetector:
         self.short_mean_float = None
         self.long_mean_float = None
 
-    def detect_objects(self, raw_frame):
+    def detect_objects(self, raw_frame) -> (Dict[int, DetectedBlob], dict, dict):
         start = cv.getTickCount()
         runtimes_ms = {}
         frame_dict = {"raw": raw_frame}
@@ -116,24 +115,27 @@ class FishDetector:
         frame_dict["gray_boosted"] = enhanced_temp
         return frame_dict
 
-    def extract_keypoints(self, frame_dict) -> Dict[int, DetectedObject]:
+    def extract_keypoints(self, frame_dict) -> Dict[int, DetectedBlob]:
         # Extract keypoints
         contours, _ = cv.findContours(frame_dict["dilated"], cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
-
-        self.frame_dict_history[self.frame_number] = frame_dict
-        detections: Dict[int, DetectedObject] = {}
+        detections: list[DetectedBlob] = {}
         for contour in contours:
-            new_object = DetectedObject(
+            new_object = DetectedBlob(
                 identifier=self.latest_obj_index,
                 frame_number=self.frame_number,
                 contour=contour,
-                frame_dict_history=self.frame_dict_history,
+                frame=frame_dict,
             )
             detections[new_object.ID] = new_object
             self.latest_obj_index += 1
         return detections
 
-    def associate_detections(self, detections, object_history) -> Dict[int, DetectedObject]:
+    def associate_detections(
+        self,
+        detections: dict[int, DetectedBlob],
+        object_history: dict[int, KalmanTrackedBlob],
+        processed_frame_dict,
+    ) -> Dict[int, KalmanTrackedBlob]:
         if len(detections) == 0:
             return object_history
 
@@ -164,10 +166,10 @@ class FishDetector:
 
             kalman.filter_detections(detections, self.object_filter)
             return kalman.tracks_to_object_history(
-                self.object_filter.tracks,
-                object_history,
-                self.frame_number,
-                frame_dict=self.frame_dict_history,
+                tracks=self.object_filter.tracks,
+                object_history=object_history,
+                frame_number=self.frame_number,
+                processed_frame_dict=processed_frame_dict,
                 bbox_size_to_stddev_ratio_threshold=self.conf.get("bbox_size_to_stddev_ratio_threshold"),
             )
         else:

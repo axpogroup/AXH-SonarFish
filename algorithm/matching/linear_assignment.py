@@ -1,8 +1,9 @@
 import numpy as np
-from deepsort.detection import Detection
 from deepsort.linear_assignment import kalman_filter
 from deepsort.track import Track
 from scipy.optimize import linear_sum_assignment as linear_assignment
+
+from algorithm.DetectedObject import DetectedBlob
 
 INFTY_COST = 1e5
 
@@ -11,7 +12,7 @@ def min_cost_matching(
     distance_metric: callable,
     max_distance: float,
     tracks: list[Track],
-    detections: list[Detection],
+    detections: dict[int, DetectedBlob],
     track_indices: list[int] = None,
     detection_indices: list[int] = None,
 ) -> tuple[list[tuple[int, int]], list[int], list[int]]:
@@ -91,7 +92,7 @@ def matching_cascade(
     max_distance: float,
     cascade_depth: int,
     tracks: list[Track],
-    detections: list[Detection],
+    detections: dict[int, DetectedBlob],
     track_indices: list[int] = None,
     detection_indices: list[int] = None,
 ) -> tuple[list[tuple[int, int]], list[int], list[int]]:

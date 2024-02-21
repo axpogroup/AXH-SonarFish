@@ -3,7 +3,7 @@ import scipy
 from deepsort import iou_matching
 from deepsort.tracker import Track
 
-from algorithm.DetectedObject import DetectedObject
+from algorithm.DetectedObject import DetectedBlob, KalmanTrackedBlob
 from algorithm.flow_conditions import rot_mat_from_river_velocity
 from algorithm.matching.distance import DistanceMetric
 from algorithm.matching.linear_assignment import (
@@ -313,11 +313,11 @@ class Tracker:
         for track in self.tracks:
             track.predict(self.kf)
 
-    def update(self, detections: dict[int, DetectedObject]):
+    def update(self, detections: dict[int, DetectedBlob]):
         """Perform measurement update and track management.
         Parameters
         ----------
-        detections : List[deep_sort.detection.Detection]
+        detections : List[DetectedBoundingBox]
             A list of detections at the current time step.
         """
         # Run matching cascade.
@@ -341,7 +341,7 @@ class Tracker:
                 targets += [track.track_id for _ in track.features]
         self.primary_metric.partial_fit(features, targets, active_targets)
 
-    def _match(self, detections: dict[int, DetectedObject]):
+    def _match(self, detections: dict[int, DetectedBlob]):
 
         def gated_metric(tracks, dets, track_indices, detection_indices):
             features = [dets[i].feature for i in detection_indices]
@@ -412,7 +412,7 @@ class Tracker:
 
 
 def filter_detections(
-    detections: dict[int, DetectedObject],
+    detections: dict[int, DetectedBlob],
     tracker: Tracker,
 ):
     tracker.predict()
@@ -421,28 +421,27 @@ def filter_detections(
 
 def tracks_to_object_history(
     tracks: list[Track],
-    object_history: dict[int, DetectedObject],
+    object_history: dict[int, KalmanTrackedBlob],
     frame_number: int,
-    frame_dict: dict,
+    processed_frame_dict: dict,
     bbox_size_to_stddev_ratio_threshold: int,
-) -> dict[int, DetectedObject]:
+) -> dict[int, KalmanTrackedBlob]:
     for track in tracks:
         angle_with_x_axis, sqrt_of_lamdas = get_confidence_ellipse_attributes(track)
-        obj = DetectedObject(
-            track.track_id,
-            track.to_tlwh(),
-            frame_number,
-            frame_dict_history=frame_dict,
+        obj = KalmanTrackedBlob(
+            identifier=track.track_id,
+            contour=track.to_tlwh(),
+            frame_number=frame_number,
             ellipse_angle=angle_with_x_axis,
             ellipse_axes_lengths=sqrt_of_lamdas,
-            track_is_confirmed=track.is_confirmed(),
+            detection_is_tracked=track.is_confirmed(),
+            frame=processed_frame_dict,
         )
         if obj.bbox_size_to_stddev_ratio and obj.bbox_size_to_stddev_ratio < bbox_size_to_stddev_ratio_threshold:
             if track.track_id not in object_history.keys():
                 object_history[track.track_id] = obj
             else:
                 object_history[track.track_id].update_object(obj)
-    frame_dict.pop(frame_number)
     return object_history
 
 
