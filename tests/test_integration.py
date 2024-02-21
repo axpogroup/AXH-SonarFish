@@ -75,7 +75,6 @@ class TestIntegration:
         intermediate_videos_directory,
         labels_directory,
         relevant_csv_columns,
-        snapshot,
     ):
         with open("../settings/preprocessing_settings.yaml") as f:
             preprocess_settings = yaml.load(f, Loader=yaml.SafeLoader)

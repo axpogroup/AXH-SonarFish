@@ -59,7 +59,7 @@ def compute_metrics(settings_dict):
 
 def main(settings_dict: dict):
     labels_df = read_labels_into_dataframe(
-        labels_path=Path(settings_dict["ground_truth_directory"]),
+        labels_path=Path(settings_dict.get("ground_truth_directory", "")),
         filename=Path(settings_dict["file_name"]).stem,
     )
 
