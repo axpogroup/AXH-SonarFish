@@ -62,9 +62,8 @@ def clear_directory(directory):
 
 def assert_directory_empty(directory: str):
     files = os.listdir(directory)
-    assert len(files) == 0 or (
-        len(files) == 1 and files[0] == ".gitkeep"
-    ), f"The {directory} directory should be empty before running the test, but it has {files=}"
+    if not (len(files) == 1 and files[0] == ".gitkeep"):
+        raise Exception(f"The {directory} directory should be empty before running the test, but it has {files=}")
 
 
 class TestIntegration:
@@ -100,9 +99,7 @@ class TestIntegration:
         detection_settings["file_name"] = "trimmed_video.mp4"
         detection_settings["mask_directory"] = "../analysis/demo/masks"
         detection_settings["display_output_video"] = False
-
         run_algorithm_main(detection_settings)
-
         detections_csv = pd.read_csv(f"{model_output_directory}/trimmed_video.csv")
         assert list(detections_csv.columns)[:6] == relevant_csv_columns
         assert len(detections_csv) > 0
