@@ -90,7 +90,6 @@ def get_visual_output(
                 truth_color=truth_color,
                 paths=True,
                 fullres=True,
-                annotate="velocities",
             )
         else:
             disp = img
