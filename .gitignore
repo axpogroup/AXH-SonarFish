@@ -138,6 +138,7 @@ local.settings.json
 output/
 labeling/
 *.mp4
+!./tests/**/*.mp4
 demo_*
 .venv
 .vscode
