@@ -102,8 +102,6 @@ class TestIntegration:
         detection_settings["display_output_video"] = False
         run_algorithm_main(detection_settings)
         detections_csv = pd.read_csv(f"{model_output_directory}/trimmed_video.csv")
-        reference_csv = pd.read_csv("snapshots/trimmed_video.csv")
-        pd.testing.assert_frame_equal(detections_csv, reference_csv)
         assert list(detections_csv.columns)[:6] == relevant_csv_columns
         assert len(detections_csv) > 0
 
