@@ -2,8 +2,10 @@ import os
 from typing import Dict
 
 import cv2 as cv
+import matplotlib.cm as cm
 import numpy as np
 import pandas as pd
+import scipy.cluster.vq as scv
 
 from algorithm.DetectedObject import DetectedObject
 from algorithm.flow_conditions import rotate_velocity_vectors
@@ -103,7 +105,7 @@ class FishDetector:
 
     def enhance_image(self, frame_dict):
         # Image enhancement
-        if self.conf["downsample"]:
+        if self.conf.get("downsample"):
             frame_dict["raw_downsampled"] = resize_img(frame_dict["raw"], self.conf["downsample"])
             frame_dict["gray"] = self.rgb_to_gray(frame_dict["raw_downsampled"])
         else:
@@ -264,9 +266,13 @@ class FishDetector:
                 np.place(img, self.sonar_controls_mask < 100, 0)
         return img
 
-    @staticmethod
-    def rgb_to_gray(img):
-        return cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+    def rgb_to_gray(self, img):
+        if self.conf["video_colormap"] == "red":
+            return cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+        elif self.conf["video_colormap"] == "jet":
+            return colormap_to_array(img)
+        else:
+            raise ValueError(f"Invalid colormap: {self.settings_dict['video_colormap']}, must be 'red' or 'jet'")
 
     @staticmethod
     def ceil_to_odd_int(number):
@@ -308,3 +314,18 @@ class FishDetector:
         else:
             matching_threshold = self.conf["filter_association_thresh"]
         return matching_threshold
+
+
+def colormap_to_array(input_array, colormap=cm.jet):
+    # http://stackoverflow.com/questions/3720840/how-to-reverse-color-map-image-to-scalar-values/3722674#3722674
+    colormap_mapping = colormap(np.linspace(0.0, 1.0, 255))[:, 0:3]
+
+    # We need to reverse color channels since opencv uses BGR and not RGB
+    reshaped_array = input_array[:, :, ::-1].reshape(
+        (input_array.shape[0] * input_array.shape[1], input_array.shape[2])
+    )
+    color_nearest_neighbor, _ = scv.vq(reshaped_array, colormap_mapping)
+    scaled_values = color_nearest_neighbor.astype("uint8")
+    reshaped_values = scaled_values.reshape(input_array.shape[0], input_array.shape[1])
+
+    return reshaped_values
