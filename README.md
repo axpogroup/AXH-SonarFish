@@ -29,8 +29,6 @@ The data structure is as follows:
           - videos
           - labels 
 
-
-
 - *labeled_videos* : contains the labeled videos.
 - *labels*: this is where the output of *extract_labels_from_videos.py* is stored.
 - *model_output* : contains the output of the fish detection algorithm. This includes a folder for each video file 
@@ -90,6 +88,17 @@ This is a high-level overview of the steps needed to run the continous operation
 1. Download the sample sonar video from here: [demo_sample_sonar_recording.mp4 - Sharepoint](https://axpogrp.sharepoint.com/:v:/s/DEPTHTD-A/ESdKpDEWDEBDqYR6KVFZ0D8BJrxKcDi6F8JaenjD0YhWWw?e=5jNCLF) 
 2. Place the video in the following folder: _"data/raw/videos/"_
 3. Do the same steps as in the previous section and comment out the ground_truth_directory in the settings file. This will cause the algorithm to not compare the output with the ground truth.
+
+# Labeling Videos
+We use the video editing tool shotcut to label videos.
+## Converting Colormaps
+You can convert the red colormap the sonar videos are stored in to a jet colormap, which is easier to interpret for the human eye. The script, `convert_video_red_to_jet.py`, does this transformation.
+You can (after activating the `.venv` of the project) run the script with
+```bash
+python .algorithm/convert_video_red_to_jet.py </path/to/your/video.mp4>
+```
+Replace `</path/to/your/video.mp4>` with the path to the video file you want to process.
+You can also specify the boosting $\alpha$ and $\beta$ for the conversion with the `--boosting_alpha` and `--boosting_beta` flags. The defaults are 2.0 and 30.0 respectively.
 
 # Comments
 Tested with Python 3.10, 
