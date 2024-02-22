@@ -14,36 +14,30 @@ def calculate_derivatives(
     return np.gradient(x), np.gradient(y)
 
 
-def calculate_average_curvature(x: List[float], y: List[float]) -> np.ndarray:
-
-    dx_dt, dy_dt = calculate_derivatives(x, y)
+def calculate_average_curvature(detection) -> np.ndarray:
+    if len(detection["x"].to_list()) < 2 or len(detection["y"].to_list()) < 2:
+        print(f"Skipping detection {detection['id']} because it has too few points.")
+        return 0
+    dx_dt, dy_dt = calculate_derivatives(detection["x"].to_list(), detection["y"].to_list())
     d2x_dt2, d2y_dt2 = calculate_derivatives(dx_dt, dy_dt)
     curvature = np.abs(dx_dt * d2y_dt2 - dy_dt * d2x_dt2) / (dx_dt**2 + dy_dt**2) ** (3 / 2)
-    return np.nanmean(
-        curvature,
-    )
+    avg_curvature = np.nanmean(curvature)
+    print(f"Average Curvature: {avg_curvature}", detection["classification"].unique())
+    return avg_curvature
 
 
 def extract_path_features(settings: dict):
-    output_csv = pd.read_csv(Path(settings["output_directory"]) / Path(Path(settings["file_name"]).stem + ".csv"))
-    ids_of_detections = output_csv["id"].unique()
-    fish_curvatures = []
-    object_curvatures = []
-    for ids_of_detection in ids_of_detections:
-        detection = output_csv[output_csv["id"] == ids_of_detection]
-        x_coords = detection["x"].tolist()
-        y_coords = detection["y"].tolist()
-        if len(x_coords) < 2 or len(y_coords) < 2:
-            print(f"Skipping detection {ids_of_detection} because it has too few points.")
-            continue
-        avg_curvature = calculate_average_curvature(x_coords, y_coords)
-        if detection["classification"].unique()[0] == "fish":
-            fish_curvatures.append(avg_curvature)
-        else:
-            object_curvatures.append(avg_curvature)
-        print(f"Average Curvature: {avg_curvature}", detection["classification"].unique())
-    print(f"Average fish curvature: {np.nanmean(fish_curvatures)}")
-    print(f"Average object curvature: {np.nanmean(object_curvatures)}")
+    output_csv_df = pd.read_csv(Path(settings["output_directory"]) / (Path(settings["file_name"]).stem + ".csv"))
+    avg_curvatures_of_detections_df = pd.DataFrame()
+    avg_curvatures_of_detections_series = output_csv_df.groupby("id").apply(
+        lambda detection: calculate_average_curvature(detection)
+    )
+    avg_curvatures_of_detections_df["id"] = avg_curvatures_of_detections_series.index
+    avg_curvatures_of_detections_df["average_curvature"] = avg_curvatures_of_detections_series.values
+    df_filtered_detections = output_csv_df.drop_duplicates(subset=["id"])[["id", "classification"]]
+    merged = pd.merge(df_filtered_detections, avg_curvatures_of_detections_df, on="id")
+    print("Average Curvatures of fish: ", merged[merged["classification"] == "fish"]["average_curvature"].mean())
+    print("Average Curvatures of objects: ", merged[merged["classification"] == "object"]["average_curvature"].mean())
 
 
 if __name__ == "__main__":
