@@ -33,7 +33,7 @@ def extract_path_features(settings: dict):
         detection = output_csv[output_csv["id"] == ids_of_detection]
         x_coords = detection["x"].tolist()
         y_coords = detection["y"].tolist()
-        if len(x_coords) < 2:
+        if len(x_coords) < 2 or len(y_coords) < 2:
             print(f"Skipping detection {ids_of_detection} because it has too few points.")
             continue
         avg_curvature = calculate_average_curvature(x_coords, y_coords)
