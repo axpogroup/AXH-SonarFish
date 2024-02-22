@@ -1,29 +1,23 @@
 import argparse
 from pathlib import Path
-from typing import Iterable, List, Union
 
 import numpy as np
 import pandas as pd
 import yaml
-from numpy import ndarray
 
 
-def calculate_derivatives(
-    x: List[float], y: List[float]
-) -> tuple[Union[ndarray, Iterable[ndarray]], Union[ndarray, Iterable[ndarray]]]:
-    return np.gradient(x), np.gradient(y)
-
-
-def calculate_average_curvature(detection) -> np.ndarray:
-    if len(detection["x"].to_list()) < 2 or len(detection["y"].to_list()) < 2:
+def calculate_average_curvature(detection) -> float:
+    x_coordinates = detection["x"].to_list()
+    y_coordinates = detection["y"].to_list()
+    if len(x_coordinates) < 2 or len(y_coordinates) < 2:
         print(f"Skipping detection {detection['id']} because it has too few points.")
         return 0
-    dx_dt, dy_dt = calculate_derivatives(detection["x"].to_list(), detection["y"].to_list())
-    d2x_dt2, d2y_dt2 = calculate_derivatives(dx_dt, dy_dt)
+    dx_dt, dy_dt = np.gradient(x_coordinates), np.gradient(y_coordinates)
+    d2x_dt2, d2y_dt2 = np.gradient(dx_dt), np.gradient(dy_dt)
     curvature = np.abs(dx_dt * d2y_dt2 - dy_dt * d2x_dt2) / (dx_dt**2 + dy_dt**2) ** (3 / 2)
     avg_curvature = np.nanmean(curvature)
     print(f"Average Curvature: {avg_curvature}", detection["classification"].unique())
-    return avg_curvature
+    return float(avg_curvature)
 
 
 def extract_path_features(settings: dict):
