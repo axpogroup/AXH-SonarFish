@@ -166,7 +166,7 @@ class FishDetector:
 
             kalman.filter_detections(detections, self.object_filter)
             return kalman.tracks_to_object_history(
-                tracks=self.object_filter.tracks,
+                object_filter=self.object_filter,
                 object_history=object_history,
                 frame_number=self.frame_number,
                 processed_frame_dict=processed_frame_dict,
