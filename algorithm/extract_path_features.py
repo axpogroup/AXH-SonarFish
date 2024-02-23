@@ -1,9 +1,13 @@
 import argparse
+import json
 from pathlib import Path
 
+import cv2 as cv
 import numpy as np
 import pandas as pd
 import yaml
+
+from algorithm.FishDetector import FishDetector
 
 
 def calculate_average_curvature(detection) -> float:
@@ -20,9 +24,15 @@ def calculate_average_curvature(detection) -> float:
     return float(avg_curvature)
 
 
-def extract_path_features(settings: dict):
+def load_output_csv(settings: dict) -> pd.DataFrame:
     output_csv_df = pd.read_csv(Path(settings["output_directory"]) / (Path(settings["file_name"]).stem + ".csv"))
+    output_csv_df["image_tile"] = output_csv_df["image_tile"].apply(lambda x: np.array(json.loads(x)))
+    return output_csv_df
+
+
+def extract_path_features(output_csv_df: pd.DataFrame):
     avg_curvatures_of_detections_df = pd.DataFrame()
+
     avg_curvatures_of_detections_series = output_csv_df.groupby("id").apply(
         lambda detection: calculate_average_curvature(detection)
     )
@@ -32,6 +42,48 @@ def extract_path_features(settings: dict):
     merged = pd.merge(df_filtered_detections, avg_curvatures_of_detections_df, on="id")
     print("Average Curvatures of fish: ", merged[merged["classification"] == "fish"]["average_curvature"].mean())
     print("Average Curvatures of objects: ", merged[merged["classification"] == "object"]["average_curvature"].mean())
+
+
+def mm_to_px(millimeters, settings):
+    px = millimeters * settings["input_pixels_per_mm"] * settings["downsample"] / 100
+    return px
+
+
+def extract_displacement_vectors(output_csv_df, settings):
+    items_of_detection = {}
+    for id, detection in output_csv_df.groupby("id"):
+        print(id)
+        if id not in items_of_detection.keys():
+            items_of_detection[id] = []
+        for index, row in detection.iterrows():
+            # _, im_bw = cv.threshold(row["image_tile"], 127 + settings["difference_threshold_scaler"], 255, 0)
+            drawing = row["image_tile"]
+            if len(drawing.shape) == 3:
+                drawing = drawing[0]
+            img = np.ascontiguousarray(drawing, dtype=np.uint8)
+            if len(img) != 0:
+                # cv.imwrite("test.jpg", img)
+                image_blurred = cv.GaussianBlur(img, (5, 5), 0)
+                adaptive_threshold = cv.adaptiveThreshold(
+                    image_blurred,  # Input image
+                    255,  # Maximum pixel value (white)
+                    cv.ADAPTIVE_THRESH_GAUSSIAN_C,  # Adaptive thresholding method
+                    cv.THRESH_BINARY,  # Thresholding type
+                    11,  # Block size (size of the neighborhood area)
+                    2,  # Constant subtracted from the mean (tune this parameter)
+                )
+                # cv.imwrite("test_thresh.jpg", adaptive_threshold)
+                kernel = np.ones((3, 3), np.uint8)
+                eroded = cv.erode(adaptive_threshold, kernel, iterations=1)
+                nested_detections, hierarchy = cv.findContours(eroded, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+                # for i in range(len(nested_detections)):
+                #     color = (0, 0, 0)
+                #     cv.drawContours(img, nested_detections, i, color, 2, cv.LINE_8, hierarchy, 0)
+                #     # Show in a window
+                # # cv.imwrite("test_cont.jpg", img)
+                items_of_detection[id].append((row["frame"], nested_detections))
+    for id, detection in items_of_detection.items():
+        print(f"Detection {id} has {len(detection)} frames.")
 
 
 if __name__ == "__main__":
@@ -46,5 +98,7 @@ if __name__ == "__main__":
         if args.input_file is not None:
             print("replacing input file.")
             settings["file_name"] = args.input_file
-
-    extract_path_features(settings)
+    output_csv_df = load_output_csv(settings)
+    detector = FishDetector(settings)
+    extract_displacement_vectors(output_csv_df, settings)
+    # extract_path_features(output_csv_df)
