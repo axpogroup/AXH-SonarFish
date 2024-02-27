@@ -444,10 +444,6 @@ def tracks_to_object_history(
                 object_history[track.track_id] = obj
             else:
                 object_history[track.track_id].update_object(obj)
-    # for track in object_filter.deleted_tracks:
-    #     if track.track_id in object_history.keys():
-    #         if not object_history.get(track.track_id).detection_is_tracked:
-    #             object_history.pop(track.track_id)
     return object_history
 
 
