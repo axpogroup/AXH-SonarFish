@@ -4,7 +4,7 @@ from typing import Optional
 import cv2 as cv
 import numpy as np
 
-from algorithm.DetectedObject import DetectedObject
+from algorithm.DetectedObject import BoundingBox, DetectedBlob, KalmanTrackedBlob
 from algorithm.FishDetector import FishDetector
 
 FIRST_ROW = [
@@ -17,8 +17,8 @@ SECOND_ROW = ["difference_thresholded", "median_filter", "binary", "dilated"]
 
 
 def get_visual_output(
-    object_history: dict[int, DetectedObject],
-    label_history: Optional[dict[int, DetectedObject]],
+    object_history: dict[int, DetectedBlob],
+    label_history: Optional[dict[int, BoundingBox]],
     detector: FishDetector,
     processed_frame: dict[str, np.ndarray],
     extensive=False,
@@ -99,8 +99,8 @@ def get_visual_output(
 
 def _draw_detections_and_labels(
     detector: FishDetector,
-    object_history: dict[int, DetectedObject],
-    label_history: Optional[dict[int, DetectedObject]],
+    object_history: dict[int, KalmanTrackedBlob],
+    label_history: Optional[dict[int, BoundingBox]],
     processed_frame: dict[str, np.ndarray],
     color: tuple,
     truth_color: tuple,
@@ -108,7 +108,7 @@ def _draw_detections_and_labels(
 ):
     disp = _draw_detector_output(object_history, detector, processed_frame, color=color, **kwargs)
     if label_history is not None:
-        disp = _draw_detector_output(label_history, detector, disp, annotate=False, color=truth_color, **kwargs)
+        disp = _draw_labels(label_history, detector, disp, color=truth_color, **kwargs)
     return disp
 
 
@@ -139,8 +139,24 @@ def _retrieve_frame(frame, frame_dict, puttext=None):
     return out
 
 
+def _draw_labels(
+    label_history: dict[int, BoundingBox],
+    detector,
+    img,
+    color=(255, 200, 200),
+    paths=False,
+    fullres=False,
+    association_dist=False,
+):
+    for ID, obj in label_history.items():
+        if is_detection_outdated(obj, detector):
+            continue
+        draw_basic_bounding_box_and_path(association_dist, color, detector, fullres, img, obj, paths)
+    return img
+
+
 def _draw_detector_output(
-    object_history,
+    object_history: dict[int, KalmanTrackedBlob],
     detector,
     img,
     paths=False,
@@ -150,67 +166,30 @@ def _draw_detector_output(
     color=(255, 200, 200),
 ):
     for ID, obj in object_history.items():
-        if is_detection_outdated_or_not_confirmed(obj, detector):
+        if is_detection_outdated(obj, detector) or obj.detection_is_tracked is False:
             continue
-        if fullres:
-            scale = int(100 / detector.conf["downsample"])
-        else:
-            scale = 1
-        x, y = obj.midpoints[-1][0], obj.midpoints[-1][1]
-        w, h = obj.bounding_boxes[-1][0], obj.bounding_boxes[-1][1]
-        x, y, w, h = (
-            x * scale,
-            y * scale,
-            w * scale,
-            h * scale,
+        h, scale, w, x, y = draw_basic_bounding_box_and_path(
+            association_dist, color, detector, fullres, img, obj, paths
         )
-        cv.rectangle(
-            img,
-            (x - int(w / 2), y - int(h / 2)),
-            (x + int(w / 2), y + int(h / 2)),
-            color,
-            thickness=1 * scale,
-        )
-        if obj.ellipse_angles[-1] is not None and obj.ellipse_axes_lengths_pairs[-1] is not None:
-            cv.ellipse(
-                img,
-                (obj.midpoints[-1][0], obj.midpoints[-1][1]),
-                (int(obj.ellipse_axes_lengths_pairs[-1][0]), int(obj.ellipse_axes_lengths_pairs[-1][1])),
-                obj.ellipse_angles[-1],
-                0,
-                360,
-                color,
-                1 * scale,
-            )
-        if paths:
-            for point in obj.midpoints:
-                cv.circle(
-                    img,
-                    (point[0] * scale, point[1] * scale),
-                    1 * scale,
-                    color,
-                    thickness=-1,
-                )
-        if association_dist:
-            cv.circle(
-                img,
-                (obj.midpoints[-1][0] * scale, obj.midpoints[-1][1] * scale),
-                int(detector.mm_to_px(detector.conf["max_association_dist_mm"]) * scale),
-                (0, 0, 255),
-                1 * scale,
-            )
         if annotate:
+            if obj.ellipse_angles[-1] is not None and obj.ellipse_axes_lengths_pairs[-1] is not None:
+                ellipse_axes_lengths = obj.ellipse_axes_lengths_pairs[-1].astype(int)
+                cv.ellipse(
+                    img,
+                    (obj.midpoints[-1][0], obj.midpoints[-1][1]),
+                    (ellipse_axes_lengths[0], ellipse_axes_lengths[1]),
+                    obj.ellipse_angles[-1],
+                    0,
+                    360,
+                    color,
+                    1 * scale,
+                )
             text = ""
             if len(obj.means_of_pixels_intensity) > 0:
                 ratio = obj.bbox_size_to_stddev_ratio
-                text = f"ID:{obj.ID}, ratio: {ratio}"
+                text = f"ID:{obj.ID}, ratio: {int(ratio)}"
                 if len(obj.velocities) > 100:
-                    text += (
-                        ", v [px/frame]: "
-                        + str(obj.velocities[-1][0] * scale)
-                        + ", "
-                        + str(obj.velocities[-1][1] * scale)
-                    )
+                    text += f", v [px/frame]: {obj.velocities[-1] * scale}"
             cv.putText(
                 img,
                 text,
@@ -221,6 +200,46 @@ def _draw_detector_output(
                 2,
             )
     return img
+
+
+def draw_basic_bounding_box_and_path(association_dist, color, detector, fullres, img, obj, paths):
+    if fullres:
+        scale = int(100 / detector.conf["downsample"])
+    else:
+        scale = 1
+    x, y = obj.midpoints[-1][0], obj.midpoints[-1][1]
+    w, h = obj.bounding_boxes[-1][0], obj.bounding_boxes[-1][1]
+    x, y, w, h = (
+        x * scale,
+        y * scale,
+        w * scale,
+        h * scale,
+    )
+    cv.rectangle(
+        img,
+        (x - int(w / 2), y - int(h / 2)),
+        (x + int(w / 2), y + int(h / 2)),
+        color,
+        thickness=1 * scale,
+    )
+    if paths:
+        for point in obj.midpoints:
+            cv.circle(
+                img,
+                (point[0] * scale, point[1] * scale),
+                1 * scale,
+                color,
+                thickness=-1,
+            )
+    if association_dist:
+        cv.circle(
+            img,
+            (obj.midpoints[-1][0] * scale, obj.midpoints[-1][1] * scale),
+            int(detector.mm_to_px(detector.conf["max_association_dist_mm"]) * scale),
+            (0, 0, 255),
+            1 * scale,
+        )
+    return h, scale, w, x, y
 
 
 def draw_associations(associations, detections, object_history, img, color):
@@ -244,8 +263,5 @@ def draw_associations(associations, detections, object_history, img, color):
     return img
 
 
-def is_detection_outdated_or_not_confirmed(obj, detector):
-    return (
-        detector.frame_number - obj.frames_observed[-1] > detector.conf["no_more_show_after_x_frames"]
-        or obj.detection_is_confirmed is False
-    )
+def is_detection_outdated(obj, detector):
+    return detector.frame_number - obj.frames_observed[-1] > detector.conf["no_more_show_after_x_frames"]
