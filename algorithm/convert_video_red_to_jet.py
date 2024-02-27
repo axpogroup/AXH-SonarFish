@@ -37,11 +37,23 @@ def process_video(input_filename: str, boosting_alpha: float = 2.0, boosting_bet
     out.release()
 
 
+def process_files_or_directory(path: str, boosting_alpha: float = 2.0, boosting_beta: float = 30.0):
+    path = Path(path)
+    if path.is_file():
+        process_video(str(path), boosting_alpha, boosting_beta)
+    elif path.is_dir():
+        for child in path.iterdir():
+            if child.suffix == ".mp4":  # or whatever file types you're using
+                process_video(str(child), boosting_alpha, boosting_beta)
+    else:
+        print(f"{path} is not a valid file or directory.")
+
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Process a video file.")
-    parser.add_argument("path", help="The path to the video file to process.")
+    parser = argparse.ArgumentParser(description="Process a video file or a directory of video files.")
+    parser.add_argument("path", help="The path to the video file or directory to process.")
     parser.add_argument("--boosting_alpha", type=float, default=2.0, help="The boosting alpha value.")
     parser.add_argument("--boosting_beta", type=float, default=30.0, help="The boosting beta value.")
     args = parser.parse_args()
 
-    process_video(args.path, args.boosting_alpha, args.boosting_beta)
+    process_files_or_directory(args.path, args.boosting_alpha, args.boosting_beta)

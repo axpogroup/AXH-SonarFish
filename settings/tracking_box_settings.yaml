@@ -22,7 +22,7 @@ threshold_contours: 35  # 139
 
 max_association_dist: 35
 phase_out_after_x_frames: 9
-min_occurences_in_last_x_frames: [5, 10   ]
+min_occurences_in_last_x_frames: [5, 10]
 
 # Classification
 river_pixel_velocity: [-1.91, -0.85]
