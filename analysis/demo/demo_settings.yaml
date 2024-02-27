@@ -9,7 +9,7 @@ ground_truth_directory: "data/labels/"
 experiment_name: "how_much_is_the_fish"
 
 tag: "label"
-record_output_video: False # Only works for full resolution output
+record_output_video: True # Only works for full resolution output
 record_processing_frame: "raw" # one of ['raw', 'raw_downsampled', 'gray', 'gray_boosted', 'long_mean', 'short_mean', 'difference', 'absolute_difference', 'difference_thresholded', 'difference_thresholded_abs', 'median_filter', 'binary', 'dilated']
 draw_detections_on_saved_video: True
 
