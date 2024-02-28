@@ -1,3 +1,4 @@
+import json
 import os
 from pathlib import Path
 
@@ -74,23 +75,16 @@ class InputOutputHandler:
                         obj.velocities[i][0] if len(obj.velocities) > i else np.nan,
                         obj.velocities[i][1] if len(obj.velocities) > i else np.nan,
                         obj.areas[i],
+                        np.array(obj.feature_patch[i]),
                     ]
                 )
 
-        return pd.DataFrame(
+        detections_df = pd.DataFrame(
             rows,
-            columns=[
-                "frame",
-                "id",
-                "x",
-                "y",
-                "w",
-                "h",
-                "v_x",
-                "v_y",
-                "contour_area",
-            ],
+            columns=["frame", "id", "x", "y", "w", "h", "v_x", "v_y", "contour_area", "image_tile"],
         )
+        detections_df["image_tile"] = detections_df["image_tile"].apply(lambda x: json.dumps(x.tolist()))
+        return detections_df
 
     def trackbars(self, detector):
         def change_current_mean_frames(value):
