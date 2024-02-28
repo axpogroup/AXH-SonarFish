@@ -295,6 +295,7 @@ class Tracker:
         elimination_metric: DistanceMetric,
         conf: dict,
     ) -> None:
+        self.deleted_tracks = []
         self.primary_metric = primary_metric
         self.elimination_metric = elimination_metric
         self.conf = conf
@@ -330,6 +331,7 @@ class Tracker:
             self.tracks[track_idx].mark_missed()
         for detection_idx in unmatched_detections:
             self._initiate_track(detections[detection_idx])
+        self.deleted_tracks = [t for t in self.tracks if t.is_deleted()]
         self.tracks = [t for t in self.tracks if not t.is_deleted()]
 
         # Update distance metric.
@@ -420,13 +422,13 @@ def filter_detections(
 
 
 def tracks_to_object_history(
-    tracks: list[Track],
+    object_filter: Tracker,
     object_history: dict[int, KalmanTrackedBlob],
     frame_number: int,
     processed_frame_dict: dict,
     bbox_size_to_stddev_ratio_threshold: int,
 ) -> dict[int, KalmanTrackedBlob]:
-    for track in tracks:
+    for track in object_filter.tracks:
         angle_with_x_axis, sqrt_of_lamdas = get_confidence_ellipse_attributes(track)
         obj = KalmanTrackedBlob(
             identifier=track.track_id,
