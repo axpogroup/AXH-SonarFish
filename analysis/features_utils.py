@@ -108,7 +108,7 @@ def get_overlap_ratio(img1, img2, visualize: Optional[bool] = None):
     # Show images for testing.
     if visualize:
         show_overlap(merged_img)
-    return get_ratio_of_yellow_pixels(merged_img)
+    return get_ratio_of_overlaping_pixels(merged_img)
 
 
 def show_overlap(merged_img):
@@ -119,14 +119,14 @@ def show_overlap(merged_img):
     cv.destroyAllWindows()
 
 
-def get_ratio_of_yellow_pixels(merged_img):
-    number_of_yellow_pixels = np.count_nonzero(np.all(merged_img == (0, 200, 200), axis=2))
-    number_of_red_pixels = np.count_nonzero(np.all(merged_img == (0, 0, 200), axis=2))
-    number_of_green_pixels = np.count_nonzero(np.all(merged_img == (0, 200, 0), axis=2))
-    if number_of_red_pixels + number_of_green_pixels != 0:
-        ratio = number_of_yellow_pixels / (number_of_red_pixels + number_of_green_pixels)
-    elif number_of_yellow_pixels != 0:
-        ratio = number_of_yellow_pixels
+def get_ratio_of_overlaping_pixels(merged_img):
+    overlaping_pixels = np.count_nonzero(np.all(merged_img == (0, 200, 200), axis=2))
+    number_of_non_overlaping_in_first = np.count_nonzero(np.all(merged_img == (0, 0, 200), axis=2))
+    number_of_overlaping_in_second = np.count_nonzero(np.all(merged_img == (0, 200, 0), axis=2))
+    if number_of_non_overlaping_in_first + number_of_overlaping_in_second != 0:
+        ratio = overlaping_pixels / (number_of_non_overlaping_in_first + number_of_overlaping_in_second)
+    elif overlaping_pixels != 0:
+        ratio = overlaping_pixels
     else:
         ratio = 0
     return ratio
