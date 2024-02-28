@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 from typing import Callable, Iterator, Union
 
@@ -10,149 +11,139 @@ from motmetrics.distances import boxiou
 from scipy.optimize import linear_sum_assignment
 from tqdm import tqdm
 
+from analysis.features_utils import calculate_features
+
 
 def calculate_track_distance(
-    mmt_track: pd.DataFrame,
+    measurements_track: pd.DataFrame,
     gt_track: pd.DataFrame,
     min_iou_thresh: float,
     min_overlap_ratio: float,
 ) -> float:
-    if set(mmt_track["frame"]).isdisjoint(set(gt_track["frame"])):
-        mmt_to_gt_dist = 1.0
+    if set(measurements_track["frame"]).isdisjoint(set(gt_track["frame"])):
+        measurements_to_gt_dist = 1.0
     else:
-        joined = mmt_track.set_index("frame").join(
-            gt_track.set_index("frame"), how="outer", lsuffix="_mmt", rsuffix="_gt"
+        joined = measurements_track.set_index("frame").join(
+            gt_track.set_index("frame"), how="outer", lsuffix="_measurements", rsuffix="_gt"
         )
         iou = boxiou(
-            joined[["x_mmt", "y_mmt", "w_mmt", "h_mmt"]].values,
+            joined[["x_measurements", "y_measurements", "w_measurements", "h_measurements"]].values,
             joined[["x_gt", "y_gt", "w_gt", "h_gt"]].values,
         )
         iou[iou < min_iou_thresh] = np.nan
         iou_cost = 1.0 - iou
         if np.isnan(iou_cost).all():
-            mmt_to_gt_dist = 1.0
-        elif np.count_nonzero(~np.isnan(iou_cost)) / len(mmt_track) < min_overlap_ratio:
-            mmt_to_gt_dist = 1.0
+            measurements_to_gt_dist = 1.0
+        elif np.count_nonzero(~np.isnan(iou_cost)) / len(measurements_track) < min_overlap_ratio:
+            measurements_to_gt_dist = 1.0
         else:
-            mmt_to_gt_dist = np.nanmean(iou_cost)
-    return mmt_to_gt_dist
-
-
-def trace_window_metrics(group: pd.DataFrame) -> pd.Series:
-    # Calculate the Euclidean distance between previous and current positions
-    x_diff = np.diff(group["x"])
-    y_diff = np.diff(group["y"])
-    euclidean_distances = np.sqrt(x_diff**2 + y_diff**2)
-
-    # Calculate the sum of distances over the group
-    traversed_distance = np.sum(euclidean_distances)
-
-    # Calculate the frame number difference
-    frame_diff = group["frame"].iloc[-1] - group["frame"].iloc[0]
-
-    return pd.Series({"traversed_distance": traversed_distance, "frame_diff": frame_diff})
+            measurements_to_gt_dist = np.nanmean(iou_cost)
+    return measurements_to_gt_dist
 
 
 class FeatureGenerator(object):
     def __init__(
         self,
-        mmt_csv_paths: list[Union[str, Path]],
+        measurements_csv_paths: list[Union[str, Path]],
         gt_csv_paths: list[Union[str, Path]],
         min_track_length: int = 10,
         force_feature_recalc: bool = False,
     ):
         self.min_track_length = min_track_length
-        mmt_csv_paths = [Path(p) for p in mmt_csv_paths]
+        measurements_csv_paths = [Path(p) for p in measurements_csv_paths]
         gt_csv_paths = [Path(p) for p in gt_csv_paths]
-        self._calc_feature_dfs(mmt_csv_paths, gt_csv_paths, force_feature_recalc)
+        self._calc_feature_dfs(measurements_csv_paths, gt_csv_paths, force_feature_recalc)
 
     def _calc_feature_dfs(
-        self, mmt_csv_paths: list[Path], gt_csv_paths: list[Path], force_feature_recalc: bool = False
+        self, measurements_csv_paths: list[Path], gt_csv_paths: list[Path], force_feature_recalc: bool = False
     ) -> None:
-        self.mmt_dfs, self.gt_dfs = [], []
-        for mmt_df, gt_df, is_cached, cache_pth in self._read_csvs(mmt_csv_paths, gt_csv_paths, force_feature_recalc):
+        self.measurements_dfs, self.gt_dfs = [], []
+        for measurements_df, gt_df, is_cached, cache_path in self._read_csvs(
+            measurements_csv_paths, gt_csv_paths, force_feature_recalc
+        ):
             self.gt_dfs.append(gt_df)
             if is_cached and not force_feature_recalc:
-                self.mmt_dfs.append(mmt_df)
+                self.measurements_dfs.append(measurements_df)
             else:
-                mmt_df = self._calculate_features(mmt_df)
-                mmt_df.to_csv(cache_pth, index=False)
-                self.mmt_dfs.append(mmt_df)
+                measurements_df = calculate_features(measurements_df)
+                measurements_df.to_csv(cache_path, index=False)
+                self.measurements_dfs.append(measurements_df)
 
     def _read_csvs(
         self,
-        mmt_csv_paths: list[Path],
+        measurements_csv_paths: list[Path],
         gt_csv_paths: list[Path],
         force_feature_recalc: bool = False,
     ) -> Iterator[dict[str, Union[pd.DataFrame, bool, Path]]]:
-        for pth in mmt_csv_paths:
-            cache_pth = pth.with_stem(
-                pth.stem + f"_cached_features_min_track_length_{self.min_track_length}"
+        for path in measurements_csv_paths:
+            cache_path = path.with_stem(
+                path.stem + f"_cached_features_min_track_length_{self.min_track_length}"
             ).with_suffix(".csv")
-            if cache_pth.exists() and not force_feature_recalc:
-                print(f"Reading cached features from {cache_pth}")
-                mmt_df = pd.read_csv(cache_pth, delimiter=",")
-                gt_df = pd.read_csv(gt_csv_paths[mmt_csv_paths.index(pth)], delimiter=",")
-                yield mmt_df, gt_df, True, cache_pth
+            gt_df = pd.read_csv(gt_csv_paths[measurements_csv_paths.index(path)], delimiter=",")
+            if cache_path.exists() and not force_feature_recalc:
+                print(f"Reading cached features from {cache_path}")
+                measurements_df = load_csv_with_tiles(cache_path)
+                yield measurements_df, gt_df, True, cache_path
             else:
-                mmt_df = pd.read_csv(pth, delimiter=",")
+                measurements_df = load_csv_with_tiles(path)
                 value_counts_model = (
-                    pd.DataFrame(mmt_df.id.value_counts())
+                    pd.DataFrame(measurements_df.id.value_counts())
                     .reset_index()
                     .rename(columns={"index": "id", "id": "occurences"})
                 )
-                mmt_df = mmt_df[
-                    mmt_df["id"].isin(value_counts_model[value_counts_model.occurences >= self.min_track_length]["id"])
+                measurements_df = measurements_df[
+                    measurements_df["id"].isin(
+                        value_counts_model[value_counts_model.occurences >= self.min_track_length]["id"]
+                    )
                 ]
-                mmt_df.to_csv(cache_pth, index=False)
-                gt_df = pd.read_csv(gt_csv_paths[mmt_csv_paths.index(pth)], delimiter=",")
-                yield mmt_df, gt_df, False, cache_pth
+                measurements_df.to_csv(cache_path, index=False)
+                yield measurements_df, gt_df, False, cache_path
 
-    @staticmethod
-    def _calculate_features(mmt_df: pd.DataFrame) -> pd.DataFrame:
-        feature_df = mmt_df.groupby("id").apply(trace_window_metrics)
-        return mmt_df.join(feature_df, on="id", how="left")
-
-    def map_mmt2gt_trajectory(
+    def map_measurements2gt_trajectory(
         self, min_iou_thresh: float = 0.4, min_overlap_ratio: float = 0.3, max_iou_track_distance: float = 0.6
     ) -> tuple[dict[int, int], dict[int, int]]:
-        all_mmt_gt_pairs = []
-        all_mmt_gt_pairs_secondary = []
+        all_measurements_gt_pairs = []
+        all_measurements_gt_pairs_secondary = []
 
-        for df_idx, (mmt_df, gt_df) in enumerate(zip(self.mmt_dfs, self.gt_dfs)):
-            model_detections = mmt_df
+        for df_idx, (measurements_df, gt_df) in enumerate(zip(self.measurements_dfs, self.gt_dfs)):
+            model_detections = measurements_df
             ground_truth = gt_df
 
             track_distances = np.empty((len(model_detections["id"].unique()), len(ground_truth["id"].unique())))
 
-            for mmt_idx, track_id in tqdm(enumerate(model_detections["id"].unique())):
-                mmt_track = model_detections.loc[model_detections["id"] == track_id, ["frame", "x", "y", "w", "h"]]
+            for measurements_idx, track_id in tqdm(enumerate(model_detections["id"].unique())):
+                measurements_track = model_detections.loc[
+                    model_detections["id"] == track_id, ["frame", "x", "y", "w", "h"]
+                ]
 
                 for gt_idx, gt_id in enumerate(ground_truth["id"].unique()):
                     gt_track = ground_truth.loc[ground_truth["id"] == gt_id, ["frame", "x", "y", "w", "h"]]
-                    track_distances[mmt_idx, gt_idx] = calculate_track_distance(
-                        mmt_track, gt_track, min_iou_thresh, min_overlap_ratio
+                    track_distances[measurements_idx, gt_idx] = calculate_track_distance(
+                        measurements_track, gt_track, min_iou_thresh, min_overlap_ratio
                     )
 
-            mmt_gt_pairs, dist_matrix_indices = self._calculate_trajectory_pairs(
+            measurements_gt_pairs, dist_matrix_indices = self._calculate_trajectory_pairs(
                 track_distances, model_detections, ground_truth, max_iou_track_distance
             )
 
             track_distances_copy = track_distances.copy()
             track_distances_copy[dist_matrix_indices] = 1.0
-            mmt_gt_pairs_secondary, _ = self._calculate_trajectory_pairs(
+            measurements_gt_pairs_secondary, _ = self._calculate_trajectory_pairs(
                 track_distances_copy, model_detections, ground_truth, max_iou_track_distance
             )
 
-            self.mmt_dfs[df_idx]["gt_label"] = "noise"
-            self.mmt_dfs[df_idx].loc[
-                mmt_df["id"].isin(np.hstack((mmt_gt_pairs[:, 0], mmt_gt_pairs_secondary[:, 0]))), "gt_label"
+            self.measurements_dfs[df_idx]["gt_label"] = "noise"
+            self.measurements_dfs[df_idx].loc[
+                measurements_df["id"].isin(
+                    np.hstack((measurements_gt_pairs[:, 0], measurements_gt_pairs_secondary[:, 0]))
+                ),
+                "gt_label",
             ] = "fish"
 
-            all_mmt_gt_pairs.extend(mmt_gt_pairs)
-            all_mmt_gt_pairs_secondary.extend(mmt_gt_pairs_secondary)
+            all_measurements_gt_pairs.extend(measurements_gt_pairs)
+            all_measurements_gt_pairs_secondary.extend(measurements_gt_pairs_secondary)
 
-        return dict(all_mmt_gt_pairs), dict(all_mmt_gt_pairs_secondary)
+        return dict(all_measurements_gt_pairs), dict(all_measurements_gt_pairs_secondary)
 
     def _calculate_trajectory_pairs(
         self,
@@ -166,11 +157,11 @@ class FeatureGenerator(object):
         dist_matrix_indices = np.where(track_distances[row_indices, col_indices] < max_iou_track_distance)
         dist_matrix_row_indices = np.array(row_indices)[dist_matrix_indices]
         dist_matrix_col_indices = np.array(col_indices)[dist_matrix_indices]
-        mmt_gt_pairs = np.vstack(
+        measurements_gt_pairs = np.vstack(
             (model_detections.id.unique()[dist_matrix_row_indices], ground_truth.id.unique()[dist_matrix_col_indices])
         ).T
 
-        return mmt_gt_pairs, (dist_matrix_row_indices, dist_matrix_col_indices)
+        return measurements_gt_pairs, (dist_matrix_row_indices, dist_matrix_col_indices)
 
     def plot_track_pairings(
         self,
@@ -178,16 +169,16 @@ class FeatureGenerator(object):
         min_overlap_ratio: float = 0.3,
         max_iou_track_distance: float = 0.6,
     ) -> None:
-        if "cluster" not in self.mmt_dfs[0].columns:
+        if "cluster" not in self.measurements_dfs[0].columns:
             raise ValueError(
                 "No clustering has been performed yet. Please perform clustering with the do_clustering method."
             )
 
-        all_mmt_gt_pairs, all_mmt_gt_pairs_secondary = self.map_mmt2gt_trajectory(
+        all_measurements_gt_pairs, all_measurements_gt_pairs_secondary = self.map_measurements2gt_trajectory(
             min_iou_thresh, min_overlap_ratio, max_iou_track_distance
         )
 
-        model_detections = pd.concat(self.mmt_dfs)
+        model_detections = pd.concat(self.measurements_dfs)
         ground_truth = pd.concat(self.gt_dfs)
 
         n_clusters = model_detections["cluster"].nunique()
@@ -197,16 +188,18 @@ class FeatureGenerator(object):
         plt.gca().invert_yaxis()
 
         # Plot assigned tracks
-        for mmt_track_id, gt_track_id in all_mmt_gt_pairs.items():
-            mmt_track_df = model_detections[model_detections.id == mmt_track_id]
-            ax.plot(mmt_track_df.x, mmt_track_df.y, color=colormap(mmt_track_df.cluster.iloc[0] + 1))
+        for measurements_track_id, gt_track_id in all_measurements_gt_pairs.items():
+            self.plot_tracks_and_annotations(ax, colormap, measurements_track_id, model_detections)
             gt_track_df = ground_truth[ground_truth.id == gt_track_id]
             ax.plot(gt_track_df.x, gt_track_df.y, alpha=0.5, color=colormap(0), linestyle="dashed")
 
-        for mmt_track_id, gt_track_id in all_mmt_gt_pairs_secondary.items():
-            mmt_track_df = model_detections[model_detections.id == mmt_track_id]
+        for measurements_track_id, gt_track_id in all_measurements_gt_pairs_secondary.items():
+            measurements_track_df = model_detections[model_detections.id == measurements_track_id]
             ax.plot(
-                mmt_track_df.x, mmt_track_df.y, color=colormap(mmt_track_df.cluster.iloc[0] + 1), linestyle="dotted"
+                measurements_track_df.x,
+                measurements_track_df.y,
+                color=colormap(measurements_track_df.cluster.iloc[0] + 1),
+                linestyle="dotted",
             )
 
         ax.set(ylabel="y", title="assigned trajectories with clustering", ylim=[270, 0], xlim=[0, 480])
@@ -223,13 +216,11 @@ class FeatureGenerator(object):
         _, ax = plt.subplots(nrows=1, ncols=1, sharex=True, figsize=(10, 10))
         plt.gca().invert_yaxis()
 
-        for mmt_track_id in model_detections.id.unique():
-            if (mmt_track_id not in all_mmt_gt_pairs.keys()) and (
-                mmt_track_id not in all_mmt_gt_pairs_secondary.keys()
+        for measurements_track_id in model_detections.id.unique():
+            if (measurements_track_id not in all_measurements_gt_pairs.keys()) and (
+                measurements_track_id not in all_measurements_gt_pairs_secondary.keys()
             ):
-                mmt_track_df = model_detections[model_detections.id == mmt_track_id]
-                ax.plot(mmt_track_df.x, mmt_track_df.y, color=colormap(mmt_track_df.cluster.iloc[0] + 1))
-
+                self.plot_tracks_and_annotations(ax, colormap, measurements_track_id, model_detections)
         ax.set(ylabel="y", title="unassigned trajectories with clustering", ylim=[270, 0], xlim=[0, 480])
         ax.set_aspect("equal", adjustable="box")
 
@@ -240,13 +231,31 @@ class FeatureGenerator(object):
 
         plt.show()
 
-        return all_mmt_gt_pairs, all_mmt_gt_pairs_secondary
+        return all_measurements_gt_pairs, all_measurements_gt_pairs_secondary
+
+    def plot_tracks_and_annotations(self, ax, colormap, measurements_track_id, model_detections):
+        measurements_track_df = model_detections[model_detections.id == measurements_track_id]
+        ax.plot(
+            measurements_track_df.x,
+            measurements_track_df.y,
+            color=colormap(measurements_track_df.cluster.iloc[0] + 1),
+        )
+        ax.annotate(
+            f"{measurements_track_id}, {str(measurements_track_df.average_overlap_ratio.iloc[0])[:4]}",
+            (measurements_track_df.x.iloc[0], measurements_track_df.y.iloc[0]),
+        )
 
     def do_clustering(self, features: list[str], clustering_method: Callable, n_clusters: int):
         labels = []
-        for idx in range(len(self.mmt_dfs)):
-            selected_features = pd.concat(self.mmt_dfs)[features]
+        for idx in range(len(self.measurements_dfs)):
+            selected_features = pd.concat(self.measurements_dfs)[features]
             clustering = clustering_method(n_clusters=n_clusters)
             labels.append(clustering.fit_predict(selected_features))
-            self.mmt_dfs[idx]["cluster"] = labels[-1]
+            self.measurements_dfs[idx]["cluster"] = labels[-1]
         return labels
+
+
+def load_csv_with_tiles(path: Path) -> pd.DataFrame:
+    csv_with_tiles_df = pd.read_csv(path, delimiter=",")
+    csv_with_tiles_df["image_tile"] = csv_with_tiles_df["image_tile"].apply(lambda x: np.array(json.loads(x)))
+    return csv_with_tiles_df
