@@ -4,11 +4,33 @@ from typing import Optional
 import cv2 as cv
 import numpy as np
 import pandas as pd
+from numpy import ndarray
 
 
 def calculate_features(measurements_df: pd.DataFrame) -> pd.DataFrame:
     feature_df = measurements_df.groupby("id").apply(trace_window_metrics)
     return measurements_df.join(feature_df, on="id", how="left")
+
+
+def calculate_average_distance_from_start(detection: pd.DataFrame) -> ndarray:
+    # Get the starting point
+    start_x, start_y = detection["x"].iloc[0], detection["y"].iloc[0]
+
+    # Calculate the Euclidean distance from the starting point for each point
+    distances = np.sqrt((detection["x"] - start_x) ** 2 + (detection["y"] - start_y) ** 2)
+
+    # Calculate the average distance
+    return np.nanmean(distances)
+
+
+def calculate_distance_between_starting_and_ending_point(detection):
+    # Get the starting point
+    start_x, start_y = detection["x"].iloc[0], detection["y"].iloc[0]
+    # Get the ending point
+    end_x, end_y = detection["x"].iloc[-1], detection["y"].iloc[-1]
+    # Calculate the Euclidean distance between the starting and ending point
+    distance = np.sqrt((end_x - start_x) ** 2 + (end_y - start_y) ** 2)
+    return distance
 
 
 def trace_window_metrics(detection: pd.DataFrame) -> pd.Series:
@@ -19,6 +41,11 @@ def trace_window_metrics(detection: pd.DataFrame) -> pd.Series:
             "frame_diff": frame_diff,
             "average_curvature": calculate_average_curvature(detection),
             "average_overlap_ratio": calculate_average_overlap_ratio(detection),
+            "average_distance_from_start": calculate_average_distance_from_start(detection),
+            "average_contour_area": np.mean(detection["contour_area"]),
+            "distance_between_starting_and_ending_point": calculate_distance_between_starting_and_ending_point(
+                detection
+            ),
         }
     )
 
@@ -108,7 +135,7 @@ def get_overlap_ratio(img1, img2, visualize: Optional[bool] = None):
     # Show images for testing.
     if visualize:
         show_overlap(merged_img)
-    return get_ratio_of_yellow_pixels(merged_img)
+    return get_ratio_of_overlaping_pixels(merged_img)
 
 
 def show_overlap(merged_img):
@@ -119,14 +146,14 @@ def show_overlap(merged_img):
     cv.destroyAllWindows()
 
 
-def get_ratio_of_yellow_pixels(merged_img):
-    number_of_yellow_pixels = np.count_nonzero(np.all(merged_img == (0, 200, 200), axis=2))
-    number_of_red_pixels = np.count_nonzero(np.all(merged_img == (0, 0, 200), axis=2))
-    number_of_green_pixels = np.count_nonzero(np.all(merged_img == (0, 200, 0), axis=2))
-    if number_of_red_pixels + number_of_green_pixels != 0:
-        ratio = number_of_yellow_pixels / (number_of_red_pixels + number_of_green_pixels)
-    elif number_of_yellow_pixels != 0:
-        ratio = number_of_yellow_pixels
+def get_ratio_of_overlaping_pixels(merged_img):
+    overlaping_pixels = np.count_nonzero(np.all(merged_img == (0, 200, 200), axis=2))
+    number_of_non_overlaping_in_first = np.count_nonzero(np.all(merged_img == (0, 0, 200), axis=2))
+    number_of_overlaping_in_second = np.count_nonzero(np.all(merged_img == (0, 200, 0), axis=2))
+    if number_of_non_overlaping_in_first + number_of_overlaping_in_second != 0:
+        ratio = overlaping_pixels / (number_of_non_overlaping_in_first + number_of_overlaping_in_second)
+    elif overlaping_pixels != 0:
+        ratio = overlaping_pixels
     else:
         ratio = 0
     return ratio
