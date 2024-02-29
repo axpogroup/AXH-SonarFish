@@ -77,14 +77,28 @@ class InputOutputHandler:
                             obj.velocities[i][1] if len(obj.velocities) > i else np.nan,
                             obj.areas[i],
                             np.array(obj.feature_patch[i]),
+                            np.array(obj.raw_image_patch[i]),
                         ]
                     )
 
         detections_df = pd.DataFrame(
             rows,
-            columns=["frame", "id", "x", "y", "w", "h", "v_x", "v_y", "contour_area", "image_tile"],
+            columns=[
+                "frame",
+                "id",
+                "x",
+                "y",
+                "w",
+                "h",
+                "v_x",
+                "v_y",
+                "contour_area",
+                "image_tile",
+                "raw_image_tile",
+            ],
         )
         detections_df["image_tile"] = detections_df["image_tile"].apply(lambda x: json.dumps(x.tolist()))
+        detections_df["raw_image_tile"] = detections_df["raw_image_tile"].apply(lambda x: json.dumps(x.tolist()))
         return detections_df
 
     def trackbars(self, detector):

@@ -41,6 +41,7 @@ class DetectedBlob(BoundingBox):
         contour: np.ndarray,
         frame_number: int,
         frame: dict[str, np.ndarray],
+        store_raw_image_patch: Optional[bool] = None,
     ):
         super().__init__(
             identifier,
@@ -50,7 +51,9 @@ class DetectedBlob(BoundingBox):
         self.stddevs_of_pixels_intensity = []
         self.means_of_pixels_intensity = []
         self.areas = [self.w * self.h if contour.shape == (4,) else cv.contourArea(contour)]
-        self.feature_patch = self.get_feature_patch(frame, "difference_thresholded")
+        self.feature_patch = [self.get_feature_patch(frame, "difference_thresholded")]
+        if store_raw_image_patch:
+            self.raw_image_patch = [self.get_feature_patch(frame, "raw")]
         self.calculate_average_pixel_intensity(frame["difference"])
 
     def update_object(self, detection):
@@ -58,7 +61,9 @@ class DetectedBlob(BoundingBox):
         self.areas.append(detection.areas[-1])
         self.means_of_pixels_intensity.append(detection.means_of_pixels_intensity[-1])
         self.stddevs_of_pixels_intensity.append(detection.stddevs_of_pixels_intensity[-1])
-        self.feature_patch = detection.feature_patch
+        self.feature_patch.append(detection.feature_patch)
+        if hasattr(self, "raw_image_patch"):
+            self.raw_image_patch.append(detection.raw_image_patch)
 
     def calculate_average_pixel_intensity(self, reference_frame: np.ndarray):
         detection_box = reference_frame[self.y : self.y + self.h, self.x : self.x + self.w]
@@ -110,19 +115,19 @@ class DetectedBlob(BoundingBox):
 
     @property
     def histogram(self):
-        img = self.feature_patch
+        img = self.feature_patch[-1]
         hist_raw = np.histogram(img, bins=range(257))[0].reshape(-1, 1).astype(np.float32)
 
         return cv.normalize(hist_raw, hist_raw, alpha=0, beta=1, norm_type=cv.NORM_MINMAX)
 
     @property
     def sift_features(self):
-        patch = self.feature_patch
+        patch = self.feature_patch[-1]
         return cv.SIFT_create().detectAndCompute(patch, None)
 
     @property
     def fft(self):
-        patch = self.feature_patch
+        patch = self.feature_patch[-1]
         patch_resized = cv.resize(patch, (64, 64))
         return np.fft.fft2(patch_resized)
 
@@ -152,6 +157,7 @@ class KalmanTrackedBlob(DetectedBlob):
         frame_number: int,
         contour: np.ndarray,
         frame: dict[str, np.ndarray],
+        store_raw_image_patch: bool,
         ellipse_angle: Optional[float] = None,
         ellipse_axes_lengths: Optional[tuple[int, int]] = None,
         detection_is_tracked: bool = False,
@@ -161,6 +167,7 @@ class KalmanTrackedBlob(DetectedBlob):
             contour=contour,
             frame_number=frame_number,
             frame=frame,
+            store_raw_image_patch=store_raw_image_patch,
         )
         self.detection_is_tracked = detection_is_tracked
         self.ellipse_angles = [ellipse_angle]

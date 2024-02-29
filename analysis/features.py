@@ -41,6 +41,11 @@ def calculate_track_distance(
     return measurements_to_gt_dist
 
 
+def filter_features(measurements_df, min_overlapping_ratio):
+    measurements_df = measurements_df[measurements_df["average_overlap_ratio"] > min_overlapping_ratio]
+    return measurements_df
+
+
 class FeatureGenerator(object):
     def __init__(
         self,
@@ -48,7 +53,9 @@ class FeatureGenerator(object):
         gt_csv_paths: list[Union[str, Path]],
         min_track_length: int = 10,
         force_feature_recalc: bool = False,
+        min_overlapping_ratio: int = 1,
     ):
+        self.min_overlapping_ratio = min_overlapping_ratio
         self.min_track_length = min_track_length
         measurements_csv_paths = [Path(p) for p in measurements_csv_paths]
         gt_csv_paths = [Path(p) for p in gt_csv_paths]
@@ -66,6 +73,7 @@ class FeatureGenerator(object):
                 self.measurements_dfs.append(measurements_df)
             else:
                 measurements_df = calculate_features(measurements_df)
+                measurements_df = filter_features(measurements_df, self.min_overlapping_ratio)
                 measurements_df.to_csv(cache_path, index=False)
                 self.measurements_dfs.append(measurements_df)
 
@@ -215,7 +223,6 @@ class FeatureGenerator(object):
         # Plot tracks that were not assigned to a ground truth
         _, ax = plt.subplots(nrows=1, ncols=1, sharex=True, figsize=(10, 10))
         plt.gca().invert_yaxis()
-
         for measurements_track_id in model_detections.id.unique():
             if (measurements_track_id not in all_measurements_gt_pairs.keys()) and (
                 measurements_track_id not in all_measurements_gt_pairs_secondary.keys()
@@ -241,9 +248,21 @@ class FeatureGenerator(object):
             color=colormap(measurements_track_df.cluster.iloc[0] + 1),
         )
         ax.annotate(
-            f"{measurements_track_id}, {str(measurements_track_df.average_overlap_ratio.iloc[0])[:4]}",
+            f"{measurements_track_id}, {str(measurements_track_df.average_distance_from_start.iloc[0])[:4]}",
             (measurements_track_df.x.iloc[0], measurements_track_df.y.iloc[0]),
         )
+
+    def plot_image_tiles_along_trajectory(self, measurements_track_id: int, every_nth_frame: int) -> None:
+        model_detections = pd.concat(self.measurements_dfs)
+        measurements_track_df = model_detections[model_detections.id == measurements_track_id]
+        for row in measurements_track_df.itertuples():
+            if row.Index % every_nth_frame == 0:
+                image_tile = row.image_tile
+                if len(image_tile.shape) > 2:
+                    image_tile = row.image_tile[0]
+                plt.imshow(image_tile, cmap="gray")
+                plt.title(f"Frame {row.frame}")
+                plt.show()
 
     def do_clustering(self, features: list[str], clustering_method: Callable, n_clusters: int):
         labels = []
@@ -258,4 +277,5 @@ class FeatureGenerator(object):
 def load_csv_with_tiles(path: Path) -> pd.DataFrame:
     csv_with_tiles_df = pd.read_csv(path, delimiter=",")
     csv_with_tiles_df["image_tile"] = csv_with_tiles_df["image_tile"].apply(lambda x: np.array(json.loads(x)))
+    csv_with_tiles_df["raw_image_tile"] = csv_with_tiles_df["raw_image_tile"].apply(lambda x: np.array(json.loads(x)))
     return csv_with_tiles_df

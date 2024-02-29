@@ -4,6 +4,7 @@ input_directory:  "data/intermediate/videos/"
 mask_directory: "analysis/demo/masks"
 output_directory: "data/model_output/"
 ground_truth_directory: "data/labels/"
+store_raw_image_patch: True
 
 # Azure ML
 experiment_name: "how_much_is_the_fish"

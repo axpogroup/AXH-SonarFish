@@ -420,13 +420,13 @@ def filter_detections(
 
 
 def tracks_to_object_history(
-    tracks: list[Track],
+    object_filter: Tracker,
     object_history: dict[int, KalmanTrackedBlob],
     frame_number: int,
     processed_frame_dict: dict,
     bbox_size_to_stddev_ratio_threshold: int,
 ) -> dict[int, KalmanTrackedBlob]:
-    for track in tracks:
+    for track in object_filter.tracks:
         angle_with_x_axis, sqrt_of_lamdas = get_confidence_ellipse_attributes(track)
         obj = KalmanTrackedBlob(
             identifier=track.track_id,
@@ -436,6 +436,7 @@ def tracks_to_object_history(
             ellipse_axes_lengths=sqrt_of_lamdas,
             detection_is_tracked=track.is_confirmed(),
             frame=processed_frame_dict,
+            store_raw_image_patch=object_filter.conf["store_raw_image_patch"],
         )
         if obj.bbox_size_to_stddev_ratio and obj.bbox_size_to_stddev_ratio < bbox_size_to_stddev_ratio_threshold:
             if track.track_id not in object_history.keys():
