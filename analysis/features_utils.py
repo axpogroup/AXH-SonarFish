@@ -6,21 +6,41 @@ import numpy as np
 import pandas as pd
 
 
-def calculate_features(measurements_df: pd.DataFrame) -> pd.DataFrame:
-    feature_df = measurements_df.groupby("id").apply(trace_window_metrics)
+def calculate_features(measurements_df: pd.DataFrame, rake_mask: np.ndarray) -> pd.DataFrame:
+    feature_df = measurements_df.groupby("id").apply(lambda x: trace_window_metrics(x, rake_mask))
     return measurements_df.join(feature_df, on="id", how="left")
 
 
-def trace_window_metrics(detection: pd.DataFrame) -> pd.Series:
+def trace_window_metrics(detection: pd.DataFrame, rake_mask: np.array) -> pd.Series:
     frame_diff = detection["frame"].iloc[-1] - detection["frame"].iloc[0]
+    time_ratio_near_rake, dist_near_rake = calculate_rake_path_ratio(detection, rake_mask)
     return pd.Series(
         {
             "traversed_distance": sum_euclidean_distance_between_positions(detection),
             "frame_diff": frame_diff,
             "average_curvature": calculate_average_curvature(detection),
             "average_overlap_ratio": calculate_average_overlap_ratio(detection),
+            "average_bbox_size": calculate_average_bbox_size(detection),
+            "rake_time_ratio": time_ratio_near_rake,
+            "dist_near_rake": dist_near_rake,
         }
     )
+
+
+def calculate_average_bbox_size(group: pd.DataFrame) -> float:
+    return np.mean(group["w"] * group["h"])
+
+
+def calculate_rake_path_ratio(detection: pd.DataFrame, rake_mask: np.array) -> tuple[float, float]:
+    x = detection["x"].values
+    y = detection["y"].values
+    is_near_rake = rake_mask[y.astype(int), x.astype(int)]
+    time_ratio_near_rake = np.sum(is_near_rake) / len(is_near_rake)
+
+    x_diff = np.diff(x[is_near_rake])
+    y_diff = np.diff(y[is_near_rake])
+    dist_near_rake = np.sum(np.sqrt(x_diff**2 + y_diff**2))
+    return time_ratio_near_rake, dist_near_rake
 
 
 def sum_euclidean_distance_between_positions(detection: pd.DataFrame):
@@ -37,7 +57,7 @@ def calculate_average_curvature(detection: pd.DataFrame) -> float:
         return 0
     dx_dt, dy_dt = np.gradient(detection["x"]), np.gradient(detection["y"])
     d2x_dt2, d2y_dt2 = np.gradient(dx_dt), np.gradient(dy_dt)
-    curvature = np.abs(dx_dt * d2y_dt2 - dy_dt * d2x_dt2) / (dx_dt**2 + dy_dt**2) ** (3 / 2)
+    curvature = np.abs(dx_dt * d2y_dt2 - dy_dt * d2x_dt2) / (dx_dt**2 + dy_dt**2 + 1e-8) ** (3 / 2)
     avg_curvature = np.nanmean(curvature)
     return float(avg_curvature)
 

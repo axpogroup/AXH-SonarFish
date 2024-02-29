@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 from typing import Dict
 
 import cv2 as cv
@@ -21,16 +21,6 @@ class FishDetector:
         self.frame_number = 0
         self.latest_obj_index = 0
 
-        # Masks
-        self.non_object_space_mask = cv.imread(
-            os.path.join(self.conf["mask_directory"], "fish.png"),
-            cv.IMREAD_GRAYSCALE,
-        )
-        self.sonar_controls_mask = cv.imread(
-            os.path.join(self.conf["mask_directory"], "full.png"),
-            cv.IMREAD_GRAYSCALE,
-        )
-
         # Enhancement
         self.framebuffer = None
         self.mean_buffer = None
@@ -38,7 +28,7 @@ class FishDetector:
         self.short_mean_float = None
         self.long_mean_float = None
 
-    def detect_objects(self, raw_frame) -> (Dict[int, DetectedBlob], dict, dict):
+    def detect_objects(self, raw_frame) -> tuple[Dict[int, DetectedBlob], dict, dict]:
         start = cv.getTickCount()
         runtimes_ms = {}
         frame_dict = {"raw": raw_frame}
@@ -109,7 +99,7 @@ class FishDetector:
             frame_dict["gray"] = self.rgb_to_gray(frame_dict["raw_downsampled"])
         else:
             frame_dict["gray"] = self.rgb_to_gray(frame_dict["raw"])
-        enhanced_temp = self.mask_regions(frame_dict["gray"], area="sonar_controls")
+        enhanced_temp = self.mask_regions(frame_dict["gray"], self.conf["mask_file"])
         enhanced_temp = cv.convertScaleAbs(enhanced_temp, alpha=self.conf["contrast"], beta=self.conf["brightness"])
         self.update_buffers_calculate_means(enhanced_temp)
         frame_dict["gray_boosted"] = enhanced_temp
@@ -243,29 +233,24 @@ class FishDetector:
             else:
                 self.mean_buffer_counter += 1
 
-    def mask_regions(self, img, area="sonar_controls"):
-        if area == "non_object_space":
-            if img.shape[:1] != self.non_object_space_mask.shape[:1]:
-                percent_difference = img.shape[0] / self.non_object_space_mask.shape[0] * 100
+    def mask_regions(self, img, mask_file="sonar_controls.png"):
 
-                np.place(
-                    img,
-                    resize_img(self.non_object_space_mask, percent_difference) < 100,
-                    0,
-                )
-            else:
-                np.place(img, self.non_object_space_mask < 100, 0)
-        elif area == "sonar_controls":
-            if img.shape[:1] != self.sonar_controls_mask.shape[:1]:
-                percent_difference = img.shape[0] / self.sonar_controls_mask.shape[0] * 100
+        mask = cv.imread(
+            (Path(self.conf["mask_directory"]) / mask_file).as_posix(),
+            cv.IMREAD_GRAYSCALE,
+        )
 
-                np.place(
-                    img,
-                    resize_img(self.sonar_controls_mask, percent_difference) < 100,
-                    0,
-                )
-            else:
-                np.place(img, self.sonar_controls_mask < 100, 0)
+        if img.shape[:1] != mask.shape[:1]:
+            percent_difference = img.shape[0] / mask.shape[0] * 100
+
+            np.place(
+                img,
+                resize_img(mask, percent_difference) < 100,
+                0,
+            )
+        else:
+            np.place(img, mask < 100, 0)
+
         return img
 
     def rgb_to_gray(self, img):

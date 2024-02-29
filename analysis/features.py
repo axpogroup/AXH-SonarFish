@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 from typing import Callable, Iterator, Union
 
+import cv2 as cv
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import numpy as np
@@ -41,21 +42,48 @@ def calculate_track_distance(
     return measurements_to_gt_dist
 
 
+def trace_window_metrics(group: pd.DataFrame) -> pd.Series:
+    # Calculate the Euclidean distance between previous and current positions
+    x_diff = np.diff(group["x"])
+    y_diff = np.diff(group["y"])
+    euclidean_distances = np.sqrt(x_diff**2 + y_diff**2)
+
+    # Calculate the sum of distances over the group
+    traversed_distance = np.sum(euclidean_distances)
+
+    # Calculate the frame number difference
+    frame_diff = group["frame"].iloc[-1] - group["frame"].iloc[0]
+
+    return pd.Series({"traversed_distance": traversed_distance, "frame_diff": frame_diff})
+
+
 class FeatureGenerator(object):
     def __init__(
         self,
         measurements_csv_paths: list[Union[str, Path]],
         gt_csv_paths: list[Union[str, Path]],
+        rake_mask_path: Union[str, Path],
         min_track_length: int = 10,
         force_feature_recalc: bool = False,
     ):
         self.min_track_length = min_track_length
         measurements_csv_paths = [Path(p) for p in measurements_csv_paths]
         gt_csv_paths = [Path(p) for p in gt_csv_paths]
-        self._calc_feature_dfs(measurements_csv_paths, gt_csv_paths, force_feature_recalc)
+        rake_mask = cv.imread(
+            Path(rake_mask_path).as_posix(),
+            cv.IMREAD_GRAYSCALE,
+        )
+        # make rake mask binary
+        rake_mask = cv.resize(rake_mask, (480, 270)) > 0
+        assert rake_mask is not None, f"Could not read rake mask from {rake_mask_path}"
+        self._calc_feature_dfs(measurements_csv_paths, gt_csv_paths, rake_mask, force_feature_recalc)
 
     def _calc_feature_dfs(
-        self, measurements_csv_paths: list[Path], gt_csv_paths: list[Path], force_feature_recalc: bool = False
+        self,
+        measurements_csv_paths: list[Path],
+        gt_csv_paths: list[Path],
+        rake_mask: np.ndarray,
+        force_feature_recalc: bool,
     ) -> None:
         self.measurements_dfs, self.gt_dfs = [], []
         for measurements_df, gt_df, is_cached, cache_path in self._read_csvs(
@@ -65,7 +93,7 @@ class FeatureGenerator(object):
             if is_cached and not force_feature_recalc:
                 self.measurements_dfs.append(measurements_df)
             else:
-                measurements_df = calculate_features(measurements_df)
+                measurements_df = calculate_features(measurements_df, rake_mask)
                 measurements_df.to_csv(cache_path, index=False)
                 self.measurements_dfs.append(measurements_df)
 
