@@ -4,6 +4,7 @@ input_directory:  "data/intermediate/videos/"
 mask_directory: "analysis/demo/masks"
 output_directory: "data/model_output/"
 ground_truth_directory: "data/labels/"
+mask_file: "stroppel_non_object_space.png" # one of ["sonar_controls.png", "stroppel_non_object_space.png", "herrendoebeli_non_object_space.png"]
 
 # Azure ML
 experiment_name: "how_much_is_the_fish"
