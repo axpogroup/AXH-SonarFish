@@ -57,6 +57,12 @@ def trace_window_metrics(group: pd.DataFrame) -> pd.Series:
     return pd.Series({"traversed_distance": traversed_distance, "frame_diff": frame_diff})
 
 
+def load_csv_with_tiles(path: Path) -> pd.DataFrame:
+    csv_with_tiles_df = pd.read_csv(path, delimiter=",")
+    csv_with_tiles_df["image_tile"] = csv_with_tiles_df["image_tile"].apply(lambda x: np.array(json.loads(x)))
+    return csv_with_tiles_df
+
+
 class FeatureGenerator(object):
     def __init__(
         self,
@@ -217,12 +223,7 @@ class FeatureGenerator(object):
 
         # Plot assigned tracks
         for measurements_track_id, gt_track_id in all_measurements_gt_pairs.items():
-            measurements_track_df = model_detections[model_detections.id == measurements_track_id]
-            ax.plot(
-                measurements_track_df.x,
-                measurements_track_df.y,
-                color=colormap(measurements_track_df.cluster.iloc[0] + 1),
-            )
+            self.plot_tracks_and_annotations(ax, colormap, measurements_track_id, model_detections)
             gt_track_df = ground_truth[ground_truth.id == gt_track_id]
             ax.plot(gt_track_df.x, gt_track_df.y, alpha=0.5, color=colormap(0), linestyle="dashed")
 
@@ -253,13 +254,7 @@ class FeatureGenerator(object):
             if (measurements_track_id not in all_measurements_gt_pairs.keys()) and (
                 measurements_track_id not in all_measurements_gt_pairs_secondary.keys()
             ):
-                measurements_track_df = model_detections[model_detections.id == measurements_track_id]
-                ax.plot(
-                    measurements_track_df.x,
-                    measurements_track_df.y,
-                    color=colormap(measurements_track_df.cluster.iloc[0] + 1),
-                )
-
+                self.plot_tracks_and_annotations(ax, colormap, measurements_track_id, model_detections)
         ax.set(ylabel="y", title="unassigned trajectories with clustering", ylim=[270, 0], xlim=[0, 480])
         ax.set_aspect("equal", adjustable="box")
 
@@ -272,6 +267,18 @@ class FeatureGenerator(object):
 
         return all_measurements_gt_pairs, all_measurements_gt_pairs_secondary
 
+    def plot_tracks_and_annotations(self, ax, colormap, measurements_track_id, model_detections):
+        measurements_track_df = model_detections[model_detections.id == measurements_track_id]
+        ax.plot(
+            measurements_track_df.x,
+            measurements_track_df.y,
+            color=colormap(measurements_track_df.cluster.iloc[0] + 1),
+        )
+        ax.annotate(
+            f"{measurements_track_id}, {str(measurements_track_df.average_overlap_ratio.iloc[0])[:4]}",
+            (measurements_track_df.x.iloc[0], measurements_track_df.y.iloc[0]),
+        )
+
     def do_clustering(self, features: list[str], clustering_method: Callable, n_clusters: int):
         labels = []
         for idx in range(len(self.measurements_dfs)):
@@ -280,9 +287,3 @@ class FeatureGenerator(object):
             labels.append(clustering.fit_predict(selected_features))
             self.measurements_dfs[idx]["cluster"] = labels[-1]
         return labels
-
-
-def load_csv_with_tiles(path: Path) -> pd.DataFrame:
-    csv_with_tiles_df = pd.read_csv(path, delimiter=",")
-    csv_with_tiles_df["image_tile"] = csv_with_tiles_df["image_tile"].apply(lambda x: np.array(json.loads(x)))
-    return csv_with_tiles_df
