@@ -63,27 +63,42 @@ class InputOutputHandler:
     def get_detections_pd(object_history: dict[int, KalmanTrackedBlob]) -> pd.DataFrame:
         rows = []
         for _, obj in object_history.items():
-            for i in range(len(obj.frames_observed)):
-                rows.append(
-                    [
-                        obj.frames_observed[i],
-                        obj.ID,
-                        obj.top_lefts_x[i],
-                        obj.top_lefts_y[i],
-                        obj.bounding_boxes[i][0],
-                        obj.bounding_boxes[i][1],
-                        obj.velocities[i][0] if len(obj.velocities) > i else np.nan,
-                        obj.velocities[i][1] if len(obj.velocities) > i else np.nan,
-                        obj.areas[i],
-                        np.array(obj.feature_patch[i]),
-                    ]
-                )
+            if obj.detection_is_tracked:
+                for i in range(len(obj.frames_observed)):
+                    rows.append(
+                        [
+                            obj.frames_observed[i],
+                            obj.ID,
+                            obj.top_lefts_x[i],
+                            obj.top_lefts_y[i],
+                            obj.bounding_boxes[i][0],
+                            obj.bounding_boxes[i][1],
+                            obj.velocities[i][0] if len(obj.velocities) > i else np.nan,
+                            obj.velocities[i][1] if len(obj.velocities) > i else np.nan,
+                            obj.areas[i],
+                            np.array(obj.feature_patch[i]),
+                            np.array(obj.raw_image_patch[i]),
+                        ]
+                    )
 
         detections_df = pd.DataFrame(
             rows,
-            columns=["frame", "id", "x", "y", "w", "h", "v_x", "v_y", "contour_area", "image_tile"],
+            columns=[
+                "frame",
+                "id",
+                "x",
+                "y",
+                "w",
+                "h",
+                "v_x",
+                "v_y",
+                "contour_area",
+                "image_tile",
+                "raw_image_tile",
+            ],
         )
         detections_df["image_tile"] = detections_df["image_tile"].apply(lambda x: json.dumps(x.tolist()))
+        detections_df["raw_image_tile"] = detections_df["raw_image_tile"].apply(lambda x: json.dumps(x.tolist()))
         return detections_df
 
     def trackbars(self, detector):

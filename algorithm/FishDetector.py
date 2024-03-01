@@ -115,6 +115,7 @@ class FishDetector:
                 frame_number=self.frame_number,
                 contour=contour,
                 frame=frame_dict,
+                store_raw_image_patch=self.conf["store_raw_image_patch"],
             )
             detections[new_object.ID] = new_object
             self.latest_obj_index += 1

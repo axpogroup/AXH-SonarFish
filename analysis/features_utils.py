@@ -4,11 +4,28 @@ from typing import Optional
 import cv2 as cv
 import numpy as np
 import pandas as pd
+from numpy import ndarray
 
 
 def calculate_features(measurements_df: pd.DataFrame, masks: dict[str, np.ndarray]) -> pd.DataFrame:
     feature_df = measurements_df.groupby("id").apply(lambda x: trace_window_metrics(x, masks))
     return measurements_df.join(feature_df, on="id", how="left")
+
+
+def calculate_distance_between_starting_and_ending_point(detection):
+    # Get the starting point
+    start_x, start_y = detection["x"].iloc[0], detection["y"].iloc[0]
+    # Get the ending point
+    end_x, end_y = detection["x"].iloc[-1], detection["y"].iloc[-1]
+    # Calculate the Euclidean distance between the starting and ending point
+    distance = np.sqrt((end_x - start_x) ** 2 + (end_y - start_y) ** 2)
+    return distance
+
+
+def calculate_average_distance_from_start(detection: pd.DataFrame) -> ndarray:
+    start_x, start_y = detection["x"].iloc[0], detection["y"].iloc[0]
+    distances = np.sqrt((detection["x"] - start_x) ** 2 + (detection["y"] - start_y) ** 2)
+    return np.nanmean(distances)
 
 
 def trace_window_metrics(detection: pd.DataFrame, masks: dict[str, np.array]) -> pd.Series:
@@ -23,7 +40,12 @@ def trace_window_metrics(detection: pd.DataFrame, masks: dict[str, np.array]) ->
             "average_bbox_size": calculate_average_bbox_size(detection),
             "rake_time_ratio": time_ratio_near_rake,
             "dist_near_rake": dist_near_rake,
-            "flow_time_ratio": calculate_flow_area_time_ratio(detection, masks["flow_area_mask"]),
+            "flow_area_time_ratio": calculate_flow_area_time_ratio(detection, masks["flow_area_mask"]),
+            "average_distance_from_start": calculate_average_distance_from_start(detection),
+            "average_contour_area": np.mean(detection["contour_area"]),
+            "distance_between_starting_and_ending_point": calculate_distance_between_starting_and_ending_point(
+                detection
+            ),
         }
     )
 
@@ -80,7 +102,7 @@ def calculate_average_overlap_ratio(detection: pd.DataFrame):
             img, prev_img = pad_images_to_have_same_shape(img, prev_img)
             overlap_ratios.append(get_overlap_ratio(prev_img, img))
         prev_img = img
-    return np.mean(overlap_ratios)
+    return np.mean(overlap_ratios[:-5])
 
 
 # Code from https://stackoverflow.com/questions/74657074/find-new-blobs-comparing-two-different-binary-images

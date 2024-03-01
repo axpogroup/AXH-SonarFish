@@ -1,5 +1,5 @@
 # Input / Output
-file_name: "start_2023-11-21T17-37-01.696+00-00.mp4"
+file_name: "start_2023-08-21T19-25-43.889+00-00.mp4"
 input_directory:  "data/intermediate/videos/"
 mask_directory: "analysis/demo/masks"
 output_directory: "data/model_output/"
@@ -12,7 +12,8 @@ experiment_name: "how_much_is_the_fish"
 tag: "label"
 record_output_video: True # Only works for full resolution output
 record_processing_frame: "raw" # one of ['raw', 'raw_downsampled', 'gray', 'gray_boosted', 'long_mean', 'short_mean', 'difference', 'absolute_difference', 'difference_thresholded', 'difference_thresholded_abs', 'median_filter', 'binary', 'dilated']
-draw_detections_on_saved_video: False
+draw_detections_on_saved_video: True
+store_raw_image_patch: True
 
 display_output_video: True
 display_mode_extensive: True
