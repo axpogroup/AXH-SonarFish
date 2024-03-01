@@ -41,6 +41,7 @@ class DetectedBlob(BoundingBox):
         contour: np.ndarray,
         frame_number: int,
         frame: dict[str, np.ndarray],
+        store_raw_image_patch: Optional[bool] = None,
     ):
         super().__init__(
             identifier,
@@ -51,6 +52,8 @@ class DetectedBlob(BoundingBox):
         self.means_of_pixels_intensity = []
         self.areas = [self.w * self.h if contour.shape == (4,) else cv.contourArea(contour)]
         self.feature_patch = [self.get_feature_patch(frame, "difference_thresholded")]
+        if store_raw_image_patch:
+            self.raw_image_patch = [self.get_feature_patch(frame, "raw")]
         self.calculate_average_pixel_intensity(frame["difference"])
 
     def update_object(self, detection):
@@ -59,6 +62,8 @@ class DetectedBlob(BoundingBox):
         self.means_of_pixels_intensity.append(detection.means_of_pixels_intensity[-1])
         self.stddevs_of_pixels_intensity.append(detection.stddevs_of_pixels_intensity[-1])
         self.feature_patch.append(detection.feature_patch)
+        if hasattr(self, "raw_image_patch"):
+            self.raw_image_patch.append(detection.raw_image_patch)
 
     def calculate_average_pixel_intensity(self, reference_frame: np.ndarray):
         detection_box = reference_frame[self.y : self.y + self.h, self.x : self.x + self.w]
@@ -152,6 +157,7 @@ class KalmanTrackedBlob(DetectedBlob):
         frame_number: int,
         contour: np.ndarray,
         frame: dict[str, np.ndarray],
+        store_raw_image_patch: bool,
         ellipse_angle: Optional[float] = None,
         ellipse_axes_lengths: Optional[tuple[int, int]] = None,
         detection_is_tracked: bool = False,
@@ -161,6 +167,7 @@ class KalmanTrackedBlob(DetectedBlob):
             contour=contour,
             frame_number=frame_number,
             frame=frame,
+            store_raw_image_patch=store_raw_image_patch,
         )
         self.detection_is_tracked = detection_is_tracked
         self.ellipse_angles = [ellipse_angle]
