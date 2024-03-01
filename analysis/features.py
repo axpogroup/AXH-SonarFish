@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Callable, Iterator, Union
+from typing import Callable, Iterator, Optional, Union
 
 import cv2 as cv
 import matplotlib.cm as cm
@@ -69,46 +69,38 @@ class FeatureGenerator(object):
         measurements_csv_paths: list[Union[str, Path]],
         gt_csv_paths: list[Union[str, Path]],
         rake_mask_path: Union[str, Path],
+        flow_area_mask_path: Union[str, Path],
+        non_flow_area_mask_path: Union[str, Path],
         min_track_length: int = 10,
         force_feature_recalc: bool = False,
     ):
         self.min_track_length = min_track_length
         measurements_csv_paths = [Path(p) for p in measurements_csv_paths]
         gt_csv_paths = [Path(p) for p in gt_csv_paths]
-        rake_mask = cv.imread(
-            Path(rake_mask_path).as_posix(),
-            cv.IMREAD_GRAYSCALE,
-        )
-        # make rake mask binary
-        rake_mask = cv.resize(rake_mask, (480, 270)) > 0
-        assert rake_mask is not None, f"Could not read rake mask from {rake_mask_path}"
-        self._calc_feature_dfs(measurements_csv_paths, gt_csv_paths, rake_mask, force_feature_recalc)
+        self.masks = {
+            "rake_mask": self._read_mask(rake_mask_path),
+            "flow_area_mask": self._read_mask(flow_area_mask_path),
+            "non_flow_area_mask": self._read_mask(non_flow_area_mask_path),
+        }
+        self._calc_feature_dfs(measurements_csv_paths, gt_csv_paths, force_feature_recalc)
 
     def _calc_feature_dfs(
         self,
         measurements_csv_paths: list[Path],
         gt_csv_paths: list[Path],
-        rake_mask: np.ndarray,
         force_feature_recalc: bool,
     ) -> None:
         self.measurements_dfs, self.gt_dfs = [], []
-        for measurements_df, gt_df, is_cached, cache_path in self._read_csvs(
-            measurements_csv_paths, gt_csv_paths, force_feature_recalc
-        ):
+        for measurements_df, gt_df in self._read_csvs(measurements_csv_paths, gt_csv_paths, force_feature_recalc):
             self.gt_dfs.append(gt_df)
-            if is_cached and not force_feature_recalc:
-                self.measurements_dfs.append(measurements_df)
-            else:
-                measurements_df = calculate_features(measurements_df, rake_mask)
-                measurements_df.to_csv(cache_path, index=False)
-                self.measurements_dfs.append(measurements_df)
+            self.measurements_dfs.append(measurements_df)
 
     def _read_csvs(
         self,
         measurements_csv_paths: list[Path],
         gt_csv_paths: list[Path],
         force_feature_recalc: bool = False,
-    ) -> Iterator[dict[str, Union[pd.DataFrame, bool, Path]]]:
+    ) -> Iterator[dict[str, Union[pd.DataFrame]]]:
         for path in measurements_csv_paths:
             cache_path = path.with_stem(
                 path.stem + f"_cached_features_min_track_length_{self.min_track_length}"
@@ -117,7 +109,7 @@ class FeatureGenerator(object):
             if cache_path.exists() and not force_feature_recalc:
                 print(f"Reading cached features from {cache_path}")
                 measurements_df = load_csv_with_tiles(cache_path)
-                yield measurements_df, gt_df, True, cache_path
+                yield measurements_df, gt_df
             else:
                 measurements_df = load_csv_with_tiles(path)
                 value_counts_model = (
@@ -130,8 +122,18 @@ class FeatureGenerator(object):
                         value_counts_model[value_counts_model.occurences >= self.min_track_length]["id"]
                     )
                 ]
-                measurements_df.to_csv(cache_path, index=False)
-                yield measurements_df, gt_df, False, cache_path
+                measurements_df = calculate_features(measurements_df, self.masks)
+                save_df = measurements_df.copy()
+                save_df["image_tile"] = save_df["image_tile"].apply(lambda x: x.tolist())
+                save_df.to_csv(cache_path, index=False)
+                yield measurements_df, gt_df
+
+    @staticmethod
+    def _read_mask(mask_path: Union[str, Path]) -> np.ndarray:
+        mask = cv.imread(Path(mask_path).as_posix(), cv.IMREAD_GRAYSCALE)
+        assert mask is not None, f"Could not read mask from {mask_path}"
+        mask = mask[49:1001, 92:1831]  # Drop the border
+        return cv.resize(mask, (480, 270)) > 0
 
     def map_measurements2gt_trajectory(
         self, min_iou_thresh: float = 0.4, min_overlap_ratio: float = 0.3, max_iou_track_distance: float = 0.6
@@ -202,8 +204,10 @@ class FeatureGenerator(object):
         min_iou_thresh: float = 0.4,
         min_overlap_ratio: float = 0.3,
         max_iou_track_distance: float = 0.6,
+        metric_to_show: Optional[str] = None,
+        mask_to_show: Optional[str] = None,
     ) -> None:
-        if "cluster" not in self.measurements_dfs[0].columns:
+        if "assigned_label" not in self.measurements_dfs[0].columns:
             raise ValueError(
                 "No clustering has been performed yet. Please perform clustering with the do_clustering method."
             )
@@ -215,15 +219,17 @@ class FeatureGenerator(object):
         model_detections = pd.concat(self.measurements_dfs)
         ground_truth = pd.concat(self.gt_dfs)
 
-        n_clusters = model_detections["cluster"].nunique()
-        colormap = cm.get_cmap("viridis", n_clusters + 1)  # +1 for the ground truth color
+        n_labels = model_detections["assigned_label"].nunique()
+        colormap = cm.get_cmap("viridis", n_labels + 1)  # +1 for the ground truth color
 
         _, ax = plt.subplots(nrows=1, ncols=1, sharex=True, figsize=(10, 10))
+        if mask_to_show:
+            ax.imshow(self.masks[mask_to_show], cmap="gray", alpha=0.2)
         plt.gca().invert_yaxis()
 
         # Plot assigned tracks
         for measurements_track_id, gt_track_id in all_measurements_gt_pairs.items():
-            self.plot_tracks_and_annotations(ax, colormap, measurements_track_id, model_detections)
+            self.plot_tracks_and_annotations(ax, colormap, measurements_track_id, model_detections, metric_to_show)
             gt_track_df = ground_truth[ground_truth.id == gt_track_id]
             ax.plot(gt_track_df.x, gt_track_df.y, alpha=0.5, color=colormap(0), linestyle="dashed")
 
@@ -232,58 +238,87 @@ class FeatureGenerator(object):
             ax.plot(
                 measurements_track_df.x,
                 measurements_track_df.y,
-                color=colormap(measurements_track_df.cluster.iloc[0] + 1),
+                color=colormap(measurements_track_df.assigned_label.iloc[0] + 1),
                 linestyle="dotted",
             )
 
-        ax.set(ylabel="y", title="assigned trajectories with clustering", ylim=[270, 0], xlim=[0, 480])
+        ax.set(ylabel="y", title="matched trajectories with assigned label", ylim=[270, 0], xlim=[0, 480])
         ax.set_aspect("equal", adjustable="box")
 
         legend_elements = [Line2D([0], [0], color=colormap(0), lw=2, label="Label")]
-        for i in range(n_clusters):
-            legend_elements.append(Line2D([0], [0], color=colormap(i + 1), lw=2, label=f"Cluster {i}"))
+        for i in range(n_labels):
+            legend_elements.append(Line2D([0], [0], color=colormap(i + 1), lw=2, label=f"label {i}"))
         ax.legend(handles=legend_elements)
 
         plt.show()
 
         # Plot tracks that were not assigned to a ground truth
         _, ax = plt.subplots(nrows=1, ncols=1, sharex=True, figsize=(10, 10))
+        if mask_to_show:
+            ax.imshow(self.masks[mask_to_show], cmap="gray", alpha=0.2)
+        plt.gca().invert_yaxis()
         plt.gca().invert_yaxis()
 
         for measurements_track_id in model_detections.id.unique():
             if (measurements_track_id not in all_measurements_gt_pairs.keys()) and (
                 measurements_track_id not in all_measurements_gt_pairs_secondary.keys()
             ):
-                self.plot_tracks_and_annotations(ax, colormap, measurements_track_id, model_detections)
-        ax.set(ylabel="y", title="unassigned trajectories with clustering", ylim=[270, 0], xlim=[0, 480])
+                self.plot_tracks_and_annotations(ax, colormap, measurements_track_id, model_detections, metric_to_show)
+        ax.set(ylabel="y", title="matched trajectories with assigned label", ylim=[270, 0], xlim=[0, 480])
         ax.set_aspect("equal", adjustable="box")
 
         legend_elements = [Line2D([0], [0], color=colormap(0), lw=2, label="Label")]
-        for i in range(n_clusters):
-            legend_elements.append(Line2D([0], [0], color=colormap(i + 1), lw=2, label=f"Cluster {i}"))
+        for i in range(n_labels):
+            legend_elements.append(Line2D([0], [0], color=colormap(i + 1), lw=2, label=f"label {i}"))
         ax.legend(handles=legend_elements)
 
         plt.show()
 
         return all_measurements_gt_pairs, all_measurements_gt_pairs_secondary
 
-    def plot_tracks_and_annotations(self, ax, colormap, measurements_track_id, model_detections):
+    def plot_tracks_and_annotations(
+        self,
+        ax,
+        colormap,
+        measurements_track_id,
+        model_detections,
+        metric_to_show: Optional[str],
+    ) -> None:
         measurements_track_df = model_detections[model_detections.id == measurements_track_id]
         ax.plot(
             measurements_track_df.x,
             measurements_track_df.y,
-            color=colormap(measurements_track_df.cluster.iloc[0] + 1),
+            color=colormap(measurements_track_df.assigned_label.iloc[0] + 1),
         )
+        metric_annotation = str(measurements_track_df[metric_to_show].iloc[0])[:4] if metric_to_show else ""
         ax.annotate(
-            f"{measurements_track_id}, {str(measurements_track_df.average_overlap_ratio.iloc[0])[:4]}",
+            f"{measurements_track_id}, {metric_annotation}",
             (measurements_track_df.x.iloc[0], measurements_track_df.y.iloc[0]),
         )
 
-    def do_clustering(self, features: list[str], clustering_method: Callable, n_clusters: int):
+    def do_clustering(self, features: list[str], clustering_method: Callable, n_labels: int):
         labels = []
         for idx in range(len(self.measurements_dfs)):
             selected_features = pd.concat(self.measurements_dfs)[features]
-            clustering = clustering_method(n_clusters=n_clusters)
+            clustering = clustering_method(n_labels=n_labels)
             labels.append(clustering.fit_predict(selected_features))
-            self.measurements_dfs[idx]["cluster"] = labels[-1]
+            self.measurements_dfs[idx]["assigned_label"] = labels[-1]
         return labels
+
+    def do_binary_classification(self, model: Callable, features: list[str]):
+        X, y = [], []
+        for df in self.measurements_dfs:
+            df = df.groupby("id").first().reset_index()
+            X += [df[features]]
+            y += [df["gt_label"]]
+        X = pd.concat(X)
+        y = pd.concat(y)
+        model = model.fit(X, y)
+        for idx, df in enumerate(self.measurements_dfs):
+            self.measurements_dfs[idx]["assigned_label"] = [
+                1 if x == "fish" else 0 for x in model.predict(df[features])
+            ]
+
+    @property
+    def feature_names(self):
+        return self.measurements_dfs[0].columns.tolist()[9:]

@@ -6,14 +6,14 @@ import numpy as np
 import pandas as pd
 
 
-def calculate_features(measurements_df: pd.DataFrame, rake_mask: np.ndarray) -> pd.DataFrame:
-    feature_df = measurements_df.groupby("id").apply(lambda x: trace_window_metrics(x, rake_mask))
+def calculate_features(measurements_df: pd.DataFrame, masks: dict[str, np.ndarray]) -> pd.DataFrame:
+    feature_df = measurements_df.groupby("id").apply(lambda x: trace_window_metrics(x, masks))
     return measurements_df.join(feature_df, on="id", how="left")
 
 
-def trace_window_metrics(detection: pd.DataFrame, rake_mask: np.array) -> pd.Series:
+def trace_window_metrics(detection: pd.DataFrame, masks: dict[str, np.array]) -> pd.Series:
     frame_diff = detection["frame"].iloc[-1] - detection["frame"].iloc[0]
-    time_ratio_near_rake, dist_near_rake = calculate_rake_path_ratio(detection, rake_mask)
+    time_ratio_near_rake, dist_near_rake = calculate_rake_path_ratio(detection, masks["rake_mask"])
     return pd.Series(
         {
             "traversed_distance": sum_euclidean_distance_between_positions(detection),
@@ -23,6 +23,7 @@ def trace_window_metrics(detection: pd.DataFrame, rake_mask: np.array) -> pd.Ser
             "average_bbox_size": calculate_average_bbox_size(detection),
             "rake_time_ratio": time_ratio_near_rake,
             "dist_near_rake": dist_near_rake,
+            "flow_time_ratio": calculate_flow_area_time_ratio(detection, masks["flow_area_mask"]),
         }
     )
 
@@ -41,6 +42,14 @@ def calculate_rake_path_ratio(detection: pd.DataFrame, rake_mask: np.array) -> t
     y_diff = np.diff(y[is_near_rake])
     dist_near_rake = np.sum(np.sqrt(x_diff**2 + y_diff**2))
     return time_ratio_near_rake, dist_near_rake
+
+
+def calculate_flow_area_time_ratio(detection: pd.DataFrame, flow_mask: np.array) -> float:
+    x = detection["x"].values
+    y = detection["y"].values
+    is_in_flow = flow_mask[y.astype(int), x.astype(int)]
+    time_ratio_in_flow = np.sum(is_in_flow) / len(is_in_flow)
+    return time_ratio_in_flow
 
 
 def sum_euclidean_distance_between_positions(detection: pd.DataFrame):
