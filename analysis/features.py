@@ -67,7 +67,10 @@ def load_csv_with_tiles(path: Path) -> pd.DataFrame:
 
 
 def filter_features(measurements_df, min_overlapping_ratio):
-    measurements_df = measurements_df[measurements_df["average_overlap_ratio"] > min_overlapping_ratio]
+    measurements_df = measurements_df[
+        (measurements_df["average_overlap_ratio"] > min_overlapping_ratio)
+        & (measurements_df["average_pixel_intensity"] > 127.80)
+    ]
     return measurements_df
 
 
@@ -144,11 +147,12 @@ class FeatureGenerator(object):
                 ]
                 measurements_df = calculate_features(measurements_df, self.masks)
                 measurements_df = filter_features(measurements_df, self.min_overlapping_ratio)
-                save_df = measurements_df.copy()
-                save_df["image_tile"] = save_df["image_tile"].apply(lambda x: x.tolist())
-                save_df["raw_image_tile"] = save_df["raw_image_tile"].apply(lambda x: x.tolist())
-                save_df.to_csv(cache_path, index=False)
-                yield measurements_df, gt_df
+                if not measurements_df.empty:
+                    save_df = measurements_df.copy()
+                    save_df["image_tile"] = save_df["image_tile"].apply(lambda x: x.tolist())
+                    save_df["raw_image_tile"] = save_df["raw_image_tile"].apply(lambda x: x.tolist())
+                    save_df.to_csv(cache_path, index=False)
+                    yield measurements_df, gt_df
 
     @staticmethod
     def _read_mask(mask_path: Union[str, Path]) -> np.ndarray:
@@ -300,7 +304,7 @@ class FeatureGenerator(object):
             measurements_track_df.y,
             color=colormap(int(measurements_track_df.assigned_label.iloc[0]) + 1),
         )
-        metric_annotation = str(measurements_track_df[metric_to_show].iloc[0])[:4] if metric_to_show else ""
+        metric_annotation = str(measurements_track_df[metric_to_show].iloc[0])[:6] if metric_to_show else ""
         ax.annotate(
             f"{measurements_track_id}, {metric_annotation}",
             (measurements_track_df.x.iloc[0], measurements_track_df.y.iloc[0]),

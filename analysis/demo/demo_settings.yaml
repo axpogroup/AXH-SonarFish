@@ -1,5 +1,5 @@
 # Input / Output
-file_name: "start_2023-08-21T19-25-43.889+00-00.mp4"
+file_name: "start_2023-11-21T17-37-01.696+00-00.mp4"
 input_directory:  "data/intermediate/videos/"
 mask_directory: "analysis/demo/masks"
 output_directory: "data/model_output/"
