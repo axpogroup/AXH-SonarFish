@@ -61,9 +61,9 @@ class DetectedBlob(BoundingBox):
         self.areas.append(detection.areas[-1])
         self.means_of_pixels_intensity.append(detection.means_of_pixels_intensity[-1])
         self.stddevs_of_pixels_intensity.append(detection.stddevs_of_pixels_intensity[-1])
-        self.feature_patch.append(detection.feature_patch)
+        self.feature_patch.append(detection.feature_patch[-1])
         if hasattr(self, "raw_image_patch"):
-            self.raw_image_patch.append(detection.raw_image_patch)
+            self.raw_image_patch.append(detection.raw_image_patch[-1])
 
     def calculate_average_pixel_intensity(self, reference_frame: np.ndarray):
         detection_box = reference_frame[self.y : self.y + self.h, self.x : self.x + self.w]
