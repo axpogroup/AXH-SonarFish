@@ -46,6 +46,7 @@ def trace_window_metrics(detection: pd.DataFrame) -> pd.Series:
             "distance_between_starting_and_ending_point": calculate_distance_between_starting_and_ending_point(
                 detection
             ),
+            "average_stddev_of_pixels_intensity": np.mean(detection["stddev_of_intensity"]),
         }
     )
 
