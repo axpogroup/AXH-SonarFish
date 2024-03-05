@@ -325,7 +325,12 @@ class FeatureGenerator(object):
                 plt.title(f"Frame {row.frame}")
                 plt.show()
 
-    def show_trajectory_numeric_features(self, measurements_track_id: int) -> None:
+    def show_trajectory_numeric_features(
+        self,
+        measurements_track_id: int,
+        boxplot_split_thresholds: list[float] = [1],
+    ) -> None:
+        boxplot_split_thresholds = sorted(boxplot_split_thresholds)
         features_to_print = [
             feature for feature in self.feature_names if feature not in ["image_tile", "raw_image_tile", "video_id"]
         ]
@@ -336,32 +341,49 @@ class FeatureGenerator(object):
         track_df = self._get_track_df_by_id(measurements_track_id).iloc[0]
         all_tracks_df = self.stacked_dfs.groupby(["video_id", "id"]).first().reset_index()
 
-        # Split features based on median
+        # Calculate medians
         medians = all_tracks_df[features_to_plot].median()
-        features_above_1 = [feature for feature in features_to_plot if medians[feature] > 1]
-        features_below_1 = [feature for feature in features_to_plot if medians[feature] <= 1]
 
-        # Create boxplots
-        fig, axs = plt.subplots(2)
-        axs[0].boxplot(all_tracks_df[features_above_1].values, labels=features_above_1)
-        axs[1].boxplot(all_tracks_df[features_below_1].values, labels=features_below_1)
+        # Split features based on thresholds
+        subplots = len(boxplot_split_thresholds) + 1
+        _, axs = plt.subplots(subplots)
 
-        # Add chosen track as dots
-        axs[0].plot(range(1, len(features_above_1) + 1), track_df[features_above_1].values.tolist(), "ro")
-        axs[1].plot(range(1, len(features_below_1) + 1), track_df[features_below_1].values.tolist(), "ro")
+        for i, threshold in enumerate(boxplot_split_thresholds):
+            if i == 0:
+                features_above_threshold = [feature for feature in features_to_plot if medians[feature] <= threshold]
+            elif i < len(boxplot_split_thresholds) - 1:
+                features_above_threshold = []
+                for feature in features_to_plot:
+                    if (
+                        medians[feature] > boxplot_split_thresholds[i - 1]
+                        and medians[feature] <= boxplot_split_thresholds[i]
+                    ):
+                        features_above_threshold.append(feature)
+            else:
+                features_above_threshold = [feature for feature in features_to_plot if medians[feature] > threshold]
+            if not features_above_threshold:
+                continue
+            axs[i].boxplot(all_tracks_df[features_above_threshold].values, labels=features_above_threshold)
+            axs[i].plot(
+                range(1, len(features_above_threshold) + 1), track_df[features_above_threshold].values.tolist(), "ro"
+            )
+            axs[i].set_title(f"Numeric Features Distribution (Median > {threshold})")
 
-        # Set plot title and labels
-        axs[0].set_title("Numeric Features Distribution (Median > 1)")
-        axs[1].set_title("Numeric Features Distribution (Median <= 1)")
+        features_below_threshold = [
+            feature for feature in features_to_plot if medians[feature] <= boxplot_split_thresholds[-1]
+        ]
+        axs[-1].boxplot(all_tracks_df[features_below_threshold].values, labels=features_below_threshold)
+        axs[-1].plot(
+            range(1, len(features_below_threshold) + 1), track_df[features_below_threshold].values.tolist(), "ro"
+        )
+        axs[-1].set_title(f"Numeric Features Distribution (Median <= {boxplot_split_thresholds[-1]})")
+
         for ax in axs:
             ax.set_xlabel("Features")
             ax.set_ylabel("Values")
             ax.set_xticklabels(ax.get_xticklabels(), rotation=90)
 
-        # Increase space between subplots
-        plt.subplots_adjust(hspace=0.8)  # Adjust the value as needed
-
-        # Show the plot
+        plt.subplots_adjust(hspace=1.5)  # Adjust the value as needed
         plt.show()
 
         max_name_length = max([len(feat) for feat in features_to_print])
