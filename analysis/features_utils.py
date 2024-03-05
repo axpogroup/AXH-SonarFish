@@ -28,6 +28,20 @@ def calculate_average_distance_from_start(detection: pd.DataFrame) -> ndarray:
     return np.nanmean(distances)
 
 
+def calculate_mean_of_pixel_intensity(row):
+    detection_box = row
+    if 0 in detection_box.shape:
+        print("detection_box is empty")
+        return
+    mean, stddev = cv.meanStdDev(detection_box)
+    return mean[0]
+
+
+def calculate_average_pixel_intensity(detection):
+    stddevs = detection["image_tile"].apply(lambda x: calculate_mean_of_pixel_intensity(x))
+    return np.nanmean(stddevs)[0]
+
+
 def trace_window_metrics(detection: pd.DataFrame, masks: dict[str, np.array]) -> pd.Series:
     frame_diff = detection["frame"].iloc[-1] - detection["frame"].iloc[0]
     time_ratio_near_rake, dist_near_rake = calculate_rake_path_ratio(detection, masks["rake_mask"])
@@ -46,7 +60,7 @@ def trace_window_metrics(detection: pd.DataFrame, masks: dict[str, np.array]) ->
             "distance_between_starting_and_ending_point": calculate_distance_between_starting_and_ending_point(
                 detection
             ),
-            "average_stddev_of_pixels_intensity": np.mean(detection["stddev_of_intensity"]),
+            "average_pixel_intensity": calculate_average_pixel_intensity(detection),
         }
     )
 
