@@ -1,5 +1,4 @@
 import json
-from itertools import islice
 from pathlib import Path
 from typing import Callable, Iterator, Optional, Union
 
@@ -8,11 +7,10 @@ import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from imblearn.over_sampling import RandomOverSampler
 from matplotlib.lines import Line2D
 from motmetrics.distances import boxiou
 from scipy.optimize import linear_sum_assignment
-from sklearn import preprocessing
+from sklearn import metrics, preprocessing
 from sklearn.model_selection import KFold
 from tqdm import tqdm
 
@@ -228,7 +226,6 @@ class FeatureGenerator(object):
         self,
         metric_to_show: Optional[str] = None,
         mask_to_show: Optional[str] = None,
-        show_legend: bool = False,
     ) -> None:
         if "assigned_label" not in self.measurements_dfs[0].columns:
             raise ValueError(
@@ -239,6 +236,7 @@ class FeatureGenerator(object):
         ground_truth = pd.concat(self.gt_dfs)
 
         n_labels = model_detections["assigned_label"].nunique()
+        show_legend = True if n_labels <= 6 else False
         colormap = cm.get_cmap("viridis", n_labels + 1)  # +1 for the ground truth color
 
         _, ax = plt.subplots(nrows=1, ncols=1, sharex=True, figsize=(10, 10))
@@ -277,7 +275,7 @@ class FeatureGenerator(object):
                 measurements_track_id not in self.all_measurements_gt_pairs_secondary.keys()
             ):
                 self.plot_tracks_and_annotations(ax, colormap, measurements_track_id, model_detections, metric_to_show)
-        ax.set(ylabel="y", title="matched trajectories with assigned label", ylim=[270, 0], xlim=[0, 480])
+        ax.set(ylabel="y", title="non-matched trajectories with assigned label", ylim=[270, 0], xlim=[0, 480])
         ax.set_aspect("equal", adjustable="box")
 
         legend_elements = [Line2D([0], [0], color=colormap(0), lw=2, label="Label")]
@@ -300,7 +298,7 @@ class FeatureGenerator(object):
         ax.plot(
             measurements_track_df.x,
             measurements_track_df.y,
-            color=colormap(measurements_track_df.assigned_label.iloc[0] + 1),
+            color=colormap(int(measurements_track_df.assigned_label.iloc[0]) + 1),
         )
         metric_annotation = str(measurements_track_df[metric_to_show].iloc[0])[:4] if metric_to_show else ""
         ax.annotate(
@@ -347,19 +345,18 @@ class FeatureGenerator(object):
     ):
         # if distinguish_flow_areas:
         # dfs_subset = [df[df["flow_area_time_ratio"] > 0.5] for df in self.measurements_dfs]
-        # TODO: Implement the rest of the method
-        X, y, track_ids = [], [], []
-        for df in self.measurements_dfs:
-            df = df.groupby("id").first().reset_index()
-            track_ids.append(df["id"])
-            X += [df[features]]
-            y += [df["gt_label"]]
-        X = np.array(pd.concat(X))
-        y = np.array([1 if lbl == "fish" else 0 for lbl in pd.concat(y)])
+        # TODO: Implement a model for each flow area
+        if distinguish_flow_areas:
+            df = self.stacked_dfs.groupby(["video_id", "id"]).first().reset_index()
+            df = df[df["flow_area_time_ratio"] > 0.5]
 
-        # Balancing the classes using RandomOverSampler
-        oversampler = RandomOverSampler()
-        X, y = oversampler.fit_resample(X, y)
+        df = self.stacked_dfs.groupby(["video_id", "id"]).first().reset_index()
+        X = np.array(df[features])
+        y = np.array([1 if lbl == "fish" else 0 for lbl in df["gt_label"]])
+
+        # # Balancing the classes using RandomOverSampler
+        # oversampler = RandomOverSampler()
+        # X, y = oversampler.fit_resample(X, y)
 
         kf = KFold(n_splits=kfold_n_splits)
         y_kfold = np.empty(y.shape)
@@ -372,15 +369,57 @@ class FeatureGenerator(object):
             model = model.fit(X_train, y_train)
             y_kfold[val_index] = model.predict(X_val)
 
-        y_kfold = [list(islice(y_kfold, len(ids))) for ids in track_ids]
-        for idx, df in enumerate(self.measurements_dfs):
-            right_df = df.groupby("id").first().reset_index()
-            right_df["assigned_label"] = y_kfold[idx]
-            try:
-                self.measurements_dfs[idx].drop(columns=["assigned_label"], inplace=True)
-            except KeyError:
-                pass
-            self.measurements_dfs[idx] = df.merge(right_df[["id", "assigned_label"]], on="id", how="left")
+        df["assigned_label"] = y_kfold
+        for idx, measurement_df in enumerate(self.measurements_dfs):
+            video_id = measurement_df["video_id"].iloc[0]
+            right_df = df[df["video_id"] == video_id][["id", "assigned_label"]]
+            measurement_df.drop(columns=["assigned_label"], inplace=True)
+            self.measurements_dfs[idx] = measurement_df.merge(right_df, on="id", how="left")
+
+    def _do_binary_classification_for_split(
+        self,
+        model: Callable,
+        features: list[str],
+        kfold_n_splits: int,
+    ):
+        pass
+
+    def do_thresholding_classification(
+        self,
+        feature_thresholding_values: Optional[dict[str, float]] = None,
+    ) -> None:
+        self.stacked_dfs["assigned_label"] = "fish"
+        for feat, thresh in feature_thresholding_values.items():
+            if feat.endswith("_min"):
+                feat = feat.replace("_min", "")
+                self.stacked_dfs.loc[self.stacked_dfs[feat] < thresh, "assigned_label"] = "noise"
+            elif feat.endswith("_max"):
+                self.stacked_dfs.loc[self.stacked_dfs[feat] > thresh, "assigned_label"] = "noise"
+            else:
+                print(f"Invalid feature threshold name: {feat}. Must end with '_min' or '_max'")
+
+    def calculate_metrics(self, beta_vals: list[int] = [2], make_plots: bool = False):
+        df = self.stacked_dfs.groupby("id").first().reset_index()
+        inputs = [
+            df["gt_label"].apply(lambda x: 1 if x == "fish" else 0),
+            df["assigned_label"],
+        ]
+        confusion_matrix = metrics.confusion_matrix(*inputs, normalize="true", labels=[0, 1])
+        precision = metrics.precision_score(*inputs, labels=[0, 1], average="binary")
+        recall = metrics.recall_score(*inputs, labels=[0, 1], average="binary")
+        f1 = metrics.f1_score(*inputs, labels=[0, 1], average="binary")
+        print(f"Precision: {precision}")
+        print(f"Recall: {recall}")
+        print(f"F1 score: {f1}")
+        fbeta = []
+        for beta in beta_vals:
+            fbeta.append(metrics.fbeta_score(*inputs, beta=beta, labels=[0, 1], average="binary"))
+            print(f"F{beta} score: {fbeta[-1]}")
+        if make_plots:
+            metrics.ConfusionMatrixDisplay(confusion_matrix, display_labels=["noise", "fish"]).plot()
+        else:
+            print(f"Confusion matrix: {confusion_matrix}")
+        return confusion_matrix, precision, recall, f1, fbeta
 
     @property
     def feature_names(self):
