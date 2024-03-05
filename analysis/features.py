@@ -343,20 +343,36 @@ class FeatureGenerator(object):
         kfold_n_splits: int,
         distinguish_flow_areas: bool = False,
     ):
-        # if distinguish_flow_areas:
-        # dfs_subset = [df[df["flow_area_time_ratio"] > 0.5] for df in self.measurements_dfs]
-        # TODO: Implement a model for each flow area
         if distinguish_flow_areas:
             df = self.stacked_dfs.groupby(["video_id", "id"]).first().reset_index()
-            df = df[df["flow_area_time_ratio"] > 0.5]
+            flow_area_indices = df["flow_area_time_ratio"] > 0.5
+            df.loc[flow_area_indices, "assigned_label"] = self._do_binary_classification_for_trajectory_subset(
+                df[flow_area_indices], model, features, kfold_n_splits
+            )
+            df.loc[~flow_area_indices, "assigned_label"] = self._do_binary_classification_for_trajectory_subset(
+                df[~flow_area_indices], model, features, kfold_n_splits
+            )
+        else:
+            df = self.stacked_dfs.groupby(["video_id", "id"]).first().reset_index()
+            df["assigned_label"] = self._do_binary_classification_for_trajectory_subset(
+                df, model, features, kfold_n_splits
+            )
 
-        df = self.stacked_dfs.groupby(["video_id", "id"]).first().reset_index()
+        for idx, measurement_df in enumerate(self.measurements_dfs):
+            measurement_df.drop(columns=["assigned_label"], inplace=True)
+            video_id = measurement_df["video_id"].iloc[0]
+            right_df = df[df["video_id"] == video_id][["id", "assigned_label"]]
+            self.measurements_dfs[idx] = measurement_df.merge(right_df, on="id", how="left")
+
+    @staticmethod
+    def _do_binary_classification_for_trajectory_subset(
+        df: pd.DataFrame,
+        model: Callable,
+        features: list[str],
+        kfold_n_splits: int,
+    ) -> np.array:
         X = np.array(df[features])
         y = np.array([1 if lbl == "fish" else 0 for lbl in df["gt_label"]])
-
-        # # Balancing the classes using RandomOverSampler
-        # oversampler = RandomOverSampler()
-        # X, y = oversampler.fit_resample(X, y)
 
         kf = KFold(n_splits=kfold_n_splits)
         y_kfold = np.empty(y.shape)
@@ -369,20 +385,7 @@ class FeatureGenerator(object):
             model = model.fit(X_train, y_train)
             y_kfold[val_index] = model.predict(X_val)
 
-        df["assigned_label"] = y_kfold
-        for idx, measurement_df in enumerate(self.measurements_dfs):
-            video_id = measurement_df["video_id"].iloc[0]
-            right_df = df[df["video_id"] == video_id][["id", "assigned_label"]]
-            measurement_df.drop(columns=["assigned_label"], inplace=True)
-            self.measurements_dfs[idx] = measurement_df.merge(right_df, on="id", how="left")
-
-    def _do_binary_classification_for_split(
-        self,
-        model: Callable,
-        features: list[str],
-        kfold_n_splits: int,
-    ):
-        pass
+        return y_kfold
 
     def do_thresholding_classification(
         self,
