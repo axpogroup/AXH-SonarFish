@@ -346,12 +346,19 @@ class FeatureGenerator(object):
 
         # Split features based on thresholds
         subplots = len(boxplot_split_thresholds) + 1
-        _, axs = plt.subplots(subplots)
+        _, axs = plt.subplots(subplots, figsize=(10, subplots * 7))  # Increase the figure size
 
         for i, threshold in enumerate(boxplot_split_thresholds):
             if i == 0:
                 features_above_threshold = [feature for feature in features_to_plot if medians[feature] <= threshold]
-            elif i < len(boxplot_split_thresholds) - 1:
+                axs[i].set_title(f"Numeric Features Distribution (Median <= {threshold})")
+                axs[i].boxplot(all_tracks_df[features_above_threshold].values, labels=features_above_threshold)
+                axs[i].plot(
+                    range(1, len(features_above_threshold) + 1),
+                    track_df[features_above_threshold].values.tolist(),
+                    "ro",
+                )
+            else:
                 features_above_threshold = []
                 for feature in features_to_plot:
                     if (
@@ -359,31 +366,31 @@ class FeatureGenerator(object):
                         and medians[feature] <= boxplot_split_thresholds[i]
                     ):
                         features_above_threshold.append(feature)
-            else:
-                features_above_threshold = [feature for feature in features_to_plot if medians[feature] > threshold]
-            if not features_above_threshold:
-                continue
-            axs[i].boxplot(all_tracks_df[features_above_threshold].values, labels=features_above_threshold)
-            axs[i].plot(
-                range(1, len(features_above_threshold) + 1), track_df[features_above_threshold].values.tolist(), "ro"
-            )
-            axs[i].set_title(f"Numeric Features Distribution (Median > {threshold})")
-
-        features_below_threshold = [
-            feature for feature in features_to_plot if medians[feature] <= boxplot_split_thresholds[-1]
-        ]
-        axs[-1].boxplot(all_tracks_df[features_below_threshold].values, labels=features_below_threshold)
-        axs[-1].plot(
-            range(1, len(features_below_threshold) + 1), track_df[features_below_threshold].values.tolist(), "ro"
-        )
-        axs[-1].set_title(f"Numeric Features Distribution (Median <= {boxplot_split_thresholds[-1]})")
+                axs[i].set_title(
+                    f"Features Distr ({boxplot_split_thresholds[i - 1]} < Median <= {boxplot_split_thresholds[i]})"
+                )
+                axs[i].boxplot(all_tracks_df[features_above_threshold].values, labels=features_above_threshold)
+                axs[i].plot(
+                    range(1, len(features_above_threshold) + 1),
+                    track_df[features_above_threshold].values.tolist(),
+                    "ro",
+                )
+                if i == len(boxplot_split_thresholds) - 1:
+                    features_above_threshold = [feature for feature in features_to_plot if medians[feature] > threshold]
+                    axs[i + 1].set_title(f"Numeric Features Distribution (Median > {threshold})")
+                    axs[i + 1].boxplot(all_tracks_df[features_above_threshold].values, labels=features_above_threshold)
+                    axs[i + 1].plot(
+                        range(1, len(features_above_threshold) + 1),
+                        track_df[features_above_threshold].values.tolist(),
+                        "ro",
+                    )
 
         for ax in axs:
             ax.set_xlabel("Features")
             ax.set_ylabel("Values")
             ax.set_xticklabels(ax.get_xticklabels(), rotation=90)
 
-        plt.subplots_adjust(hspace=1.5)  # Adjust the value as needed
+        plt.subplots_adjust(hspace=0.8)  # Adjust the value as needed
         plt.show()
 
         max_name_length = max([len(feat) for feat in features_to_print])
