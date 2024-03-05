@@ -1,10 +1,10 @@
 # Input / Output
-file_name: "start_2023-11-21T17-37-01.696+00-00.mp4"
+file_name: "start_2023-08-21T19-25-43.889+00-00.mp4"
 input_directory:  "data/intermediate/videos/"
 mask_directory: "analysis/demo/masks"
 output_directory: "data/model_output/"
 ground_truth_directory: "data/labels/"
-store_raw_image_patch: True
+mask_file: "stroppel_non_object_space.png" # one of ["sonar_controls.png", "stroppel_non_object_space.png", "herrendoebeli_non_object_space.png"]
 
 # Azure ML
 experiment_name: "how_much_is_the_fish"
@@ -13,9 +13,10 @@ tag: "label"
 record_output_video: True # Only works for full resolution output
 record_processing_frame: "raw" # one of ['raw', 'raw_downsampled', 'gray', 'gray_boosted', 'long_mean', 'short_mean', 'difference', 'absolute_difference', 'difference_thresholded', 'difference_thresholded_abs', 'median_filter', 'binary', 'dilated']
 draw_detections_on_saved_video: True
+store_raw_image_patch: True
 
 display_output_video: True
-display_mode_extensive: False
+display_mode_extensive: True
 display_trackbars: False
 
 # Size
@@ -47,7 +48,7 @@ kalman_max_iou_distance: 0.5 # basically (1 - iou_min)
 kalman_max_age: 35
 kalman_n_init: 60
 filter_nearest_neighbor:
-filter_blob_matching_metric: "fft" # one of ['euclidean_distance', 'blob_area', 'histogram', 'mutual_information', 'fft']
+filter_blob_matching_metric: "histogram" # one of ['euclidean_distance', 'blob_area', 'histogram', 'mutual_information', 'fft']
 filter_association_thresh: 0.3
 filter_blob_elimination_metric: "euclidean_distance" # one of ['euclidean_distance']
 bbox_size_to_stddev_ratio_threshold: 120
