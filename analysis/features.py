@@ -294,16 +294,16 @@ class FeatureGenerator(object):
         model_detections,
         metric_to_show: Optional[str],
     ) -> None:
-        measurements_track_df = model_detections[model_detections.id == measurements_track_id]
+        track_df = model_detections[model_detections.id == measurements_track_id]
         ax.plot(
-            measurements_track_df.x,
-            measurements_track_df.y,
-            color=colormap(int(measurements_track_df.assigned_label.iloc[0]) + 1),
+            track_df.x,
+            track_df.y,
+            color=colormap(int(track_df.assigned_label.iloc[0]) + 1),
         )
-        metric_annotation = str(measurements_track_df[metric_to_show].iloc[0])[:4] if metric_to_show else ""
+        metric_annotation = str(track_df[metric_to_show].iloc[0])[:4] if metric_to_show else ""
         ax.annotate(
             f"{measurements_track_id}, {metric_annotation}",
-            (measurements_track_df.x.iloc[0], measurements_track_df.y.iloc[0]),
+            (track_df.x.iloc[0], track_df.y.iloc[0]),
         )
 
     def plot_image_tiles_along_trajectory(
@@ -313,10 +313,9 @@ class FeatureGenerator(object):
         raw: bool = False,
     ) -> None:
         feature_name = "raw_image_tile" if raw else "image_tile"
-        measurements_track_df = self.stacked_dfs[self.stacked_dfs.id == measurements_track_id]
-        assert measurements_track_df["video_id"].nunique() == 1, "The track is not unique to a video"
+        track_df = self._get_track_df_by_id(measurements_track_id)
 
-        for idx, row in measurements_track_df.iterrows():
+        for idx, row in track_df.iterrows():
             if idx % every_nth_frame == 0:
                 image_tile = np.squeeze(row[feature_name])
                 if raw:
@@ -325,6 +324,54 @@ class FeatureGenerator(object):
                     plt.imshow(image_tile, cmap="gray")
                 plt.title(f"Frame {row.frame}")
                 plt.show()
+
+    def show_trajectory_numeric_features(self, measurements_track_id: int) -> None:
+        features_to_print = [
+            feature for feature in self.feature_names if feature not in ["image_tile", "raw_image_tile", "video_id"]
+        ]
+        features_to_plot = [
+            feature for feature in features_to_print if feature not in ["classification", "gt_label", "assigned_label"]
+        ]
+
+        track_df = self._get_track_df_by_id(measurements_track_id).iloc[0]
+        all_tracks_df = self.stacked_dfs.groupby(["video_id", "id"]).first().reset_index()
+
+        # Split features based on median
+        medians = all_tracks_df[features_to_plot].median()
+        features_above_1 = [feature for feature in features_to_plot if medians[feature] > 1]
+        features_below_1 = [feature for feature in features_to_plot if medians[feature] <= 1]
+
+        # Create boxplots
+        fig, axs = plt.subplots(2)
+        axs[0].boxplot(all_tracks_df[features_above_1].values, labels=features_above_1)
+        axs[1].boxplot(all_tracks_df[features_below_1].values, labels=features_below_1)
+
+        # Add chosen track as dots
+        axs[0].plot(range(1, len(features_above_1) + 1), track_df[features_above_1].values.tolist(), "ro")
+        axs[1].plot(range(1, len(features_below_1) + 1), track_df[features_below_1].values.tolist(), "ro")
+
+        # Set plot title and labels
+        axs[0].set_title("Numeric Features Distribution (Median > 1)")
+        axs[1].set_title("Numeric Features Distribution (Median <= 1)")
+        for ax in axs:
+            ax.set_xlabel("Features")
+            ax.set_ylabel("Values")
+            ax.set_xticklabels(ax.get_xticklabels(), rotation=90)
+
+        # Increase space between subplots
+        plt.subplots_adjust(hspace=0.8)  # Adjust the value as needed
+
+        # Show the plot
+        plt.show()
+
+        max_name_length = max([len(feat) for feat in features_to_print])
+        for feat in features_to_print:
+            print(f"{feat:<{max_name_length}} {track_df[feat]}")
+
+    def _get_track_df_by_id(self, track_id: int) -> pd.DataFrame:
+        track_df = self.stacked_dfs[self.stacked_dfs.id == track_id]
+        assert track_df["video_id"].nunique() == 1, "The track is not unique to a video"
+        return track_df
 
     def do_clustering(self, features: list[str], clustering_method: Callable, n_clusters: int):
         X = pd.concat([df[features] for df in self.measurements_dfs])
