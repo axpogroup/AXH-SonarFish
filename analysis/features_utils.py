@@ -7,20 +7,9 @@ import pandas as pd
 from numpy import ndarray
 
 
-def calculate_features(measurements_df: pd.DataFrame) -> pd.DataFrame:
-    feature_df = measurements_df.groupby("id").apply(trace_window_metrics)
+def calculate_features(measurements_df: pd.DataFrame, masks: dict[str, np.ndarray]) -> pd.DataFrame:
+    feature_df = measurements_df.groupby("id").apply(lambda x: trace_window_metrics(x, masks))
     return measurements_df.join(feature_df, on="id", how="left")
-
-
-def calculate_average_distance_from_start(detection: pd.DataFrame) -> ndarray:
-    # Get the starting point
-    start_x, start_y = detection["x"].iloc[0], detection["y"].iloc[0]
-
-    # Calculate the Euclidean distance from the starting point for each point
-    distances = np.sqrt((detection["x"] - start_x) ** 2 + (detection["y"] - start_y) ** 2)
-
-    # Calculate the average distance
-    return np.nanmean(distances)
 
 
 def calculate_distance_between_starting_and_ending_point(detection):
@@ -33,14 +22,25 @@ def calculate_distance_between_starting_and_ending_point(detection):
     return distance
 
 
-def trace_window_metrics(detection: pd.DataFrame) -> pd.Series:
+def calculate_average_distance_from_start(detection: pd.DataFrame) -> ndarray:
+    start_x, start_y = detection["x"].iloc[0], detection["y"].iloc[0]
+    distances = np.sqrt((detection["x"] - start_x) ** 2 + (detection["y"] - start_y) ** 2)
+    return np.nanmean(distances)
+
+
+def trace_window_metrics(detection: pd.DataFrame, masks: dict[str, np.array]) -> pd.Series:
     frame_diff = detection["frame"].iloc[-1] - detection["frame"].iloc[0]
+    time_ratio_near_rake, dist_near_rake = calculate_rake_path_ratio(detection, masks["rake_mask"])
     return pd.Series(
         {
             "traversed_distance": sum_euclidean_distance_between_positions(detection),
             "frame_diff": frame_diff,
             "average_curvature": calculate_average_curvature(detection),
             "average_overlap_ratio": calculate_average_overlap_ratio(detection),
+            "average_bbox_size": calculate_average_bbox_size(detection),
+            "rake_time_ratio": time_ratio_near_rake,
+            "dist_near_rake": dist_near_rake,
+            "flow_area_time_ratio": calculate_flow_area_time_ratio(detection, masks["flow_area_mask"]),
             "average_distance_from_start": calculate_average_distance_from_start(detection),
             "average_contour_area": np.mean(detection["contour_area"]),
             "distance_between_starting_and_ending_point": calculate_distance_between_starting_and_ending_point(
@@ -49,6 +49,30 @@ def trace_window_metrics(detection: pd.DataFrame) -> pd.Series:
             "average_stddev_of_pixels_intensity": np.mean(detection["stddev_of_intensity"]),
         }
     )
+
+
+def calculate_average_bbox_size(group: pd.DataFrame) -> float:
+    return np.mean(group["w"] * group["h"])
+
+
+def calculate_rake_path_ratio(detection: pd.DataFrame, rake_mask: np.array) -> tuple[float, float]:
+    x = detection["x"].values
+    y = detection["y"].values
+    is_near_rake = rake_mask[y.astype(int), x.astype(int)]
+    time_ratio_near_rake = np.sum(is_near_rake) / len(is_near_rake)
+
+    x_diff = np.diff(x[is_near_rake])
+    y_diff = np.diff(y[is_near_rake])
+    dist_near_rake = np.sum(np.sqrt(x_diff**2 + y_diff**2))
+    return time_ratio_near_rake, dist_near_rake
+
+
+def calculate_flow_area_time_ratio(detection: pd.DataFrame, flow_mask: np.array) -> float:
+    x = detection["x"].values
+    y = detection["y"].values
+    is_in_flow = flow_mask[y.astype(int), x.astype(int)]
+    time_ratio_in_flow = np.sum(is_in_flow) / len(is_in_flow)
+    return time_ratio_in_flow
 
 
 def sum_euclidean_distance_between_positions(detection: pd.DataFrame):
@@ -65,7 +89,7 @@ def calculate_average_curvature(detection: pd.DataFrame) -> float:
         return 0
     dx_dt, dy_dt = np.gradient(detection["x"]), np.gradient(detection["y"])
     d2x_dt2, d2y_dt2 = np.gradient(dx_dt), np.gradient(dy_dt)
-    curvature = np.abs(dx_dt * d2y_dt2 - dy_dt * d2x_dt2) / (dx_dt**2 + dy_dt**2) ** (3 / 2)
+    curvature = np.abs(dx_dt * d2y_dt2 - dy_dt * d2x_dt2) / (dx_dt**2 + dy_dt**2 + 1e-8) ** (3 / 2)
     avg_curvature = np.nanmean(curvature)
     return float(avg_curvature)
 
