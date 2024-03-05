@@ -298,16 +298,16 @@ class FeatureGenerator(object):
         model_detections,
         metric_to_show: Optional[str],
     ) -> None:
-        measurements_track_df = model_detections[model_detections.id == measurements_track_id]
+        track_df = model_detections[model_detections.id == measurements_track_id]
         ax.plot(
-            measurements_track_df.x,
-            measurements_track_df.y,
-            color=colormap(int(measurements_track_df.assigned_label.iloc[0]) + 1),
+            track_df.x,
+            track_df.y,
+            color=colormap(int(track_df.assigned_label.iloc[0]) + 1),
         )
-        metric_annotation = str(measurements_track_df[metric_to_show].iloc[0])[:6] if metric_to_show else ""
+        metric_annotation = str(track_df[metric_to_show].iloc[0])[:4] if metric_to_show else ""
         ax.annotate(
             f"{measurements_track_id}, {metric_annotation}",
-            (measurements_track_df.x.iloc[0], measurements_track_df.y.iloc[0]),
+            (track_df.x.iloc[0], track_df.y.iloc[0]),
         )
 
     def plot_image_tiles_along_trajectory(
@@ -317,10 +317,9 @@ class FeatureGenerator(object):
         raw: bool = False,
     ) -> None:
         feature_name = "raw_image_tile" if raw else "image_tile"
-        measurements_track_df = self.stacked_dfs[self.stacked_dfs.id == measurements_track_id]
-        assert measurements_track_df["video_id"].nunique() == 1, "The track is not unique to a video"
+        track_df = self._get_track_df_by_id(measurements_track_id)
 
-        for idx, row in measurements_track_df.iterrows():
+        for idx, row in track_df.iterrows():
             if idx % every_nth_frame == 0:
                 image_tile = np.squeeze(row[feature_name])
                 if raw:
@@ -329,6 +328,76 @@ class FeatureGenerator(object):
                     plt.imshow(image_tile, cmap="gray")
                 plt.title(f"Frame {row.frame}")
                 plt.show()
+
+    def show_trajectory_numeric_features(
+        self,
+        measurements_track_id: int,
+        boxplot_split_thresholds: list[float] = [1],
+    ) -> None:
+        boxplot_split_thresholds = sorted(boxplot_split_thresholds)
+        features_to_print = [
+            feature for feature in self.feature_names if feature not in ["image_tile", "raw_image_tile", "video_id"]
+        ]
+        features_to_plot = [
+            feature for feature in features_to_print if feature not in ["classification", "gt_label", "assigned_label"]
+        ]
+
+        track_df = self._get_track_df_by_id(measurements_track_id).iloc[0]
+        all_tracks_df = self.stacked_dfs.groupby(["video_id", "id"]).first().reset_index()
+
+        # Calculate medians
+        medians = all_tracks_df[features_to_plot].median()
+
+        # Split features based on thresholds
+        subplots = len(boxplot_split_thresholds) + 1
+        _, axs = plt.subplots(subplots)
+
+        for i, threshold in enumerate(boxplot_split_thresholds):
+            if i == 0:
+                features_above_threshold = [feature for feature in features_to_plot if medians[feature] <= threshold]
+            elif i < len(boxplot_split_thresholds) - 1:
+                features_above_threshold = []
+                for feature in features_to_plot:
+                    if (
+                        medians[feature] > boxplot_split_thresholds[i - 1]
+                        and medians[feature] <= boxplot_split_thresholds[i]
+                    ):
+                        features_above_threshold.append(feature)
+            else:
+                features_above_threshold = [feature for feature in features_to_plot if medians[feature] > threshold]
+            if not features_above_threshold:
+                continue
+            axs[i].boxplot(all_tracks_df[features_above_threshold].values, labels=features_above_threshold)
+            axs[i].plot(
+                range(1, len(features_above_threshold) + 1), track_df[features_above_threshold].values.tolist(), "ro"
+            )
+            axs[i].set_title(f"Numeric Features Distribution (Median > {threshold})")
+
+        features_below_threshold = [
+            feature for feature in features_to_plot if medians[feature] <= boxplot_split_thresholds[-1]
+        ]
+        axs[-1].boxplot(all_tracks_df[features_below_threshold].values, labels=features_below_threshold)
+        axs[-1].plot(
+            range(1, len(features_below_threshold) + 1), track_df[features_below_threshold].values.tolist(), "ro"
+        )
+        axs[-1].set_title(f"Numeric Features Distribution (Median <= {boxplot_split_thresholds[-1]})")
+
+        for ax in axs:
+            ax.set_xlabel("Features")
+            ax.set_ylabel("Values")
+            ax.set_xticklabels(ax.get_xticklabels(), rotation=90)
+
+        plt.subplots_adjust(hspace=1.5)  # Adjust the value as needed
+        plt.show()
+
+        max_name_length = max([len(feat) for feat in features_to_print])
+        for feat in features_to_print:
+            print(f"{feat:<{max_name_length}} {track_df[feat]}")
+
+    def _get_track_df_by_id(self, track_id: int) -> pd.DataFrame:
+        track_df = self.stacked_dfs[self.stacked_dfs.id == track_id]
+        assert track_df["video_id"].nunique() == 1, "The track is not unique to a video"
+        return track_df
 
     def do_clustering(self, features: list[str], clustering_method: Callable, n_clusters: int):
         X = pd.concat([df[features] for df in self.measurements_dfs])
@@ -347,20 +416,36 @@ class FeatureGenerator(object):
         kfold_n_splits: int,
         distinguish_flow_areas: bool = False,
     ):
-        # if distinguish_flow_areas:
-        # dfs_subset = [df[df["flow_area_time_ratio"] > 0.5] for df in self.measurements_dfs]
-        # TODO: Implement a model for each flow area
         if distinguish_flow_areas:
             df = self.stacked_dfs.groupby(["video_id", "id"]).first().reset_index()
-            df = df[df["flow_area_time_ratio"] > 0.5]
+            flow_area_indices = df["flow_area_time_ratio"] > 0.5
+            df.loc[flow_area_indices, "assigned_label"] = self._do_binary_classification_for_trajectory_subset(
+                df[flow_area_indices], model, features, kfold_n_splits
+            )
+            df.loc[~flow_area_indices, "assigned_label"] = self._do_binary_classification_for_trajectory_subset(
+                df[~flow_area_indices], model, features, kfold_n_splits
+            )
+        else:
+            df = self.stacked_dfs.groupby(["video_id", "id"]).first().reset_index()
+            df["assigned_label"] = self._do_binary_classification_for_trajectory_subset(
+                df, model, features, kfold_n_splits
+            )
 
-        df = self.stacked_dfs.groupby(["video_id", "id"]).first().reset_index()
+        for idx, measurement_df in enumerate(self.measurements_dfs):
+            measurement_df.drop(columns=["assigned_label"], inplace=True)
+            video_id = measurement_df["video_id"].iloc[0]
+            right_df = df[df["video_id"] == video_id][["id", "assigned_label"]]
+            self.measurements_dfs[idx] = measurement_df.merge(right_df, on="id", how="left")
+
+    @staticmethod
+    def _do_binary_classification_for_trajectory_subset(
+        df: pd.DataFrame,
+        model: Callable,
+        features: list[str],
+        kfold_n_splits: int,
+    ) -> np.array:
         X = np.array(df[features])
         y = np.array([1 if lbl == "fish" else 0 for lbl in df["gt_label"]])
-
-        # # Balancing the classes using RandomOverSampler
-        # oversampler = RandomOverSampler()
-        # X, y = oversampler.fit_resample(X, y)
 
         kf = KFold(n_splits=kfold_n_splits)
         y_kfold = np.empty(y.shape)
@@ -373,20 +458,7 @@ class FeatureGenerator(object):
             model = model.fit(X_train, y_train)
             y_kfold[val_index] = model.predict(X_val)
 
-        df["assigned_label"] = y_kfold
-        for idx, measurement_df in enumerate(self.measurements_dfs):
-            video_id = measurement_df["video_id"].iloc[0]
-            right_df = df[df["video_id"] == video_id][["id", "assigned_label"]]
-            measurement_df.drop(columns=["assigned_label"], inplace=True)
-            self.measurements_dfs[idx] = measurement_df.merge(right_df, on="id", how="left")
-
-    def _do_binary_classification_for_split(
-        self,
-        model: Callable,
-        features: list[str],
-        kfold_n_splits: int,
-    ):
-        pass
+        return y_kfold
 
     def do_thresholding_classification(
         self,
