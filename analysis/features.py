@@ -327,7 +327,7 @@ class FeatureGenerator(object):
 
     def show_trajectory_numeric_features(
         self,
-        measurements_track_id: int,
+        measurements_track_ids: list[int],
         boxplot_split_thresholds: list[float] = [1],
     ) -> None:
         boxplot_split_thresholds = sorted(boxplot_split_thresholds)
@@ -338,7 +338,6 @@ class FeatureGenerator(object):
             feature for feature in features_to_print if feature not in ["classification", "gt_label", "assigned_label"]
         ]
 
-        track_df = self._get_track_df_by_id(measurements_track_id).iloc[0]
         all_tracks_df = self.stacked_dfs.groupby(["video_id", "id"]).first().reset_index()
 
         # Calculate medians
@@ -348,42 +347,51 @@ class FeatureGenerator(object):
         subplots = len(boxplot_split_thresholds) + 1
         _, axs = plt.subplots(subplots, figsize=(10, subplots * 7))  # Increase the figure size
 
-        for i, threshold in enumerate(boxplot_split_thresholds):
-            if i == 0:
-                features_above_threshold = [feature for feature in features_to_plot if medians[feature] <= threshold]
-                axs[i].set_title(f"Numeric Features Distribution (Median <= {threshold})")
-                axs[i].boxplot(all_tracks_df[features_above_threshold].values, labels=features_above_threshold)
-                axs[i].plot(
-                    range(1, len(features_above_threshold) + 1),
-                    track_df[features_above_threshold].values.tolist(),
-                    "ro",
-                )
-            else:
-                features_above_threshold = []
-                for feature in features_to_plot:
-                    if (
-                        medians[feature] > boxplot_split_thresholds[i - 1]
-                        and medians[feature] <= boxplot_split_thresholds[i]
-                    ):
-                        features_above_threshold.append(feature)
-                axs[i].set_title(
-                    f"Features Distr ({boxplot_split_thresholds[i - 1]} < Median <= {boxplot_split_thresholds[i]})"
-                )
-                axs[i].boxplot(all_tracks_df[features_above_threshold].values, labels=features_above_threshold)
-                axs[i].plot(
-                    range(1, len(features_above_threshold) + 1),
-                    track_df[features_above_threshold].values.tolist(),
-                    "ro",
-                )
-                if i == len(boxplot_split_thresholds) - 1:
-                    features_above_threshold = [feature for feature in features_to_plot if medians[feature] > threshold]
-                    axs[i + 1].set_title(f"Numeric Features Distribution (Median > {threshold})")
-                    axs[i + 1].boxplot(all_tracks_df[features_above_threshold].values, labels=features_above_threshold)
-                    axs[i + 1].plot(
+        for measurements_track_id in measurements_track_ids:
+            track_df = self._get_track_df_by_id(measurements_track_id).iloc[0]
+
+            for i, threshold in enumerate(boxplot_split_thresholds):
+                if i == 0:
+                    features_above_threshold = [
+                        feature for feature in features_to_plot if medians[feature] <= threshold
+                    ]
+                    axs[i].set_title(f"Numeric Features Distribution (Median <= {threshold})")
+                    axs[i].boxplot(all_tracks_df[features_above_threshold].values, labels=features_above_threshold)
+                    axs[i].plot(
                         range(1, len(features_above_threshold) + 1),
                         track_df[features_above_threshold].values.tolist(),
                         "ro",
                     )
+                else:
+                    features_above_threshold = []
+                    for feature in features_to_plot:
+                        if (
+                            medians[feature] > boxplot_split_thresholds[i - 1]
+                            and medians[feature] <= boxplot_split_thresholds[i]
+                        ):
+                            features_above_threshold.append(feature)
+                    axs[i].set_title(
+                        f"Features Distr ({boxplot_split_thresholds[i - 1]} < Median <= {boxplot_split_thresholds[i]})"
+                    )
+                    axs[i].boxplot(all_tracks_df[features_above_threshold].values, labels=features_above_threshold)
+                    axs[i].plot(
+                        range(1, len(features_above_threshold) + 1),
+                        track_df[features_above_threshold].values.tolist(),
+                        "ro",
+                    )
+                    if i == len(boxplot_split_thresholds) - 1:
+                        features_above_threshold = [
+                            feature for feature in features_to_plot if medians[feature] > threshold
+                        ]
+                        axs[i + 1].set_title(f"Numeric Features Distribution (Median > {threshold})")
+                        axs[i + 1].boxplot(
+                            all_tracks_df[features_above_threshold].values, labels=features_above_threshold
+                        )
+                        axs[i + 1].plot(
+                            range(1, len(features_above_threshold) + 1),
+                            track_df[features_above_threshold].values.tolist(),
+                            "ro",
+                        )
 
         for ax in axs:
             ax.set_xlabel("Features")
