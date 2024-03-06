@@ -31,6 +31,8 @@ short_mean_frames: 10
 difference_threshold_scaler: 0.30
 dilation_kernel_mm: 500
 median_filter_kernel_mm: 200
+erosion_kernel_mm: 100
+
 
 # Tracking
 tracking_method: "kalman" # one of ['nearest_neighbor', 'kalman']
