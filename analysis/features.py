@@ -69,7 +69,7 @@ def load_csv_with_tiles(path: Path) -> pd.DataFrame:
 def filter_features(measurements_df, min_overlapping_ratio):
     measurements_df = measurements_df[
         (measurements_df["average_overlap_ratio"] > min_overlapping_ratio)
-        & (measurements_df["average_pixel_intensity"] > 127.80)
+        # & (measurements_df["average_pixel_intensity"] > 127.80)
     ]
     return measurements_df
 
@@ -153,6 +153,8 @@ class FeatureGenerator(object):
                     save_df["raw_image_tile"] = save_df["raw_image_tile"].apply(lambda x: x.tolist())
                     save_df.to_csv(cache_path, index=False)
                     yield measurements_df, gt_df
+                else:
+                    yield pd.DataFrame(), gt_df
 
     @staticmethod
     def _read_mask(mask_path: Union[str, Path]) -> np.ndarray:
