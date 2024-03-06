@@ -491,10 +491,11 @@ class FeatureGenerator(object):
             for features in itertools.combinations(all_features, n_features):
                 features = list(features)
                 self.do_binary_classification(model, features, kfold_n_splits, distinguish_flow_areas)
-                _, _, _, _, f1 = self.calculate_metrics()
+                _, _, _, f1, fbeta = self.calculate_metrics()
                 if f1 > best_score:
                     best_score = f1
                     best_features = features
+                print(f"Features: {features}, F1: {f1}")
         return best_features, best_score
 
     def do_thresholding_classification(
