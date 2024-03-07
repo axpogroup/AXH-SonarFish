@@ -311,20 +311,20 @@ class FeatureGenerator(object):
         self,
         measurements_track_id: int,
         every_nth_frame: int,
-        raw: bool = False,
+        feature_names: list[str] = ["image_tile"],
     ) -> None:
-        feature_name = "raw_image_tile" if raw else "image_tile"
         track_df = self._get_track_df_by_id(measurements_track_id)
 
         for idx, row in track_df.iterrows():
             if idx % every_nth_frame == 0:
-                image_tile = np.squeeze(row[feature_name])
-                if raw:
-                    plt.imshow(image_tile[:, :, ::-1])
-                else:
-                    plt.imshow(image_tile, cmap="gray")
-                plt.title(f"Frame {row.frame}")
-                plt.show()
+                for feature_name in feature_names:
+                    image_tile = np.squeeze(row[feature_name])
+                    if image_tile.shape[-1] == 3:
+                        plt.imshow(image_tile[:, :, ::-1])
+                    else:
+                        plt.imshow(image_tile, cmap="gray")
+                    plt.title(f"Frame {row.frame} - {feature_name}")
+                    plt.show()
 
     def show_trajectory_numeric_features(
         self,
@@ -478,7 +478,6 @@ class FeatureGenerator(object):
         kfold_n_splits: int = 5,
         max_n_features: int = 3,
         distinguish_flow_areas: bool = False,
-        primary_metric: str = "f1",
     ):
         all_features = [
             feat
@@ -491,7 +490,7 @@ class FeatureGenerator(object):
             for features in itertools.combinations(all_features, n_features):
                 features = list(features)
                 self.do_binary_classification(model, features, kfold_n_splits, distinguish_flow_areas)
-                _, _, _, f1, fbeta = self.calculate_metrics()
+                _, _, _, f1, _ = self.calculate_metrics()
                 if f1 > best_score:
                     best_score = f1
                     best_features = features
