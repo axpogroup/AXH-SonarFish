@@ -66,17 +66,10 @@ def load_csv_with_tiles(path: Path) -> pd.DataFrame:
     return csv_with_tiles_df
 
 
-def filter_features(measurements_df, min_overlapping_ratio):
-    measurements_df = measurements_df[
-        (measurements_df["average_overlap_ratio"] > min_overlapping_ratio)
-        # & (measurements_df["average_pixel_intensity"] > 127.80)
-    ]
-    return measurements_df
-
-
 class FeatureGenerator(object):
     def __init__(
         self,
+        load_old_measurements: bool,
         measurements_csv_paths: list[Union[str, Path]],
         gt_csv_paths: list[Union[str, Path]],
         rake_mask_path: Union[str, Path],
@@ -89,72 +82,91 @@ class FeatureGenerator(object):
         trajectory_min_overlap_ratio: float = 0.3,
         trajectory_max_iou_track_distance: float = 0.6,
     ):
+        self.measurements_dfs = None
         self.min_overlapping_ratio = min_overlapping_ratio
         self.min_track_length = min_track_length
-        measurements_csv_paths = [Path(p) for p in measurements_csv_paths]
+        self.measurements_csv_paths = [Path(p) for p in measurements_csv_paths]
+        self.force_feature_recalc = force_feature_recalc
         gt_csv_paths = [Path(p) for p in gt_csv_paths]
         self.masks = {
             "rake_mask": self._read_mask(rake_mask_path),
             "flow_area_mask": self._read_mask(flow_area_mask_path),
             "non_flow_area_mask": self._read_mask(non_flow_area_mask_path),
         }
-        self._calc_feature_dfs(measurements_csv_paths, gt_csv_paths, force_feature_recalc)
+        if load_old_measurements:
+            self._load_old_measurements_df(gt_csv_paths)
+        else:
+            self._load_measurements_df(gt_csv_paths)
         self._map_measurements2gt_trajectory(
-            trajectory_min_iou_thresh, trajectory_min_overlap_ratio, trajectory_max_iou_track_distance
+            trajectory_min_iou_thresh,
+            trajectory_min_overlap_ratio,
+            trajectory_max_iou_track_distance,
         )
 
-    def _calc_feature_dfs(
+    def format_old_classifications(self):
+        for df in self.measurements_dfs:
+            df["assigned_label"] = df["classification"].apply(lambda x: 1 if x == "fish" else 0)
+
+    def _load_measurements_df(
         self,
-        measurements_csv_paths: list[Path],
         gt_csv_paths: list[Path],
-        force_feature_recalc: bool,
     ) -> None:
         self.measurements_dfs, self.gt_dfs = [], []
-        for idx, (measurements_df, gt_df) in enumerate(
-            self._read_csvs(measurements_csv_paths, gt_csv_paths, force_feature_recalc)
-        ):
+        for idx, (measurements_df, gt_df) in enumerate(self._read_csvs(gt_csv_paths)):
             self.gt_dfs.append(gt_df)
             measurements_df["video_id"] = idx
             self.measurements_dfs.append(measurements_df)
 
+    def _load_old_measurements_df(
+        self,
+        gt_csv_paths: list[Path],
+    ) -> None:
+        self.measurements_dfs = self.read_csvs_from_paths(self.measurements_csv_paths)
+        self.format_old_classifications()
+        self.gt_dfs = self.read_csvs_from_paths(gt_csv_paths)
+
+    def calc_feature_dfs(self):
+        if self.force_feature_recalc:
+            measurements_df_list = []
+            for measurements_df, gt_df, path in zip(self.measurements_dfs, self.gt_dfs, self.measurements_csv_paths):
+                calculated_measurements_df = self.calculate_features_on_measurements(
+                    cache_path=path, measurements_df=measurements_df
+                )
+                measurements_df_list.append(calculated_measurements_df)
+            self.measurements_dfs = measurements_df_list
+
     def _read_csvs(
         self,
-        measurements_csv_paths: list[Path],
         gt_csv_paths: list[Path],
-        force_feature_recalc: bool = False,
     ) -> Iterator[dict[str, Union[pd.DataFrame]]]:
         print("Calculating/reading features")
-        for path in tqdm(measurements_csv_paths):
+        for path in tqdm(self.measurements_csv_paths):
             cache_path = path.with_stem(
                 path.stem + f"_cached_features_min_track_length_{self.min_track_length}"
             ).with_suffix(".csv")
-            gt_df = pd.read_csv(gt_csv_paths[measurements_csv_paths.index(path)], delimiter=",")
-            if cache_path.exists() and not force_feature_recalc:
+            gt_df = pd.read_csv(gt_csv_paths[self.measurements_csv_paths.index(path)], delimiter=",")
+            if cache_path.exists() and not self.force_feature_recalc:
                 print(f"Reading cached features from {cache_path}")
                 measurements_df = load_csv_with_tiles(cache_path)
-                yield measurements_df, gt_df
             else:
                 measurements_df = load_csv_with_tiles(path)
-                value_counts_model = (
-                    pd.DataFrame(measurements_df.id.value_counts())
-                    .reset_index()
-                    .rename(columns={"index": "id", "id": "occurences"})
-                )
-                measurements_df = measurements_df[
-                    measurements_df["id"].isin(
-                        value_counts_model[value_counts_model.occurences >= self.min_track_length]["id"]
-                    )
-                ]
-                measurements_df = calculate_features(measurements_df, self.masks)
-                measurements_df = filter_features(measurements_df, self.min_overlapping_ratio)
-                if not measurements_df.empty:
-                    save_df = measurements_df.copy()
-                    save_df["image_tile"] = save_df["image_tile"].apply(lambda x: x.tolist())
-                    save_df["raw_image_tile"] = save_df["raw_image_tile"].apply(lambda x: x.tolist())
-                    save_df.to_csv(cache_path, index=False)
-                    yield measurements_df, gt_df
-                else:
-                    yield pd.DataFrame(), gt_df
+                measurements_df = self.filter_tracks(measurements_df)
+            yield measurements_df, gt_df
+
+    def read_csvs_from_paths(self, csv_paths: list[Path]) -> list[pd.DataFrame]:
+        return [pd.read_csv(path, delimiter=",") for path in tqdm(csv_paths)]
+
+    def calculate_features_on_measurements(self, cache_path, measurements_df):
+        measurements_df = calculate_features(measurements_df, self.masks)
+        measurements_df = self.filter_features(measurements_df)
+        if not measurements_df.empty:
+            save_df = measurements_df.copy()
+            save_df["image_tile"] = save_df["image_tile"].apply(lambda x: x.tolist())
+            save_df["raw_image_tile"] = save_df["raw_image_tile"].apply(lambda x: x.tolist())
+            save_df.to_csv(cache_path, index=False)
+            return measurements_df
+        else:
+            return pd.DataFrame()
 
     @staticmethod
     def _read_mask(mask_path: Union[str, Path]) -> np.ndarray:
@@ -164,7 +176,10 @@ class FeatureGenerator(object):
         return cv.resize(mask, (480, 270)) > 0
 
     def _map_measurements2gt_trajectory(
-        self, min_iou_thresh: float = 0.4, min_overlap_ratio: float = 0.3, max_iou_track_distance: float = 0.6
+        self,
+        min_iou_thresh: float = 0.4,
+        min_overlap_ratio: float = 0.3,
+        max_iou_track_distance: float = 0.6,
     ) -> None:
         print("Mapping measurements to ground truth trajectories")
 
@@ -210,6 +225,24 @@ class FeatureGenerator(object):
         self.all_measurements_gt_pairs = dict(all_measurements_gt_pairs)
         self.all_measurements_gt_pairs_secondary = dict(all_measurements_gt_pairs_secondary)
 
+    def filter_features(self, measurements_df):
+        measurements_df = measurements_df[
+            (measurements_df["average_overlap_ratio"] > self.min_overlapping_ratio)
+            # & (measurements_df["average_pixel_intensity"] > 127.80)
+        ]
+        return measurements_df
+
+    def filter_tracks(self, measurements_df):
+        value_counts_model = (
+            pd.DataFrame(measurements_df.id.value_counts())
+            .reset_index()
+            .rename(columns={"index": "id", "id": "occurences"})
+        )
+        measurements_df = measurements_df[
+            measurements_df["id"].isin(value_counts_model[value_counts_model.occurences >= self.min_track_length]["id"])
+        ]
+        return measurements_df
+
     def _calculate_trajectory_pairs(
         self,
         track_distances: np.ndarray,
@@ -237,7 +270,6 @@ class FeatureGenerator(object):
             raise ValueError(
                 "No clustering has been performed yet. Please perform clustering with the do_clustering method."
             )
-
         model_detections = pd.concat(self.measurements_dfs)
         ground_truth = pd.concat(self.gt_dfs)
 
@@ -425,6 +457,7 @@ class FeatureGenerator(object):
         for idx, df in enumerate(self.measurements_dfs):
             X_val = scaler.transform(df[features])
             self.measurements_dfs[idx]["assigned_label"] = clustering.predict(X_val)
+        # add_classification_to_csv(self.measurements_dfs)
 
     def do_binary_classification(
         self,
@@ -492,7 +525,8 @@ class FeatureGenerator(object):
                 print(f"Invalid feature threshold name: {feat}. Must end with '_min' or '_max'")
 
     def calculate_metrics(self, beta_vals: list[int] = [2], make_plots: bool = False):
-        df = self.stacked_dfs.groupby("id").first().reset_index()
+        # TODO: group by video_id and id
+        df = self.stacked_dfs.groupby(["id"]).first().reset_index()
         inputs = [
             df["gt_label"].apply(lambda x: 1 if x == "fish" else 0),
             df["assigned_label"],
