@@ -77,7 +77,7 @@ class InputOutputHandler:
                             obj.velocities[i][1] if len(obj.velocities) > i else np.nan,
                             obj.areas[i],
                             np.array(obj.feature_patch[i]),
-                            np.array(obj.raw_image_patch[i]),
+                            # np.array(obj.raw_image_patch[i]),
                             obj.stddevs_of_pixels_intensity[i],
                         ]
                     )
@@ -95,12 +95,12 @@ class InputOutputHandler:
                 "v_y",
                 "contour_area",
                 "image_tile",
-                "raw_image_tile",
+                # "raw_image_tile",
                 "stddev_of_intensity",
             ],
         )
         detections_df["image_tile"] = detections_df["image_tile"].apply(lambda x: json.dumps(x.tolist()))
-        detections_df["raw_image_tile"] = detections_df["raw_image_tile"].apply(lambda x: json.dumps(x.tolist()))
+        # detections_df["raw_image_tile"] = detections_df["raw_image_tile"].apply(lambda x: json.dumps(x.tolist()))
         return detections_df
 
     def trackbars(self, detector):
@@ -278,6 +278,6 @@ class InputOutputHandler:
 
     def shutdown(self):
         self.video_cap.release()
-        if "record_output_video" in self.settings_dict.keys():
+        if self.settings_dict.get("record_output_video"):
             self.video_writer.release()
         cv.destroyAllWindows()

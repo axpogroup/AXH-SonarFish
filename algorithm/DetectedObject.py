@@ -68,7 +68,7 @@ class DetectedBlob(BoundingBox):
     def calculate_average_pixel_intensity(self, reference_frame: np.ndarray):
         detection_box = reference_frame[self.y : self.y + self.h, self.x : self.x + self.w]
         if 0 in detection_box.shape:
-            print("detection_box is empty")
+            # print("detection_box is empty")
             return
         mean, stddev = cv.meanStdDev(detection_box)
         self.means_of_pixels_intensity.append(mean[0][0])
@@ -147,6 +147,9 @@ class DetectedBlob(BoundingBox):
     def bbox_size_to_stddev_ratio(self):
         if len(self.stddevs_of_pixels_intensity) == 0 or len(self.areas) == 0:
             return None
+        if self.stddevs_of_pixels_intensity[-1] == 0:
+            # TODO: replace 120 with bbox_size_to_stddev_ratio trheshold
+            return 120
         return self.areas[-1] / self.stddevs_of_pixels_intensity[-1]
 
 
