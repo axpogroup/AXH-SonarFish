@@ -295,6 +295,7 @@ class Tracker:
         elimination_metric: DistanceMetric,
         conf: dict,
     ) -> None:
+        self.deleted_track_ids = []
         self.primary_metric = primary_metric
         self.elimination_metric = elimination_metric
         self.conf = conf
@@ -330,15 +331,28 @@ class Tracker:
             self.tracks[track_idx].mark_missed()
         for detection_idx in unmatched_detections:
             self._initiate_track(detections[detection_idx])
-        self.tracks = [t for t in self.tracks if not t.is_deleted()]
-
-        # Update distance metric.
-        active_targets = [t.track_id for t in self.tracks if t.is_confirmed()]
+        deleted_track_ids = []
+        tracks = []
+        active_targets = []
         features, targets = [], []
         for track in self.tracks:
-            if track.is_confirmed():
-                features += track.features
-                targets += [track.track_id for _ in track.features]
+            if track.is_deleted():
+                deleted_track_ids.append(track.track_id)
+            else:
+                tracks.append(track)
+                if track.is_confirmed():
+                    active_targets.append(track.track_id)
+                    features += track.features
+                    targets += [track.track_id for _ in track.features]
+        self.deleted_track_ids = deleted_track_ids
+        self.tracks = tracks
+        # Update distance metric.
+        # active_targets = [t.track_id for t in self.tracks if t.is_confirmed()]
+        # features, targets = [], []
+        # for track in self.tracks:
+        #     if track.is_confirmed():
+        #         features += track.features
+        #         targets += [track.track_id for _ in track.features]
         self.primary_metric.partial_fit(features, targets, active_targets)
 
     def _match(self, detections: dict[int, DetectedBlob]):
@@ -364,8 +378,7 @@ class Tracker:
             return cost_matrix
 
         # Split track set into confirmed and unconfirmed tracks.
-        confirmed_tracks = [i for i, t in enumerate(self.tracks) if t.is_confirmed()]
-        unconfirmed_tracks = [i for i, t in enumerate(self.tracks) if not t.is_confirmed()]
+        confirmed_tracks, unconfirmed_tracks = self.split_track_set()
 
         # Associate confirmed tracks using appearance features.
         matches_a, unmatched_tracks_a, unmatched_detections = matching_cascade(
@@ -379,10 +392,17 @@ class Tracker:
         )
 
         # Associate remaining tracks together with unconfirmed tracks using IOU.
-        iou_track_candidates = unconfirmed_tracks + [
-            k for k in unmatched_tracks_a if self.tracks[k].time_since_update == 1
-        ]
-        unmatched_tracks_a = [k for k in unmatched_tracks_a if self.tracks[k].time_since_update != 1]
+        remaining_tracks = []
+        unmatched_tracks = []
+        for track_idx in unmatched_tracks_a:
+            if self.tracks[track_idx].time_since_update == 1:
+                remaining_tracks.append(track_idx)
+            else:
+                unmatched_tracks.append(track_idx)
+        iou_track_candidates = unconfirmed_tracks + remaining_tracks
+        # [k for k in unmatched_tracks_a if self.tracks[k].time_since_update == 1]
+        # unmatched_tracks_a = [k for k in unmatched_tracks_a if self.tracks[k].time_since_update != 1]
+        unmatched_tracks_a = unmatched_tracks
         matches_b, unmatched_tracks_b, unmatched_detections = min_cost_matching(
             iou_matching.iou_cost,
             self.max_iou_distance,
@@ -395,6 +415,16 @@ class Tracker:
         matches = matches_a + matches_b
         unmatched_tracks = list(set(unmatched_tracks_a + unmatched_tracks_b))
         return matches, unmatched_tracks, unmatched_detections
+
+    def split_track_set(self):
+        confirmed_tracks = []
+        unconfirmed_tracks = []
+        for i, t in enumerate(self.tracks):
+            if t.is_confirmed():
+                confirmed_tracks.append(i)
+            else:
+                unconfirmed_tracks.append(i)
+        return confirmed_tracks, unconfirmed_tracks
 
     def _initiate_track(self, detection):
         mean, covariance = self.kf.initiate(detection.to_xyah())
@@ -443,6 +473,11 @@ def tracks_to_object_history(
                 object_history[track.track_id] = obj
             else:
                 object_history[track.track_id].update_object(obj)
+    for deleted_track_id in object_filter.deleted_track_ids:
+        deleted_detection = object_history.get(deleted_track_id)
+        if deleted_detection is not None and not deleted_detection.detection_is_tracked:
+            # print("deleting")
+            object_history.pop(deleted_track_id)
     return object_history
 
 
