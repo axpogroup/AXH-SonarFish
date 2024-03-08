@@ -1,3 +1,4 @@
+import itertools
 import json
 from pathlib import Path
 from typing import Callable, Iterator, Optional, Union
@@ -348,20 +349,20 @@ class FeatureGenerator(object):
         self,
         measurements_track_id: int,
         every_nth_frame: int,
-        raw: bool = False,
+        feature_names: list[str] = ["image_tile"],
     ) -> None:
-        feature_name = "raw_image_tile" if raw else "image_tile"
         track_df = self._get_track_df_by_id(measurements_track_id)
 
         for idx, row in track_df.iterrows():
             if idx % every_nth_frame == 0:
-                image_tile = np.squeeze(row[feature_name])
-                if raw:
-                    plt.imshow(image_tile[:, :, ::-1])
-                else:
-                    plt.imshow(image_tile, cmap="gray")
-                plt.title(f"Frame {row.frame}")
-                plt.show()
+                for feature_name in feature_names:
+                    image_tile = np.squeeze(row[feature_name])
+                    if image_tile.shape[-1] == 3:
+                        plt.imshow(image_tile[:, :, ::-1])
+                    else:
+                        plt.imshow(image_tile, cmap="gray")
+                    plt.title(f"Frame {row.frame} - {feature_name}")
+                    plt.show()
 
     def show_trajectory_numeric_features(
         self,
@@ -457,7 +458,6 @@ class FeatureGenerator(object):
         for idx, df in enumerate(self.measurements_dfs):
             X_val = scaler.transform(df[features])
             self.measurements_dfs[idx]["assigned_label"] = clustering.predict(X_val)
-        # add_classification_to_csv(self.measurements_dfs)
 
     def do_binary_classification(
         self,
@@ -510,6 +510,31 @@ class FeatureGenerator(object):
 
         return y_kfold
 
+    def sweep_classification_feature_selection(
+        self,
+        model: Callable,
+        kfold_n_splits: int = 5,
+        max_n_features: int = 3,
+        distinguish_flow_areas: bool = False,
+    ):
+        all_features = [
+            feat
+            for feat in self.feature_names
+            if feat not in ["image_tile", "raw_image_tile", "video_id", "classification", "gt_label", "assigned_label"]
+        ]
+        best_features = []
+        best_score = 0
+        for n_features in range(1, max_n_features + 1):
+            for features in itertools.combinations(all_features, n_features):
+                features = list(features)
+                self.do_binary_classification(model, features, kfold_n_splits, distinguish_flow_areas)
+                _, _, _, f1, _ = self.calculate_metrics()
+                if f1 > best_score:
+                    best_score = f1
+                    best_features = features
+                print(f"Features: {features}, F1: {f1}")
+        return best_features, best_score
+
     def do_thresholding_classification(
         self,
         feature_thresholding_values: Optional[dict[str, float]] = None,
@@ -524,7 +549,9 @@ class FeatureGenerator(object):
             else:
                 print(f"Invalid feature threshold name: {feat}. Must end with '_min' or '_max'")
 
-    def calculate_metrics(self, beta_vals: list[int] = [2], make_plots: bool = False):
+    def calculate_metrics(
+        self, beta_vals: list[int] = [2], make_plots: bool = False, verbosity: int = 0
+    ) -> tuple[np.array, float, float, float, list[float]]:
         # TODO: group by video_id and id
         df = self.stacked_dfs.groupby(["id"]).first().reset_index()
         inputs = [
@@ -535,17 +562,20 @@ class FeatureGenerator(object):
         precision = metrics.precision_score(*inputs, labels=[0, 1], average="binary")
         recall = metrics.recall_score(*inputs, labels=[0, 1], average="binary")
         f1 = metrics.f1_score(*inputs, labels=[0, 1], average="binary")
-        print(f"Precision: {precision}")
-        print(f"Recall: {recall}")
-        print(f"F1 score: {f1}")
+        if verbosity >= 1:
+            print(f"Precision: {precision}")
+            print(f"Recall: {recall}")
+            print(f"F1 score: {f1}")
         fbeta = []
         for beta in beta_vals:
             fbeta.append(metrics.fbeta_score(*inputs, beta=beta, labels=[0, 1], average="binary"))
-            print(f"F{beta} score: {fbeta[-1]}")
-        if make_plots:
-            metrics.ConfusionMatrixDisplay(confusion_matrix, display_labels=["noise", "fish"]).plot()
-        else:
-            print(f"Confusion matrix: {confusion_matrix}")
+            if verbosity >= 1:
+                print(f"F{beta} score: {fbeta[-1]}")
+        if verbosity >= 1:
+            if make_plots:
+                metrics.ConfusionMatrixDisplay(confusion_matrix, display_labels=["noise", "fish"]).plot()
+            else:
+                print(f"Confusion matrix: {confusion_matrix}")
         return confusion_matrix, precision, recall, f1, fbeta
 
     @property
