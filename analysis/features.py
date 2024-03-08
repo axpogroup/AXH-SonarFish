@@ -462,6 +462,7 @@ class FeatureGenerator(object):
         features: list[str],
         kfold_n_splits: int,
         distinguish_flow_areas: bool = False,
+        manual_noise_thresholds: Optional[dict[str, tuple[str, float]]] = None,
     ):
         if distinguish_flow_areas:
             df = self.stacked_dfs.groupby(["video_id", "id"]).first().reset_index()
@@ -477,6 +478,15 @@ class FeatureGenerator(object):
             df["assigned_label"] = self._do_binary_classification_for_trajectory_subset(
                 df, model, features, kfold_n_splits
             )
+
+        if manual_noise_thresholds:
+            for feature, (operator, threshold) in manual_noise_thresholds.items():
+                if operator == "smaller":
+                    df.loc[df[feature] < threshold, "assigned_label"] = 0
+                elif operator == "larger":
+                    df.loc[df[feature] > threshold, "assigned_label"] = 0
+                else:
+                    raise ValueError(f"Invalid operator: {operator}")
 
         for idx, measurement_df in enumerate(self.measurements_dfs):
             measurement_df.drop(columns=["assigned_label"], inplace=True)
@@ -520,6 +530,7 @@ class FeatureGenerator(object):
         kfold_n_splits: int = 5,
         max_n_features: int = 3,
         distinguish_flow_areas: bool = False,
+        manual_noise_thresholds: Optional[dict[str, tuple[str, float]]] = None,
     ):
         all_features = [
             feat
