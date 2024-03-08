@@ -109,6 +109,7 @@ if __name__ == "__main__":
         workspace_name=os.getenv("WORKSPACE_NAME"),
         subscription_id=os.getenv("SUBSCRIPTION_ID"),
     )
+    main(settings)
     mlflow.set_tracking_uri(workspace.get_mlflow_tracking_uri())
     experiment_name = settings["experiment_name"]
     mlflow.set_experiment(experiment_name)
