@@ -1,5 +1,6 @@
 import itertools
 import json
+from multiprocessing import Pool, cpu_count
 from pathlib import Path
 from typing import Callable, Iterator, Optional, Union
 
@@ -88,6 +89,9 @@ class FeatureGenerator(object):
         self.min_track_length = min_track_length
         self.measurements_csv_paths = [Path(p) for p in measurements_csv_paths]
         self.force_feature_recalc = force_feature_recalc
+        self.trajectory_min_iou_thresh = trajectory_min_iou_thresh
+        self.trajectory_min_overlap_ratio = trajectory_min_overlap_ratio
+        self.trajectory_max_iou_track_distance = trajectory_max_iou_track_distance
         gt_csv_paths = [Path(p) for p in gt_csv_paths]
         self.masks = {
             "rake_mask": self._read_mask(rake_mask_path),
@@ -98,11 +102,6 @@ class FeatureGenerator(object):
             self._load_old_measurements_df(gt_csv_paths)
         else:
             self._load_measurements_df(gt_csv_paths)
-        self._map_measurements2gt_trajectory(
-            trajectory_min_iou_thresh,
-            trajectory_min_overlap_ratio,
-            trajectory_max_iou_track_distance,
-        )
 
     def format_old_classifications(self):
         for df in self.measurements_dfs:
@@ -129,22 +128,26 @@ class FeatureGenerator(object):
     def calc_feature_dfs(self):
         if self.force_feature_recalc:
             measurements_df_list = []
-            for measurements_df, gt_df, path in zip(self.measurements_dfs, self.gt_dfs, self.measurements_csv_paths):
+            for measurements_df, gt_df, path in tqdm(zip(self.measurements_dfs, self.gt_dfs, self.cached_csv_paths)):
                 calculated_measurements_df = self.calculate_features_on_measurements(
                     cache_path=path, measurements_df=measurements_df
                 )
                 measurements_df_list.append(calculated_measurements_df)
             self.measurements_dfs = measurements_df_list
 
+        self._map_measurements2gt_trajectory()
+
     def _read_csvs(
         self,
         gt_csv_paths: list[Path],
     ) -> Iterator[dict[str, Union[pd.DataFrame]]]:
         print("Calculating/reading features")
+        self.cached_csv_paths = []
         for path in tqdm(self.measurements_csv_paths):
             cache_path = path.with_stem(
                 path.stem + f"_cached_features_min_track_length_{self.min_track_length}"
             ).with_suffix(".csv")
+            self.cached_csv_paths.append(cache_path)
             gt_df = pd.read_csv(gt_csv_paths[self.measurements_csv_paths.index(path)], delimiter=",")
             if cache_path.exists() and not self.force_feature_recalc:
                 print(f"Reading cached features from {cache_path}")
@@ -176,12 +179,7 @@ class FeatureGenerator(object):
         mask = mask[49:1001, 92:1831]  # Drop the border
         return cv.resize(mask, (480, 270)) > 0
 
-    def _map_measurements2gt_trajectory(
-        self,
-        min_iou_thresh: float = 0.4,
-        min_overlap_ratio: float = 0.3,
-        max_iou_track_distance: float = 0.6,
-    ) -> None:
+    def _map_measurements2gt_trajectory(self) -> None:
         print("Mapping measurements to ground truth trajectories")
 
         all_measurements_gt_pairs, all_measurements_gt_pairs_secondary = [], []
@@ -199,17 +197,17 @@ class FeatureGenerator(object):
                 for gt_idx, gt_id in enumerate(ground_truth["id"].unique()):
                     gt_track = ground_truth.loc[ground_truth["id"] == gt_id, ["frame", "x", "y", "w", "h"]]
                     track_distances[measurements_idx, gt_idx] = calculate_track_distance(
-                        measurements_track, gt_track, min_iou_thresh, min_overlap_ratio
+                        measurements_track, gt_track, self.trajectory_min_iou_thresh, self.trajectory_min_overlap_ratio
                     )
 
             measurements_gt_pairs, dist_matrix_indices = self._calculate_trajectory_pairs(
-                track_distances, model_detections, ground_truth, max_iou_track_distance
+                track_distances, model_detections, ground_truth, self.trajectory_max_iou_track_distance
             )
 
             track_distances_copy = track_distances.copy()
             track_distances_copy[dist_matrix_indices] = 1.0
             measurements_gt_pairs_secondary, _ = self._calculate_trajectory_pairs(
-                track_distances_copy, model_detections, ground_truth, max_iou_track_distance
+                track_distances_copy, model_detections, ground_truth, self.trajectory_max_iou_track_distance
             )
 
             self.measurements_dfs[df_idx]["gt_label"] = "noise"
@@ -271,10 +269,9 @@ class FeatureGenerator(object):
             raise ValueError(
                 "No clustering has been performed yet. Please perform clustering with the do_clustering method."
             )
-        model_detections = pd.concat(self.measurements_dfs)
         ground_truth = pd.concat(self.gt_dfs)
 
-        n_labels = model_detections["assigned_label"].nunique()
+        n_labels = self.stacked_dfs["assigned_label"].nunique()
         show_legend = True if n_labels <= 6 else False
         colormap = cm.get_cmap("viridis", n_labels + 1)  # +1 for the ground truth color
 
@@ -285,12 +282,12 @@ class FeatureGenerator(object):
 
         # Plot assigned tracks
         for measurements_track_id, gt_track_id in self.all_measurements_gt_pairs.items():
-            self.plot_tracks_and_annotations(ax, colormap, measurements_track_id, model_detections, metric_to_show)
+            self.plot_tracks_and_annotations(ax, colormap, measurements_track_id, self.stacked_dfs, metric_to_show)
             gt_track_df = ground_truth[ground_truth.id == gt_track_id]
             ax.plot(gt_track_df.x, gt_track_df.y, alpha=0.5, color=colormap(0), linestyle="dashed")
 
         for measurements_track_id, gt_track_id in self.all_measurements_gt_pairs_secondary.items():
-            self.plot_tracks_and_annotations(ax, colormap, measurements_track_id, model_detections, metric_to_show)
+            self.plot_tracks_and_annotations(ax, colormap, measurements_track_id, self.stacked_dfs, metric_to_show)
 
         ax.set(ylabel="y", title="matched trajectories with assigned label", ylim=[270, 0], xlim=[0, 480])
         ax.set_aspect("equal", adjustable="box")
@@ -309,11 +306,11 @@ class FeatureGenerator(object):
             ax.imshow(self.masks[mask_to_show], cmap="gray", alpha=0.2)
         plt.gca().invert_yaxis()
         plt.gca().invert_yaxis()
-        for measurements_track_id in model_detections.id.unique():
+        for measurements_track_id in self.stacked_dfs.id.unique():
             if (measurements_track_id not in self.all_measurements_gt_pairs.keys()) and (
                 measurements_track_id not in self.all_measurements_gt_pairs_secondary.keys()
             ):
-                self.plot_tracks_and_annotations(ax, colormap, measurements_track_id, model_detections, metric_to_show)
+                self.plot_tracks_and_annotations(ax, colormap, measurements_track_id, self.stacked_dfs, metric_to_show)
         ax.set(ylabel="y", title="non-matched trajectories with assigned label", ylim=[270, 0], xlim=[0, 480])
         ax.set_aspect("equal", adjustable="box")
 
@@ -339,7 +336,7 @@ class FeatureGenerator(object):
             track_df.y,
             color=colormap(int(track_df.assigned_label.iloc[0]) + 1),
         )
-        metric_annotation = str(track_df[metric_to_show].iloc[0])[:4] if metric_to_show else ""
+        metric_annotation = str(track_df[metric_to_show].iloc[0])[:6] if metric_to_show else ""
         ax.annotate(
             f"{measurements_track_id}, {metric_annotation}",
             (track_df.x.iloc[0], track_df.y.iloc[0]),
@@ -510,6 +507,13 @@ class FeatureGenerator(object):
 
         return y_kfold
 
+    @staticmethod
+    def worker(args):
+        self, model, features, kfold_n_splits, distinguish_flow_areas = args
+        self.do_binary_classification(model, features, kfold_n_splits, distinguish_flow_areas)
+        _, _, _, f1, _ = self.calculate_metrics()
+        return features, f1
+
     def sweep_classification_feature_selection(
         self,
         model: Callable,
@@ -531,17 +535,16 @@ class FeatureGenerator(object):
                 "binary_image",
             ]
         ]
-        best_features = []
-        best_score = 0
+
+        args_list = []
         for n_features in range(1, max_n_features + 1):
             for features in itertools.combinations(all_features, n_features):
-                features = list(features)
-                self.do_binary_classification(model, features, kfold_n_splits, distinguish_flow_areas)
-                _, _, _, f1, _ = self.calculate_metrics()
-                if f1 > best_score:
-                    best_score = f1
-                    best_features = features
-                print(f"Features: {features}, F1: {f1}")
+                args_list.append((self, model, list(features), kfold_n_splits, distinguish_flow_areas))
+
+        with Pool(cpu_count()) as p:
+            results = p.map(self.worker, args_list)
+
+        best_features, best_score = max(results, key=lambda x: x[1])
         return best_features, best_score
 
     def do_thresholding_classification(
