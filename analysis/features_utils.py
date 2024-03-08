@@ -8,16 +8,16 @@ from numpy import ndarray
 
 
 def calculate_features(measurements_df: pd.DataFrame, masks: dict[str, np.ndarray]) -> pd.DataFrame:
+    measurements_df["binary_image"], measurements_df["tile_blob_counts"] = grayscale_to_binary(
+        measurements_df["image_tile"]
+    )
     feature_df = measurements_df.groupby("id").apply(lambda x: trace_window_metrics(x, masks))
     return measurements_df.join(feature_df, on="id", how="left")
 
 
 def calculate_distance_between_starting_and_ending_point(detection):
-    # Get the starting point
     start_x, start_y = detection["x"].iloc[0], detection["y"].iloc[0]
-    # Get the ending point
     end_x, end_y = detection["x"].iloc[-1], detection["y"].iloc[-1]
-    # Calculate the Euclidean distance between the starting and ending point
     distance = np.sqrt((end_x - start_x) ** 2 + (end_y - start_y) ** 2)
     return distance
 
@@ -61,8 +61,13 @@ def trace_window_metrics(detection: pd.DataFrame, masks: dict[str, np.array]) ->
                 detection
             ),
             "average_pixel_intensity": calculate_average_pixel_intensity(detection),
+            "max_blob_count": max_blob_count(detection),
         }
     )
+
+
+def max_blob_count(detection: pd.DataFrame) -> int:
+    return max(detection["tile_blob_counts"])
 
 
 def calculate_average_bbox_size(group: pd.DataFrame) -> float:
@@ -236,3 +241,59 @@ def pad_images_to_have_same_shape(img, prev_img):
     prev_img = cv.copyMakeBorder(prev_img, top2, bottom2, left2, right2, cv.BORDER_CONSTANT, value=[0, 0, 0])
     img = cv.copyMakeBorder(img, top1, bottom1, left1, right1, cv.BORDER_CONSTANT, value=[0, 0, 0])
     return img, prev_img
+
+
+def grayscale_to_binary(
+    detection: pd.Series,
+    difference_threshold_scaler: float = 0.3,
+) -> np.ndarray:
+    binaries = []
+    blob_counts = []
+    for image in detection:
+        try:
+            adaptive_threshold = difference_threshold_scaler * cv.blur(image.astype("uint8"), (10, 10))
+            image[np.abs(image) < adaptive_threshold] = 0
+            image = (np.abs(image) + 127).astype("uint8")
+            _, binary_image = cv.threshold(image, 127 + difference_threshold_scaler, 255, 0)
+            binary_image = np.squeeze(binary_image)
+            binary_image, img_blob_counts = remove_small_blobs(binary_image)
+        except IndexError:
+            binary_image = None
+        binaries.append(binary_image)
+        blob_counts.append(img_blob_counts)
+
+    return binaries, blob_counts
+
+
+def remove_small_blobs(
+    binary_image: np.ndarray,
+    min_blob_to_area_ratio: int = 4,
+    min_blob_pixel_count: int = 5,
+) -> tuple[np.ndarray, int]:
+    # Invert the binary image
+    inverted_image = 255 - binary_image
+
+    # Find contours in the inverted image
+    contours, _ = cv.findContours(inverted_image, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+
+    # Calculate the area for each contour
+    areas = [cv.contourArea(cnt) for cnt in contours]
+
+    # Calculate the average area
+    avg_area = np.mean(areas)
+
+    # Create a new binary image
+    new_binary_image = np.zeros_like(binary_image)
+    blob_counts = 0
+    for cnt in contours:
+        if (
+            cv.contourArea(cnt) > 1.0 / min_blob_to_area_ratio * avg_area
+            and cv.contourArea(cnt) >= min_blob_pixel_count
+        ):
+            cv.drawContours(new_binary_image, [cnt], -1, 255, thickness=cv.FILLED)
+            blob_counts += 1
+
+    # Invert the new binary image back to its original state
+    new_binary_image = 255 - new_binary_image
+
+    return new_binary_image, blob_counts
