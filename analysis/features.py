@@ -482,7 +482,16 @@ class FeatureGenerator(object):
         all_features = [
             feat
             for feat in self.feature_names
-            if feat not in ["image_tile", "raw_image_tile", "video_id", "classification", "gt_label", "assigned_label"]
+            if feat
+            not in [
+                "image_tile",
+                "raw_image_tile",
+                "video_id",
+                "classification",
+                "gt_label",
+                "assigned_label",
+                "binary_image",
+            ]
         ]
         best_features = []
         best_score = 0
