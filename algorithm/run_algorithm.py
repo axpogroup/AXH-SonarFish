@@ -110,11 +110,12 @@ if __name__ == "__main__":
         subscription_id=os.getenv("SUBSCRIPTION_ID"),
     )
     main(settings)
-    mlflow.set_tracking_uri(workspace.get_mlflow_tracking_uri())
-    experiment_name = settings["experiment_name"]
-    mlflow.set_experiment(experiment_name)
-    with mlflow.start_run():
-        mlflow.log_params(settings)
-        main(settings)
-        metrics = compute_metrics(settings)
-        mlflow.log_metrics(metrics)
+    if settings.get("track_azure_ml", False):
+        mlflow.set_tracking_uri(workspace.get_mlflow_tracking_uri())
+        experiment_name = settings["experiment_name"]
+        mlflow.set_experiment(experiment_name)
+        with mlflow.start_run():
+            mlflow.log_params(settings)
+            main(settings)
+            metrics = compute_metrics(settings)
+            mlflow.log_metrics(metrics)
