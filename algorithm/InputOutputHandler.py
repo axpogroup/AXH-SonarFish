@@ -78,6 +78,7 @@ class InputOutputHandler:
                             obj.areas[i],
                             np.array(obj.feature_patch[i]),
                             np.array(obj.raw_image_patch[i]),
+                            obj.stddevs_of_pixels_intensity[i],
                         ]
                     )
 
@@ -95,6 +96,7 @@ class InputOutputHandler:
                 "contour_area",
                 "image_tile",
                 "raw_image_tile",
+                "stddev_of_intensity",
             ],
         )
         detections_df["image_tile"] = detections_df["image_tile"].apply(lambda x: json.dumps(x.tolist()))

@@ -1,5 +1,5 @@
 # Input / Output
-file_name: "start_2023-08-21T19-25-43.889+00-00.mp4"
+file_name: "start_2023-11-21T17-37-01.696+00-00.mp4"
 input_directory:  "data/intermediate/videos/"
 mask_directory: "analysis/demo/masks"
 output_directory: "data/model_output/"
@@ -31,6 +31,8 @@ short_mean_frames: 10
 difference_threshold_scaler: 0.30
 dilation_kernel_mm: 500
 median_filter_kernel_mm: 200
+erosion_kernel_mm: 100
+
 
 # Tracking
 tracking_method: "kalman" # one of ['nearest_neighbor', 'kalman']
