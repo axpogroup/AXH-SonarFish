@@ -74,6 +74,8 @@ class FeatureGenerator(object):
         load_old_measurements: bool,
         measurements_csv_paths: list[Union[str, Path]],
         gt_csv_paths: list[Union[str, Path]],
+        test_csv_paths: Optional[list[Union[str, Path]]],
+        test_gt_csv_paths: Optional[list[Union[str, Path]]],
         rake_mask_path: Union[str, Path],
         flow_area_mask_path: Union[str, Path],
         non_flow_area_mask_path: Union[str, Path],
@@ -85,90 +87,120 @@ class FeatureGenerator(object):
         trajectory_max_iou_track_distance: float = 0.6,
     ):
         self.measurements_dfs = None
+        self.test_dfs = None
         self.min_overlapping_ratio = min_overlapping_ratio
         self.min_track_length = min_track_length
         self.measurements_csv_paths = [Path(p) for p in measurements_csv_paths]
+        self.test_csv_paths = [Path(p) for p in test_csv_paths]
         self.force_feature_recalc = force_feature_recalc
         self.trajectory_min_iou_thresh = trajectory_min_iou_thresh
         self.trajectory_min_overlap_ratio = trajectory_min_overlap_ratio
         self.trajectory_max_iou_track_distance = trajectory_max_iou_track_distance
         gt_csv_paths = [Path(p) for p in gt_csv_paths]
+        test_gt_csv_paths = [Path(p) for p in test_gt_csv_paths]
         self.masks = {
             "rake_mask": self._read_mask(rake_mask_path),
             "flow_area_mask": self._read_mask(flow_area_mask_path),
             "non_flow_area_mask": self._read_mask(non_flow_area_mask_path),
         }
         if load_old_measurements:
-            self._load_old_measurements_df(gt_csv_paths)
+            self.measurements_dfs, self.gt_dfs = self._load_old_measurements_df(
+                self.measurements_csv_paths, gt_csv_paths
+            )
+            self.test_dfs, self.test_gt_dfs = self._load_old_measurements_df(self.test_csv_paths, test_gt_csv_paths)
         else:
-            self._load_measurements_df(gt_csv_paths)
+            self.measurements_dfs, self.gt_dfs, self.cached_csv_paths = self._load_measurements_df(
+                self.measurements_csv_paths, gt_csv_paths
+            )
+            self.test_dfs, self.test_gt_dfs, self.test_cached_csv_paths = self._load_measurements_df(
+                self.test_csv_paths, test_gt_csv_paths
+            )
 
-    def format_old_classifications(self):
-        for df in self.measurements_dfs:
+    @staticmethod
+    def format_old_classifications(labels_dfs: list[pd.DataFrame]):
+        for df in labels_dfs:
             df["assigned_label"] = df["classification"].apply(lambda x: 1 if x == "fish" else 0)
+        return labels_dfs
 
     def _load_measurements_df(
         self,
+        labels_csv_paths: list[Path],
         gt_csv_paths: list[Path],
     ) -> None:
-        self.measurements_dfs, self.gt_dfs = [], []
-        for idx, (measurements_df, gt_df) in enumerate(self._read_csvs(gt_csv_paths)):
-            self.gt_dfs.append(gt_df)
-            measurements_df["video_id"] = idx
-            self.measurements_dfs.append(measurements_df)
+        labels_dfs, gt_dfs, cache_paths = [], [], []
+        for idx, (labels_df, gt_df, cache_path) in enumerate(self._read_csvs(labels_csv_paths, gt_csv_paths)):
+            gt_dfs.append(gt_df)
+            labels_df["video_id"] = idx
+            labels_dfs.append(labels_df)
+            cache_paths.append(cache_path)
+        return labels_dfs, gt_dfs, cache_paths
 
     def _load_old_measurements_df(
         self,
+        labels_csv_paths: list[Path],
         gt_csv_paths: list[Path],
     ) -> None:
-        self.measurements_dfs = self.read_csvs_from_paths(self.measurements_csv_paths)
-        self.format_old_classifications()
-        self.gt_dfs = self.read_csvs_from_paths(gt_csv_paths)
+        labels_dfs = self.read_csvs_from_paths(labels_csv_paths)
+        labels_dfs = self.format_old_classifications()
+        gt_dfs = self.read_csvs_from_paths(gt_csv_paths)
+        return labels_dfs, gt_dfs
 
     def calc_feature_dfs(self):
         if self.force_feature_recalc:
             measurements_df_list = []
-            for measurements_df, gt_df, path in tqdm(zip(self.measurements_dfs, self.gt_dfs, self.cached_csv_paths)):
-                calculated_measurements_df = self.calculate_features_on_measurements(
-                    cache_path=path, measurements_df=measurements_df
-                )
+            print("Calculating/reading features for training data")
+            for measurements_df, cache_path in tqdm(zip(self.measurements_dfs, self.cached_csv_paths)):
+                calculated_measurements_df = self.calculate_features_on_tracks(cache_path, measurements_df)
                 measurements_df_list.append(calculated_measurements_df)
             self.measurements_dfs = measurements_df_list
 
-        self._map_measurements2gt_trajectory()
+            if self.test_dfs:
+                test_df_list = []
+                print("Calculating/reading features for test data")
+                for test_df, cache_path in tqdm(zip(self.test_dfs, self.test_cached_csv_paths)):
+                    calculated_test_df = self.calculate_features_on_tracks(cache_path, test_df)
+                    test_df_list.append(calculated_test_df)
+                self.test_dfs = test_df_list
+
+        self.measurements_dfs, self.all_measurements_gt_pairs, self.all_measurements_gt_pairs_secondary = (
+            self._map_measurements2gt_trajectory(self.measurements_dfs, self.gt_dfs)
+        )
+        if self.test_dfs:
+            self.test_dfs, self.test_all_measurements_gt_pairs, self.test_all_measurements_gt_pairs_secondary = (
+                self._map_measurements2gt_trajectory(self.test_dfs, self.test_gt_dfs)
+            )
 
     def _read_csvs(
         self,
+        labels_csv_paths: list[Path],
         gt_csv_paths: list[Path],
-    ) -> Iterator[dict[str, Union[pd.DataFrame]]]:
+    ) -> Iterator[tuple[pd.DataFrame, pd.DataFrame, Path]]:
         print("Calculating/reading features")
-        self.cached_csv_paths = []
-        for path in tqdm(self.measurements_csv_paths):
+        for path in tqdm(labels_csv_paths):
             cache_path = path.with_stem(
                 path.stem + f"_cached_features_min_track_length_{self.min_track_length}"
             ).with_suffix(".csv")
-            self.cached_csv_paths.append(cache_path)
-            gt_df = pd.read_csv(gt_csv_paths[self.measurements_csv_paths.index(path)], delimiter=",")
+            gt_df = pd.read_csv(gt_csv_paths[labels_csv_paths.index(path)], delimiter=",")
             if cache_path.exists() and not self.force_feature_recalc:
                 print(f"Reading cached features from {cache_path}")
-                measurements_df = load_csv_with_tiles(cache_path)
+                labels_df = load_csv_with_tiles(cache_path)
             else:
-                measurements_df = load_csv_with_tiles(path)
-                measurements_df = self.filter_tracks(measurements_df)
-            yield measurements_df, gt_df
+                labels_df = load_csv_with_tiles(path)
+                labels_df = self.filter_tracks(labels_df)
+            yield labels_df, gt_df, cache_path
 
     def read_csvs_from_paths(self, csv_paths: list[Path]) -> list[pd.DataFrame]:
         return [pd.read_csv(path, delimiter=",") for path in tqdm(csv_paths)]
 
-    def calculate_features_on_measurements(self, cache_path, measurements_df):
-        measurements_df = calculate_features(measurements_df, self.masks)
-        measurements_df = self.filter_features(measurements_df)
-        if not measurements_df.empty:
-            save_df = measurements_df.copy()
+    def calculate_features_on_tracks(self, cache_path, labels_df):
+        labels_df = calculate_features(labels_df, self.masks)
+        labels_df = self.filter_features(labels_df)
+        if not labels_df.empty:
+            save_df = labels_df.copy()
             save_df["image_tile"] = save_df["image_tile"].apply(lambda x: x.tolist())
             save_df["raw_image_tile"] = save_df["raw_image_tile"].apply(lambda x: x.tolist())
             save_df.to_csv(cache_path, index=False)
-            return measurements_df
+            return labels_df
         else:
             return pd.DataFrame()
 
@@ -179,50 +211,50 @@ class FeatureGenerator(object):
         mask = mask[49:1001, 92:1831]  # Drop the border
         return cv.resize(mask, (480, 270)) > 0
 
-    def _map_measurements2gt_trajectory(self) -> None:
-        print("Mapping measurements to ground truth trajectories")
+    def _map_measurements2gt_trajectory(self, labels_dfs_in: pd.DataFrame, gt_dfs_in: pd.DataFrame) -> None:
+        print("Mapping labels to ground truth trajectories")
 
-        all_measurements_gt_pairs, all_measurements_gt_pairs_secondary = [], []
-        for df_idx, (measurements_df, gt_df) in enumerate(zip(self.measurements_dfs, self.gt_dfs)):
-            model_detections = measurements_df
+        labels_dfs = labels_dfs_in.copy()
+        gt_dfs = gt_dfs_in.copy()
+        all_labels_gt_pairs, all_labels_gt_pairs_secondary = [], []
+        for df_idx, (labels_df, gt_df) in enumerate(zip(labels_dfs, gt_dfs)):
+            model_detections = labels_df
             ground_truth = gt_df
 
             track_distances = np.empty((len(model_detections["id"].unique()), len(ground_truth["id"].unique())))
 
-            for measurements_idx, track_id in tqdm(enumerate(model_detections["id"].unique())):
-                measurements_track = model_detections.loc[
-                    model_detections["id"] == track_id, ["frame", "x", "y", "w", "h"]
-                ]
+            for labels_idx, track_id in tqdm(enumerate(model_detections["id"].unique())):
+                labels_track = model_detections.loc[model_detections["id"] == track_id, ["frame", "x", "y", "w", "h"]]
 
                 for gt_idx, gt_id in enumerate(ground_truth["id"].unique()):
                     gt_track = ground_truth.loc[ground_truth["id"] == gt_id, ["frame", "x", "y", "w", "h"]]
-                    track_distances[measurements_idx, gt_idx] = calculate_track_distance(
-                        measurements_track, gt_track, self.trajectory_min_iou_thresh, self.trajectory_min_overlap_ratio
+                    track_distances[labels_idx, gt_idx] = calculate_track_distance(
+                        labels_track, gt_track, self.trajectory_min_iou_thresh, self.trajectory_min_overlap_ratio
                     )
 
-            measurements_gt_pairs, dist_matrix_indices = self._calculate_trajectory_pairs(
+            labels_gt_pairs, dist_matrix_indices = self._calculate_trajectory_pairs(
                 track_distances, model_detections, ground_truth, self.trajectory_max_iou_track_distance
             )
 
             track_distances_copy = track_distances.copy()
             track_distances_copy[dist_matrix_indices] = 1.0
-            measurements_gt_pairs_secondary, _ = self._calculate_trajectory_pairs(
+            labels_gt_pairs_secondary, _ = self._calculate_trajectory_pairs(
                 track_distances_copy, model_detections, ground_truth, self.trajectory_max_iou_track_distance
             )
 
-            self.measurements_dfs[df_idx]["gt_label"] = "noise"
-            self.measurements_dfs[df_idx].loc[
-                measurements_df["id"].isin(
-                    np.hstack((measurements_gt_pairs[:, 0], measurements_gt_pairs_secondary[:, 0]))
-                ),
+            labels_dfs[df_idx]["gt_label"] = "noise"
+            labels_dfs[df_idx].loc[
+                labels_df["id"].isin(np.hstack((labels_gt_pairs[:, 0], labels_gt_pairs_secondary[:, 0]))),
                 "gt_label",
             ] = "fish"
 
-            all_measurements_gt_pairs.extend(measurements_gt_pairs)
-            all_measurements_gt_pairs_secondary.extend(measurements_gt_pairs_secondary)
+            all_labels_gt_pairs.extend(labels_gt_pairs)
+            all_labels_gt_pairs_secondary.extend(labels_gt_pairs_secondary)
 
-        self.all_measurements_gt_pairs = dict(all_measurements_gt_pairs)
-        self.all_measurements_gt_pairs_secondary = dict(all_measurements_gt_pairs_secondary)
+        all_labels_gt_pairs = dict(all_labels_gt_pairs)
+        all_labels_gt_pairs_secondary = dict(all_labels_gt_pairs_secondary)
+
+        return labels_dfs, all_labels_gt_pairs, all_labels_gt_pairs_secondary
 
     def filter_features(self, measurements_df):
         measurements_df = measurements_df[
@@ -242,8 +274,8 @@ class FeatureGenerator(object):
         ]
         return measurements_df
 
+    @staticmethod
     def _calculate_trajectory_pairs(
-        self,
         track_distances: np.ndarray,
         model_detections: pd.DataFrame,
         ground_truth: pd.DataFrame,
@@ -264,14 +296,25 @@ class FeatureGenerator(object):
         self,
         metric_to_show: Optional[str] = None,
         mask_to_show: Optional[str] = None,
+        plot_test_data: bool = False,
+        show_track_id: bool = False,
     ) -> None:
         if "assigned_label" not in self.measurements_dfs[0].columns:
             raise ValueError(
                 "No clustering has been performed yet. Please perform clustering with the do_clustering method."
             )
-        ground_truth = pd.concat(self.gt_dfs)
+        if plot_test_data:
+            ground_truth = pd.concat(self.test_gt_dfs)
+            stacked_labels_dfs = self.stacked_test_dfs
+            all_measurements_gt_pairs = self.test_all_measurements_gt_pairs
+            all_measurements_gt_pairs_secondary = self.test_all_measurements_gt_pairs_secondary
+        else:
+            ground_truth = pd.concat(self.gt_dfs)
+            stacked_labels_dfs = self.stacked_dfs
+            all_measurements_gt_pairs = self.all_measurements_gt_pairs
+            all_measurements_gt_pairs_secondary = self.all_measurements_gt_pairs_secondary
 
-        n_labels = self.stacked_dfs["assigned_label"].nunique()
+        n_labels = stacked_labels_dfs["assigned_label"].nunique()
         show_legend = True if n_labels <= 6 else False
         colormap = cm.get_cmap("viridis", n_labels + 1)  # +1 for the ground truth color
 
@@ -281,13 +324,13 @@ class FeatureGenerator(object):
         plt.gca().invert_yaxis()
 
         # Plot assigned tracks
-        for measurements_track_id, gt_track_id in self.all_measurements_gt_pairs.items():
-            self.plot_tracks_and_annotations(ax, colormap, measurements_track_id, self.stacked_dfs, metric_to_show)
+        for measurements_track_id, gt_track_id in all_measurements_gt_pairs.items():
+            self.plot_tracks_and_annotations(ax, colormap, measurements_track_id, stacked_labels_dfs, metric_to_show)
             gt_track_df = ground_truth[ground_truth.id == gt_track_id]
             ax.plot(gt_track_df.x, gt_track_df.y, alpha=0.5, color=colormap(0), linestyle="dashed")
 
-        for measurements_track_id, gt_track_id in self.all_measurements_gt_pairs_secondary.items():
-            self.plot_tracks_and_annotations(ax, colormap, measurements_track_id, self.stacked_dfs, metric_to_show)
+        for measurements_track_id, gt_track_id in all_measurements_gt_pairs_secondary.items():
+            self.plot_tracks_and_annotations(ax, colormap, measurements_track_id, stacked_labels_dfs, metric_to_show)
 
         ax.set(ylabel="y", title="matched trajectories with assigned label", ylim=[270, 0], xlim=[0, 480])
         ax.set_aspect("equal", adjustable="box")
@@ -306,11 +349,13 @@ class FeatureGenerator(object):
             ax.imshow(self.masks[mask_to_show], cmap="gray", alpha=0.2)
         plt.gca().invert_yaxis()
         plt.gca().invert_yaxis()
-        for measurements_track_id in self.stacked_dfs.id.unique():
-            if (measurements_track_id not in self.all_measurements_gt_pairs.keys()) and (
-                measurements_track_id not in self.all_measurements_gt_pairs_secondary.keys()
+        for measurements_track_id in stacked_labels_dfs.id.unique():
+            if (measurements_track_id not in all_measurements_gt_pairs.keys()) and (
+                measurements_track_id not in all_measurements_gt_pairs_secondary.keys()
             ):
-                self.plot_tracks_and_annotations(ax, colormap, measurements_track_id, self.stacked_dfs, metric_to_show)
+                self.plot_tracks_and_annotations(
+                    ax, colormap, measurements_track_id, stacked_labels_dfs, metric_to_show, show_track_id
+                )
         ax.set(ylabel="y", title="non-matched trajectories with assigned label", ylim=[270, 0], xlim=[0, 480])
         ax.set_aspect("equal", adjustable="box")
 
@@ -329,6 +374,7 @@ class FeatureGenerator(object):
         measurements_track_id,
         model_detections,
         metric_to_show: Optional[str],
+        show_track_id: bool = False,
     ) -> None:
         track_df = model_detections[model_detections.id == measurements_track_id]
         ax.plot(
@@ -337,10 +383,11 @@ class FeatureGenerator(object):
             color=colormap(int(track_df.assigned_label.iloc[0]) + 1),
         )
         metric_annotation = str(track_df[metric_to_show].iloc[0])[:6] if metric_to_show else ""
-        ax.annotate(
-            f"{measurements_track_id}, {metric_annotation}",
-            (track_df.x.iloc[0], track_df.y.iloc[0]),
-        )
+        if show_track_id:
+            ax.annotate(
+                f"{measurements_track_id}, {metric_annotation}",
+                (track_df.x.iloc[0], track_df.y.iloc[0]),
+            )
 
     def plot_image_tiles_along_trajectory(
         self,
@@ -456,6 +503,10 @@ class FeatureGenerator(object):
             X_val = scaler.transform(df[features])
             self.measurements_dfs[idx]["assigned_label"] = clustering.predict(X_val)
 
+        for idx, df in enumerate(self.test_dfs):
+            X_test = scaler.transform(df[features])
+            self.test_dfs[idx]["assigned_label"] = clustering.predict(X_test)
+
     def do_binary_classification(
         self,
         model: Callable,
@@ -467,32 +518,67 @@ class FeatureGenerator(object):
         if distinguish_flow_areas:
             df = self.stacked_dfs.groupby(["video_id", "id"]).first().reset_index()
             flow_area_indices = df["flow_area_time_ratio"] > 0.5
-            df.loc[flow_area_indices, "assigned_label"] = self._do_binary_classification_for_trajectory_subset(
-                df[flow_area_indices], model, features, kfold_n_splits
+            df.loc[flow_area_indices, "assigned_label"], model_flow, scaler_flow = (
+                self._do_binary_classification_for_trajectory_subset(
+                    df[flow_area_indices], model, features, kfold_n_splits
+                )
             )
-            df.loc[~flow_area_indices, "assigned_label"] = self._do_binary_classification_for_trajectory_subset(
-                df[~flow_area_indices], model, features, kfold_n_splits
+            df.loc[~flow_area_indices, "assigned_label"], model, scaler = (
+                self._do_binary_classification_for_trajectory_subset(
+                    df[~flow_area_indices], model, features, kfold_n_splits
+                )
             )
+            # score on test data
+            if self.test_dfs:
+                df_test = self.stacked_test_dfs.groupby(["video_id", "id"]).first().reset_index()
+                flow_area_indices = df_test["flow_area_time_ratio"] > 0.5
+                df_test.loc[flow_area_indices, "assigned_label"] = model_flow.predict(
+                    scaler_flow.transform(df_test[flow_area_indices][features])
+                )
+                df_test.loc[~flow_area_indices, "assigned_label"] = model.predict(
+                    scaler.transform(df_test[~flow_area_indices][features])
+                )
         else:
             df = self.stacked_dfs.groupby(["video_id", "id"]).first().reset_index()
             df["assigned_label"] = self._do_binary_classification_for_trajectory_subset(
                 df, model, features, kfold_n_splits
             )
+            # score on test data
+            if self.test_dfs:
+                df_test = self.stacked_test_dfs.groupby(["video_id", "id"]).first().reset_index()
+                df_test["assigned_label"] = model.predict(scaler.transform(df_test[features]))
 
         if manual_noise_thresholds:
             for feature, (operator, threshold) in manual_noise_thresholds.items():
                 if operator == "smaller":
                     df.loc[df[feature] < threshold, "assigned_label"] = 0
+                    if self.test_dfs:
+                        df_test.loc[df_test[feature] < threshold, "assigned_label"] = 0
                 elif operator == "larger":
                     df.loc[df[feature] > threshold, "assigned_label"] = 0
+                    if self.test_dfs:
+                        df_test.loc[df_test[feature] > threshold, "assigned_label"] = 0
                 else:
                     raise ValueError(f"Invalid operator: {operator}")
 
         for idx, measurement_df in enumerate(self.measurements_dfs):
-            measurement_df.drop(columns=["assigned_label"], inplace=True)
+            try:
+                measurement_df.drop(columns=["assigned_label"], inplace=True)
+            except KeyError:
+                pass
             video_id = measurement_df["video_id"].iloc[0]
             right_df = df[df["video_id"] == video_id][["id", "assigned_label"]]
             self.measurements_dfs[idx] = measurement_df.merge(right_df, on="id", how="left")
+
+        if self.test_dfs:
+            for idx, test_df in enumerate(self.test_dfs):
+                try:
+                    test_df.drop(columns=["assigned_label"], inplace=True)
+                except KeyError:
+                    pass
+                video_id = test_df["video_id"].iloc[0]
+                right_df = df_test[df_test["video_id"] == video_id][["id", "assigned_label"]]
+                self.test_dfs[idx] = test_df.merge(right_df, on="id", how="left")
 
     @staticmethod
     def _do_binary_classification_for_trajectory_subset(
@@ -500,7 +586,7 @@ class FeatureGenerator(object):
         model: Callable,
         features: list[str],
         kfold_n_splits: int,
-    ) -> np.array:
+    ) -> tuple[np.array, Callable, preprocessing.StandardScaler]:
         X = np.array(df[features])
         y = np.array([1 if lbl == "fish" else 0 for lbl in df["gt_label"]])
 
@@ -515,7 +601,11 @@ class FeatureGenerator(object):
             model = model.fit(X_train, y_train)
             y_kfold[val_index] = model.predict(X_val)
 
-        return y_kfold
+        scaler_all = preprocessing.StandardScaler().fit(X)
+        X = scaler_all.transform(X)
+        model_all = model.fit(X, y)
+
+        return y_kfold, model_all, scaler_all
 
     @staticmethod
     def worker(args):
@@ -530,7 +620,6 @@ class FeatureGenerator(object):
         kfold_n_splits: int = 5,
         max_n_features: int = 3,
         distinguish_flow_areas: bool = False,
-        manual_noise_thresholds: Optional[dict[str, tuple[str, float]]] = None,
     ):
         all_features = [
             feat
@@ -573,33 +662,74 @@ class FeatureGenerator(object):
                 print(f"Invalid feature threshold name: {feat}. Must end with '_min' or '_max'")
 
     def calculate_metrics(
-        self, beta_vals: list[int] = [2], make_plots: bool = False, verbosity: int = 0
+        self,
+        beta_vals: list[int] = [2],
+        make_plots: bool = False,
+        verbosity: int = 0,
+        evaluate_test_data: bool = False,
+        distinguish_flow_areas: bool = False,
     ) -> tuple[np.array, float, float, float, list[float]]:
         # TODO: group by video_id and id
-        df = self.stacked_dfs.groupby(["id"]).first().reset_index()
-        inputs = [
-            df["gt_label"].apply(lambda x: 1 if x == "fish" else 0),
-            df["assigned_label"],
-        ]
-        confusion_matrix = metrics.confusion_matrix(*inputs, normalize="true", labels=[0, 1])
-        precision = metrics.precision_score(*inputs, labels=[0, 1], average="binary")
-        recall = metrics.recall_score(*inputs, labels=[0, 1], average="binary")
-        f1 = metrics.f1_score(*inputs, labels=[0, 1], average="binary")
-        if verbosity >= 1:
-            print(f"Precision: {precision}")
-            print(f"Recall: {recall}")
-            print(f"F1 score: {f1}")
-        fbeta = []
-        for beta in beta_vals:
-            fbeta.append(metrics.fbeta_score(*inputs, beta=beta, labels=[0, 1], average="binary"))
+        if evaluate_test_data:
+            df = self.stacked_test_dfs.groupby(["id"]).first().reset_index()
+        else:
+            df = self.stacked_dfs.groupby(["id"]).first().reset_index()
+
+        df["gt_label"] = df["gt_label"].apply(lambda x: 1 if x == "fish" else 0)
+
+        if distinguish_flow_areas:
+            flow_area_indices = df["flow_area_time_ratio"] > 0.5
+            input_dict = {
+                "flow_area": [
+                    df.loc[flow_area_indices, "gt_label"],
+                    df.loc[flow_area_indices, "assigned_label"],
+                ],
+                "non_flow_area": [
+                    df.loc[~flow_area_indices, "gt_label"],
+                    df.loc[~flow_area_indices, "assigned_label"],
+                ],
+            }
+        else:
+            input_dict = {
+                "all": [
+                    df["gt_label"],
+                    df["assigned_label"],
+                ]
+            }
+
+        metrics_dict = {}
+        for area, inputs in input_dict.items():
+            confusion_matrix = metrics.confusion_matrix(*inputs, normalize="true", labels=[0, 1])
+            precision = metrics.precision_score(*inputs, labels=[0, 1], average="binary")
+            recall = metrics.recall_score(*inputs, labels=[0, 1], average="binary")
+            f1 = metrics.f1_score(*inputs, labels=[0, 1], average="binary")
             if verbosity >= 1:
-                print(f"F{beta} score: {fbeta[-1]}")
-        if verbosity >= 1:
-            if make_plots:
-                metrics.ConfusionMatrixDisplay(confusion_matrix, display_labels=["noise", "fish"]).plot()
+                print(f"Metrics for {area}")
+                print(f"Precision: {precision}")
+                print(f"Recall: {recall}")
+                print(f"F1 score: {f1}")
+            fbeta = []
+            for beta in beta_vals:
+                fbeta.append(metrics.fbeta_score(*inputs, beta=beta, labels=[0, 1], average="binary"))
+                if verbosity >= 1:
+                    print(f"F{beta} score: {fbeta[-1]}")
+            if verbosity >= 1:
+                if make_plots:
+                    cm_display = metrics.ConfusionMatrixDisplay(
+                        confusion_matrix, display_labels=["noise", "fish"]
+                    ).plot()
+                    cm_display.ax_.set_title(f"Confusion matrix for {area}")
             else:
                 print(f"Confusion matrix: {confusion_matrix}")
-        return confusion_matrix, precision, recall, f1, fbeta
+            metrics_dict[area] = {
+                "confusion_matrix": confusion_matrix,
+                "precision": precision,
+                "recall": recall,
+                "f1": f1,
+                "fbeta": fbeta,
+            }
+
+        return metrics_dict
 
     @property
     def feature_names(self):
@@ -608,3 +738,7 @@ class FeatureGenerator(object):
     @property
     def stacked_dfs(self):
         return pd.concat(self.measurements_dfs)
+
+    @property
+    def stacked_test_dfs(self):
+        return pd.concat(self.test_dfs)
