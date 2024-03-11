@@ -454,7 +454,6 @@ def tracks_to_object_history(
     object_history: dict[int, KalmanTrackedBlob],
     frame_number: int,
     processed_frame_dict: dict,
-    bbox_size_to_stddev_ratio_threshold: int,
 ) -> dict[int, KalmanTrackedBlob]:
     for track in object_filter.tracks:
         angle_with_x_axis, sqrt_of_lamdas = get_confidence_ellipse_attributes(track)
@@ -466,9 +465,11 @@ def tracks_to_object_history(
             ellipse_axes_lengths=sqrt_of_lamdas,
             detection_is_tracked=track.is_confirmed(),
             frame=processed_frame_dict,
-            store_raw_image_patch=object_filter.conf["store_raw_image_patch"],
+            input_settings=object_filter.conf,
         )
-        if obj.bbox_size_to_stddev_ratio and obj.bbox_size_to_stddev_ratio < bbox_size_to_stddev_ratio_threshold:
+        if obj.feature["bbox_size_to_stddev_ratio"] and obj.feature[
+            "bbox_size_to_stddev_ratio"
+        ] < object_filter.conf.get("bbox_size_to_stddev_ratio_threshold"):
             if track.track_id not in object_history.keys():
                 object_history[track.track_id] = obj
             else:
@@ -476,7 +477,6 @@ def tracks_to_object_history(
     for deleted_track_id in object_filter.deleted_track_ids:
         deleted_detection = object_history.get(deleted_track_id)
         if deleted_detection is not None and not deleted_detection.detection_is_tracked:
-            # print("deleting")
             object_history.pop(deleted_track_id)
     return object_history
 

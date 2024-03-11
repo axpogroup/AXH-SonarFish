@@ -84,7 +84,6 @@ def main(settings_dict: dict):
             runtimes=runtimes,
             detector=detector,
         )
-
     if input_output_handler.output_csv_name is not None:
         df_detections = input_output_handler.get_detections_pd(object_history)
         df_detections = detector.classify_detections(df_detections)
