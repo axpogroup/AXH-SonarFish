@@ -3,6 +3,7 @@ input_directory: "data/raw/"
 
 # Output
 output_directory: "data/intermediate/"
+overwrite_existing_files: False
 
 # Downsampling
 target_fps: 10

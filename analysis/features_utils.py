@@ -34,7 +34,7 @@ def calculate_mean_of_pixel_intensity(row):
     if 0 in detection_box.shape:
         print("detection_box is empty")
         return
-    mean, stddev = cv.meanStdDev(detection_box)
+    mean, _ = cv.meanStdDev(detection_box)
     return mean[0]
 
 
@@ -76,6 +76,8 @@ def trace_window_metrics(detection: pd.DataFrame, masks: dict[str, np.array]) ->
             ),
             "average_pixel_intensity": calculate_average_pixel_intensity(detection),
             "max_blob_count": max_blob_count(detection),
+            "average_distance_from_start/traversed_distance": calculate_average_distance_from_start(detection)
+            / sum_euclidean_distance_between_positions(detection),
         }
     )
 
