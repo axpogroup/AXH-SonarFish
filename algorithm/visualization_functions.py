@@ -186,7 +186,7 @@ def _draw_detector_output(
                 )
             text = ""
             if len(obj.means_of_pixels_intensity) > 0:
-                ratio = obj.bbox_size_to_stddev_ratio
+                ratio = obj.feature["bbox_size_to_stddev_ratio"]
                 text = f"ID:{obj.ID}, ratio: {int(ratio)}"
                 if len(obj.velocities) > 100:
                     text += f", v [px/frame]: {obj.velocities[-1] * scale}"
