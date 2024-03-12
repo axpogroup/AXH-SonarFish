@@ -16,7 +16,7 @@ from sklearn import metrics, preprocessing
 from sklearn.model_selection import KFold
 from tqdm import tqdm
 
-from analysis.features_utils import calculate_features
+from analysis.features_utils import calculate_features, calculate_flow_area_time_ratio
 
 
 def calculate_track_distance(
@@ -63,7 +63,12 @@ def trace_window_metrics(group: pd.DataFrame) -> pd.Series:
 
 def load_csv_with_tiles(path: Path) -> pd.DataFrame:
     csv_with_tiles_df = pd.read_csv(path, delimiter=",")
-    csv_with_tiles_df["raw_image_tile"] = csv_with_tiles_df["raw_image_tile"].apply(lambda x: np.array(json.loads(x)))
+    try:
+        csv_with_tiles_df["raw_image_tile"] = csv_with_tiles_df["raw_image_tile"].apply(
+            lambda x: np.array(json.loads(x))
+        )
+    except KeyError:
+        pass
     csv_with_tiles_df["image_tile"] = csv_with_tiles_df["image_tile"].apply(lambda x: np.array(json.loads(x)))
     return csv_with_tiles_df
 
@@ -72,6 +77,7 @@ class FeatureGenerator(object):
     def __init__(
         self,
         load_old_measurements: bool,
+        load_old_test_files: bool,
         measurements_csv_paths: list[Union[str, Path]],
         gt_csv_paths: list[Union[str, Path]],
         test_csv_paths: Optional[list[Union[str, Path]]],
@@ -104,23 +110,36 @@ class FeatureGenerator(object):
             "non_flow_area_mask": self._read_mask(non_flow_area_mask_path),
         }
         if load_old_measurements:
-            self.measurements_dfs, self.gt_dfs = self._load_old_measurements_df(
+            self.measurements_dfs, self.gt_dfs, self.test_cached_csv_paths = self._load_old_measurements_df(
                 self.measurements_csv_paths, gt_csv_paths
             )
-            self.test_dfs, self.test_gt_dfs = self._load_old_measurements_df(self.test_csv_paths, test_gt_csv_paths)
         else:
             self.measurements_dfs, self.gt_dfs, self.cached_csv_paths = self._load_measurements_df(
                 self.measurements_csv_paths, gt_csv_paths
             )
+        if load_old_test_files:
+            self.test_dfs, self.test_gt_dfs, self.test_cached_csv_paths = self._load_old_measurements_df(
+                self.test_csv_paths, test_gt_csv_paths
+            )
+        else:
             self.test_dfs, self.test_gt_dfs, self.test_cached_csv_paths = self._load_measurements_df(
                 self.test_csv_paths, test_gt_csv_paths
             )
 
-    @staticmethod
-    def format_old_classifications(labels_dfs: list[pd.DataFrame]):
-        for df in labels_dfs:
-            df["assigned_label"] = df["classification"].apply(lambda x: 1 if x == "fish" else 0)
-        return labels_dfs
+    def format_old_classifications(self, labels_dfs: list[pd.DataFrame]):
+        dfs = labels_dfs.copy()
+        for idx, df in enumerate(dfs):
+            dfs[idx]["assigned_label"] = df["classification"].apply(lambda x: 1 if x == "fish" else 0)
+            feature_df = (
+                dfs[idx]
+                .groupby("id")
+                .apply(lambda x: calculate_flow_area_time_ratio(x, self.masks["flow_area_mask"]))
+                .to_frame("flow_area_time_ratio")
+            )
+            dfs[idx] = dfs[idx].join(feature_df, on="id", how="left")
+            dfs[idx]["video_id"] = idx
+            dfs[idx]["id"] = dfs[idx].apply(lambda x: f"{x['video_id']}-{x['id']}", axis=1)
+        return dfs
 
     def _load_measurements_df(
         self,
@@ -131,6 +150,7 @@ class FeatureGenerator(object):
         for idx, (labels_df, gt_df, cache_path) in enumerate(self._read_csvs(labels_csv_paths, gt_csv_paths)):
             gt_dfs.append(gt_df)
             labels_df["video_id"] = idx
+            labels_df["id"] = labels_df.apply(lambda x: f"{x['video_id']}-{x['id']}", axis=1)
             labels_dfs.append(labels_df)
             cache_paths.append(cache_path)
         return labels_dfs, gt_dfs, cache_paths
@@ -141,19 +161,13 @@ class FeatureGenerator(object):
         gt_csv_paths: list[Path],
     ) -> None:
         labels_dfs = self.read_csvs_from_paths(labels_csv_paths)
-        labels_dfs = self.format_old_classifications()
+        labels_dfs = self.format_old_classifications(labels_dfs)
         gt_dfs = self.read_csvs_from_paths(gt_csv_paths)
-        return labels_dfs, gt_dfs
+        cache_paths = [self._create_cache_path(path) for path in labels_csv_paths]
+        return labels_dfs, gt_dfs, cache_paths
 
     def calc_feature_dfs(self):
         if self.force_feature_recalc:
-            measurements_df_list = []
-            print("Calculating/reading features for training data")
-            for measurements_df, cache_path in tqdm(zip(self.measurements_dfs, self.cached_csv_paths)):
-                calculated_measurements_df = self.calculate_features_on_tracks(cache_path, measurements_df)
-                measurements_df_list.append(calculated_measurements_df)
-            self.measurements_dfs = measurements_df_list
-
             if self.test_dfs:
                 test_df_list = []
                 print("Calculating/reading features for test data")
@@ -161,6 +175,13 @@ class FeatureGenerator(object):
                     calculated_test_df = self.calculate_features_on_tracks(cache_path, test_df)
                     test_df_list.append(calculated_test_df)
                 self.test_dfs = test_df_list
+
+            measurements_df_list = []
+            print("Calculating/reading features for training data")
+            for measurements_df, cache_path in tqdm(zip(self.measurements_dfs, self.cached_csv_paths)):
+                calculated_measurements_df = self.calculate_features_on_tracks(cache_path, measurements_df)
+                measurements_df_list.append(calculated_measurements_df)
+            self.measurements_dfs = measurements_df_list
 
         self.measurements_dfs, self.all_measurements_gt_pairs, self.all_measurements_gt_pairs_secondary = (
             self._map_measurements2gt_trajectory(self.measurements_dfs, self.gt_dfs)
@@ -177,9 +198,7 @@ class FeatureGenerator(object):
     ) -> Iterator[tuple[pd.DataFrame, pd.DataFrame, Path]]:
         print("Calculating/reading features")
         for path in tqdm(labels_csv_paths):
-            cache_path = path.with_stem(
-                path.stem + f"_cached_features_min_track_length_{self.min_track_length}"
-            ).with_suffix(".csv")
+            cache_path = self._create_cache_path(path)
             gt_df = pd.read_csv(gt_csv_paths[labels_csv_paths.index(path)], delimiter=",")
             if cache_path.exists() and not self.force_feature_recalc:
                 print(f"Reading cached features from {cache_path}")
@@ -188,6 +207,11 @@ class FeatureGenerator(object):
                 labels_df = load_csv_with_tiles(path)
                 labels_df = self.filter_tracks(labels_df)
             yield labels_df, gt_df, cache_path
+
+    def _create_cache_path(self, path: Path) -> Path:
+        return path.with_stem(path.stem + f"_cached_features_min_track_length_{self.min_track_length}").with_suffix(
+            ".csv"
+        )
 
     def read_csvs_from_paths(self, csv_paths: list[Path]) -> list[pd.DataFrame]:
         return [pd.read_csv(path, delimiter=",") for path in tqdm(csv_paths)]
@@ -198,7 +222,10 @@ class FeatureGenerator(object):
         if not labels_df.empty:
             save_df = labels_df.copy()
             save_df["image_tile"] = save_df["image_tile"].apply(lambda x: x.tolist())
-            save_df["raw_image_tile"] = save_df["raw_image_tile"].apply(lambda x: x.tolist())
+            try:
+                save_df["raw_image_tile"] = save_df["raw_image_tile"].apply(lambda x: x.tolist())
+            except KeyError:
+                pass
             save_df.to_csv(cache_path, index=False)
             return labels_df
         else:
@@ -299,16 +326,20 @@ class FeatureGenerator(object):
         plot_test_data: bool = False,
         show_track_id: bool = False,
     ) -> None:
-        if "assigned_label" not in self.measurements_dfs[0].columns:
-            raise ValueError(
-                "No clustering has been performed yet. Please perform clustering with the do_clustering method."
-            )
         if plot_test_data:
+            if "assigned_label" not in self.test_dfs[0].columns:
+                raise ValueError(
+                    "No clustering has been performed yet. Please perform clustering with the do_clustering method."
+                )
             ground_truth = pd.concat(self.test_gt_dfs)
             stacked_labels_dfs = self.stacked_test_dfs
             all_measurements_gt_pairs = self.test_all_measurements_gt_pairs
             all_measurements_gt_pairs_secondary = self.test_all_measurements_gt_pairs_secondary
         else:
+            if "assigned_label" not in self.measurements_dfs[0].columns:
+                raise ValueError(
+                    "No clustering has been performed yet. Please perform clustering with the do_clustering method."
+                )
             ground_truth = pd.concat(self.gt_dfs)
             stacked_labels_dfs = self.stacked_dfs
             all_measurements_gt_pairs = self.all_measurements_gt_pairs
@@ -668,6 +699,7 @@ class FeatureGenerator(object):
         verbosity: int = 0,
         evaluate_test_data: bool = False,
         distinguish_flow_areas: bool = False,
+        normalize_confusion_matrix: str = None,
     ) -> tuple[np.array, float, float, float, list[float]]:
         # TODO: group by video_id and id
         if evaluate_test_data:
@@ -699,7 +731,7 @@ class FeatureGenerator(object):
 
         metrics_dict = {}
         for area, inputs in input_dict.items():
-            confusion_matrix = metrics.confusion_matrix(*inputs, normalize="true", labels=[0, 1])
+            confusion_matrix = metrics.confusion_matrix(*inputs, normalize=normalize_confusion_matrix, labels=[0, 1])
             precision = metrics.precision_score(*inputs, labels=[0, 1], average="binary")
             recall = metrics.recall_score(*inputs, labels=[0, 1], average="binary")
             f1 = metrics.f1_score(*inputs, labels=[0, 1], average="binary")
