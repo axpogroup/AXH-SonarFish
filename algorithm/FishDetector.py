@@ -52,38 +52,21 @@ class FishDetector:
             frame_dict["difference"] = (enhanced_temp + 127).astype("uint8")
             frame_dict["long_mean"] = self.long_mean_float.astype("uint8")
             frame_dict["short_mean"] = self.short_mean_float.astype("uint8")
-            # frame_dict["absolute_difference"] = (abs(enhanced_temp) + 127).astype("uint8")
             adaptive_threshold = self.conf["difference_threshold_scaler"] * cv.blur(
                 self.long_mean_float.astype("uint8"), (10, 10)
             )
             enhanced_temp[abs(enhanced_temp) < adaptive_threshold] = 0
             frame_dict["difference_thresholded"] = (enhanced_temp + 127).astype("uint8")
             enhanced_temp = (abs(enhanced_temp) + 127).astype("uint8")
-            # frame_dict["difference_thresholded_abs"] = enhanced_temp
             median_filter_kernel_px = self.mm_to_px(self.conf["median_filter_kernel_mm"])
             enhanced_temp = cv.medianBlur(enhanced_temp, self.ceil_to_odd_int(median_filter_kernel_px))
             frame_dict["median_filter"] = enhanced_temp
             runtimes_ms["enhance"] = get_elapsed_ms(start)
-
             # Threshold to binary
             ret, thres = cv.threshold(enhanced_temp, 127 + self.conf["difference_threshold_scaler"], 255, 0)
-            # ret, thres_raw = cv.threshold(
-            #     frame_dict["difference_thresholded_abs"],
-            #     127 + self.conf["difference_threshold_scaler"],
-            #     255,
-            #     0,
-            # )
-            # frame_dict["binary"] = thres
-            # frame_dict["raw_binary"] = thres_raw
             self.dilate_frame(frame_dict, thres)
-            # frame_dict["closed"] = cv.morphologyEx(thres, cv.MORPH_CLOSE, kernel)
-            # frame_dict["opened"] = cv.morphologyEx(thres, cv.MORPH_OPEN, kernel)
-            # frame_dict["internal_external"] = (
-            #     frame_dict["dilated"] - frame_dict["raw_binary"]
-            # )
             detections = self.extract_keypoints(frame_dict)
             runtimes_ms["detection_tracking"] = get_elapsed_ms(start) - runtimes_ms["enhance"]
-
         runtimes_ms["total"] = get_elapsed_ms(start)
         return detections, frame_dict, runtimes_ms
 

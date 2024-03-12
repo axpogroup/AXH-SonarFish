@@ -13,6 +13,7 @@ from algorithm.utils import get_elapsed_ms
 
 class InputOutputHandler:
     def __init__(self, settings_dict):
+        self.fps_out = 10
         self.video_writer = None
         self.settings_dict = settings_dict
         self.video_cap = cv.VideoCapture(
@@ -21,19 +22,17 @@ class InputOutputHandler:
         self.input_filename = Path(self.settings_dict["file_name"])
         self.output_dir_name = self.settings_dict["output_directory"]
         self.output_csv_name = None
-
         self.output_csv_name = os.path.join(self.output_dir_name, (self.input_filename.stem + ".csv"))
-
         self.playback_paused = False
         self.usr_input = None
         self.frame_no = 0
         self.frames_total = int(self.video_cap.get(cv.CAP_PROP_FRAME_COUNT))
-        self.fps = int(self.video_cap.get(cv.CAP_PROP_FPS))
+        self.fps_in = int(self.video_cap.get(cv.CAP_PROP_FPS))
         self.start_ticks = 1
-
+        self.index_in = -1
+        self.index_out = -1
         self.frame_retrieval_time = None
         self.last_output_time = None
-
         self.current_raw_frame = None
 
     def get_new_frame(self):
@@ -41,22 +40,28 @@ class InputOutputHandler:
         tries = 0
         if self.video_cap.isOpened():
             while tries < 5:
-                ret, self.current_raw_frame = self.video_cap.read()
-                self.frame_retrieval_time = get_elapsed_ms(start)
-
-                # if frame is read correctly ret is True
-                if not ret:
-                    tries += 1
+                success = self.video_cap.grab()
+                if success:
+                    self.index_in += 1
+                    out_due = int(self.index_in / self.fps_in * self.fps_out)
+                    if out_due > self.index_out:
+                        success, frame = self.video_cap.retrieve()
+                        if success:
+                            self.index_out += 1
+                            self.current_raw_frame = frame
+                            self.frame_no += 1
+                            self.frame_retrieval_time = get_elapsed_ms(start)
+                            return True
                 else:
-                    self.frame_no += 1
-                    return True
-
+                    tries += 1
             print("Can't receive frame (stream end?). Exiting ...")
             self.shutdown()
+            self.frame_retrieval_time = get_elapsed_ms(start)
             return False
 
         else:
             print("ERROR: Video Capturer is not open.")
+            self.frame_retrieval_time = get_elapsed_ms(start)
             return False
 
     @staticmethod
@@ -255,7 +260,7 @@ class InputOutputHandler:
         # grab the width, height, fps and length of the video stream.
         frame_width = int(self.video_cap.get(cv.CAP_PROP_FRAME_WIDTH)) if frame_width is None else frame_width
         frame_height = int(self.video_cap.get(cv.CAP_PROP_FRAME_HEIGHT)) if frame_height is None else frame_height
-        fps = int(self.video_cap.get(cv.CAP_PROP_FPS))
+        fps = self.fps_in
         if self.settings_dict["record_processing_frame"] != "raw":
             fps = fps // 2
 
@@ -269,12 +274,6 @@ class InputOutputHandler:
             fps,
             (frame_width, frame_height),
         )
-
-    def get_video_output_settings(self):
-        frame_width = int(self.video_cap.get(cv.CAP_PROP_FRAME_WIDTH))
-        frame_height = int(self.video_cap.get(cv.CAP_PROP_FRAME_HEIGHT))
-        fps = int(self.video_cap.get(cv.CAP_PROP_FPS))
-        return fps, frame_height, frame_width
 
     def shutdown(self):
         self.video_cap.release()
