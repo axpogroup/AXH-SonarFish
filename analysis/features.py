@@ -213,6 +213,11 @@ class FeatureGenerator(object):
             ".csv"
         )
 
+    def _create_classification_save_path(self, path: Path) -> Path:
+        return path.with_stem(path.stem + f"_classification_min_track_length_{self.min_track_length}").with_suffix(
+            ".csv"
+        )
+
     def read_csvs_from_paths(self, csv_paths: list[Path]) -> list[pd.DataFrame]:
         return [pd.read_csv(path, delimiter=",") for path in tqdm(csv_paths)]
 
@@ -793,6 +798,13 @@ class FeatureGenerator(object):
             }
 
         return metrics_dict
+
+    def save_classified_tracks_to_csv(self):
+        for path, df in zip(self.test_csv_paths + self.measurements_csv_paths, self.test_dfs + self.measurements_dfs):
+            save_path = self._create_classification_save_path(path)
+            save_df = df.copy()
+            save_df.drop(columns=["image_tile", "raw_image_tile"], inplace=True, errors="ignore")
+            save_df.to_csv(save_path, index=False)
 
     @property
     def feature_names(self):
