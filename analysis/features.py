@@ -356,12 +356,16 @@ class FeatureGenerator(object):
 
         # Plot assigned tracks
         for measurements_track_id, gt_track_id in all_measurements_gt_pairs.items():
-            self.plot_tracks_and_annotations(ax, colormap, measurements_track_id, stacked_labels_dfs, metric_to_show)
+            self.plot_tracks_and_annotations(
+                ax, colormap, measurements_track_id, stacked_labels_dfs, metric_to_show, show_track_id
+            )
             gt_track_df = ground_truth[ground_truth.id == gt_track_id]
             ax.plot(gt_track_df.x, gt_track_df.y, alpha=0.5, color=colormap(0), linestyle="dashed")
 
         for measurements_track_id, gt_track_id in all_measurements_gt_pairs_secondary.items():
-            self.plot_tracks_and_annotations(ax, colormap, measurements_track_id, stacked_labels_dfs, metric_to_show)
+            self.plot_tracks_and_annotations(
+                ax, colormap, measurements_track_id, stacked_labels_dfs, metric_to_show, show_track_id
+            )
 
         ax.set(ylabel="y", title="matched trajectories with assigned label", ylim=[270, 0], xlim=[0, 480])
         ax.set_aspect("equal", adjustable="box")
@@ -544,8 +548,8 @@ class FeatureGenerator(object):
         features: list[str],
         features_flow_area: list[str],
         kfold_n_splits: int,
-        manual_noise_thresholds: Optional[dict[str, tuple[str, float]]] = None,
-        manual_noise_thresholds_flow_area: Optional[dict[str, tuple[str, float]]] = None,
+        manual_noise_thresholds: Optional[tuple[str, str, float]] = None,
+        manual_noise_thresholds_flow_area: Optional[tuple[str, str, float]] = None,
     ):
         if features_flow_area:
             df = self.stacked_dfs.groupby("id").first().reset_index()
@@ -623,11 +627,11 @@ class FeatureGenerator(object):
 
     @staticmethod
     def _filter_with_manual_thresholds(
-        df_in: pd.DataFrame, manual_thresholds: dict[str, tuple[str, float]]
+        df_in: pd.DataFrame, manual_thresholds: tuple[str, str, float]
     ) -> tuple[pd.Series, np.array]:
         df = df_in.copy()
         removed_indices = np.zeros(len(df))
-        for feature, (operator, threshold) in manual_thresholds.items():
+        for feature, operator, threshold in manual_thresholds:
             if operator == "smaller":
                 df.loc[df[feature] < threshold, "assigned_label"] = 0
                 removed_indices = np.logical_or(removed_indices, df[feature] < threshold)
