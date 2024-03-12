@@ -542,55 +542,65 @@ class FeatureGenerator(object):
         self,
         model: Callable,
         features: list[str],
+        features_flow_area: list[str],
         kfold_n_splits: int,
-        distinguish_flow_areas: bool = False,
         manual_noise_thresholds: Optional[dict[str, tuple[str, float]]] = None,
+        manual_noise_thresholds_flow_area: Optional[dict[str, tuple[str, float]]] = None,
     ):
-        if distinguish_flow_areas:
-            df = self.stacked_dfs.groupby(["video_id", "id"]).first().reset_index()
+        if features_flow_area:
+            df = self.stacked_dfs.groupby("id").first().reset_index()
             flow_area_indices = df["flow_area_time_ratio"] > 0.5
             df.loc[flow_area_indices, "assigned_label"], model_flow, scaler_flow = (
                 self._do_binary_classification_for_trajectory_subset(
-                    df[flow_area_indices], model, features, kfold_n_splits
+                    df[flow_area_indices], model, features_flow_area, kfold_n_splits
                 )
             )
+            if manual_noise_thresholds_flow_area:
+                df.loc[flow_area_indices, "assigned_label"], _ = self._filter_with_manual_thresholds(
+                    df[flow_area_indices], manual_noise_thresholds_flow_area
+                )
             df.loc[~flow_area_indices, "assigned_label"], model, scaler = (
                 self._do_binary_classification_for_trajectory_subset(
                     df[~flow_area_indices], model, features, kfold_n_splits
                 )
             )
+            if manual_noise_thresholds:
+                df.loc[~flow_area_indices, "assigned_label"], _ = self._filter_with_manual_thresholds(
+                    df[~flow_area_indices], manual_noise_thresholds
+                )
             # score on test data
             if self.test_dfs:
-                df_test = self.stacked_test_dfs.groupby(["video_id", "id"]).first().reset_index()
+                df_test = self.stacked_test_dfs.groupby("id").first().reset_index()
                 flow_area_indices = df_test["flow_area_time_ratio"] > 0.5
                 df_test.loc[flow_area_indices, "assigned_label"] = model_flow.predict(
                     scaler_flow.transform(df_test[flow_area_indices][features])
                 )
+                if manual_noise_thresholds_flow_area:
+                    df_test.loc[flow_area_indices, "assigned_label"], _ = self._filter_with_manual_thresholds(
+                        df_test[flow_area_indices], manual_noise_thresholds_flow_area
+                    )
                 df_test.loc[~flow_area_indices, "assigned_label"] = model.predict(
                     scaler.transform(df_test[~flow_area_indices][features])
                 )
+                if manual_noise_thresholds:
+                    df_test.loc[~flow_area_indices, "assigned_label"], _ = self._filter_with_manual_thresholds(
+                        df_test[~flow_area_indices], manual_noise_thresholds
+                    )
+
         else:
-            df = self.stacked_dfs.groupby(["video_id", "id"]).first().reset_index()
+            df = self.stacked_dfs.groupby("id").first().reset_index()
             df["assigned_label"] = self._do_binary_classification_for_trajectory_subset(
                 df, model, features, kfold_n_splits
             )
             # score on test data
             if self.test_dfs:
-                df_test = self.stacked_test_dfs.groupby(["video_id", "id"]).first().reset_index()
+                df_test = self.stacked_test_dfs.groupby("id").first().reset_index()
                 df_test["assigned_label"] = model.predict(scaler.transform(df_test[features]))
 
-        if manual_noise_thresholds:
-            for feature, (operator, threshold) in manual_noise_thresholds.items():
-                if operator == "smaller":
-                    df.loc[df[feature] < threshold, "assigned_label"] = 0
-                    if self.test_dfs:
-                        df_test.loc[df_test[feature] < threshold, "assigned_label"] = 0
-                elif operator == "larger":
-                    df.loc[df[feature] > threshold, "assigned_label"] = 0
-                    if self.test_dfs:
-                        df_test.loc[df_test[feature] > threshold, "assigned_label"] = 0
-                else:
-                    raise ValueError(f"Invalid operator: {operator}")
+            if manual_noise_thresholds:
+                df, _ = self._filter_with_manual_thresholds(df, manual_noise_thresholds)
+                if self.test_dfs:
+                    df_test, _ = self._filter_with_manual_thresholds(df_test, manual_noise_thresholds)
 
         for idx, measurement_df in enumerate(self.measurements_dfs):
             try:
@@ -610,6 +620,23 @@ class FeatureGenerator(object):
                 video_id = test_df["video_id"].iloc[0]
                 right_df = df_test[df_test["video_id"] == video_id][["id", "assigned_label"]]
                 self.test_dfs[idx] = test_df.merge(right_df, on="id", how="left")
+
+    @staticmethod
+    def _filter_with_manual_thresholds(
+        df_in: pd.DataFrame, manual_thresholds: dict[str, tuple[str, float]]
+    ) -> tuple[pd.Series, np.array]:
+        df = df_in.copy()
+        removed_indices = np.zeros(len(df))
+        for feature, (operator, threshold) in manual_thresholds.items():
+            if operator == "smaller":
+                df.loc[df[feature] < threshold, "assigned_label"] = 0
+                removed_indices = np.logical_or(removed_indices, df[feature] < threshold)
+            elif operator == "larger":
+                df.loc[df[feature] > threshold, "assigned_label"] = 0
+                removed_indices = np.logical_or(removed_indices, df[feature] > threshold)
+            else:
+                raise ValueError(f"Invalid operator: {operator}")
+        return df["assigned_label"], removed_indices
 
     @staticmethod
     def _do_binary_classification_for_trajectory_subset(
