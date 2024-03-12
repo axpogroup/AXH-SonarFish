@@ -5,6 +5,7 @@ import cv2 as cv
 import numpy as np
 import pandas as pd
 from numpy import ndarray
+from scipy.signal import savgol_filter
 
 
 def calculate_features(measurements_df: pd.DataFrame, masks: dict[str, np.ndarray]) -> pd.DataFrame:
@@ -33,7 +34,7 @@ def calculate_mean_of_pixel_intensity(row):
     if 0 in detection_box.shape:
         # print("detection_box is empty")
         return
-    mean, stddev = cv.meanStdDev(detection_box)
+    mean, _ = cv.meanStdDev(detection_box)
     return mean[0]
 
 
@@ -49,7 +50,20 @@ def trace_window_metrics(detection: pd.DataFrame, masks: dict[str, np.array]) ->
         {
             "traversed_distance": sum_euclidean_distance_between_positions(detection),
             "frame_diff": frame_diff,
-            "average_curvature": calculate_average_curvature(detection),
+            "average_curvature": calculate_curvature(detection),
+            "average_smoothed_curvature_15": calculate_curvature(
+                detection, operator="mean", window_length=15, polyorder=2
+            ),
+            "average_smoothed_curvature_30": calculate_curvature(
+                detection, operator="mean", window_length=30, polyorder=2
+            ),
+            "median_curvature": calculate_curvature(detection, operator="median"),
+            "median_smoothed_curvature_15": calculate_curvature(
+                detection, operator="median", window_length=15, polyorder=2
+            ),
+            "median_smoothed_curvature_30": calculate_curvature(
+                detection, operator="median", window_length=30, polyorder=2
+            ),
             "average_overlap_ratio": calculate_average_overlap_ratio(detection),
             "average_bbox_size": calculate_average_bbox_size(detection),
             "rake_time_ratio": time_ratio_near_rake,
@@ -62,6 +76,8 @@ def trace_window_metrics(detection: pd.DataFrame, masks: dict[str, np.array]) ->
             ),
             "average_pixel_intensity": calculate_average_pixel_intensity(detection),
             "max_blob_count": max_blob_count(detection),
+            "average_distance_from_start/traversed_distance": calculate_average_distance_from_start(detection)
+            / sum_euclidean_distance_between_positions(detection),
         }
     )
 
@@ -102,15 +118,30 @@ def sum_euclidean_distance_between_positions(detection: pd.DataFrame):
     return traversed_distance
 
 
-def calculate_average_curvature(detection: pd.DataFrame) -> float:
+def calculate_curvature(
+    detection: pd.DataFrame,
+    operator: str = "mean",
+    window_length: int = 7,
+    polyorder: int = 2,
+) -> float:
     if len(detection["x"]) < 2 or len(detection["y"]) < 2:
         print(f"Skipping detection {detection['id']} because it has too few points.")
         return 0
-    dx_dt, dy_dt = np.gradient(detection["x"]), np.gradient(detection["y"])
+
+    # Apply Savitzky-Golay filter to smooth the trajectory
+    x_smooth = savgol_filter(detection["x"], window_length, polyorder)
+    y_smooth = savgol_filter(detection["y"], window_length, polyorder)
+
+    dx_dt, dy_dt = np.gradient(x_smooth), np.gradient(y_smooth)
     d2x_dt2, d2y_dt2 = np.gradient(dx_dt), np.gradient(dy_dt)
     curvature = np.abs(dx_dt * d2y_dt2 - dy_dt * d2x_dt2) / (dx_dt**2 + dy_dt**2 + 1e-8) ** (3 / 2)
-    avg_curvature = np.nanmean(curvature)
-    return float(avg_curvature)
+
+    if operator == "mean":
+        return float(np.nanmean(curvature))
+    elif operator == "median":
+        return float(np.nanmedian(curvature))
+    else:
+        raise ValueError(f"Invalid operator: {operator}")
 
 
 def calculate_average_overlap_ratio(detection: pd.DataFrame):

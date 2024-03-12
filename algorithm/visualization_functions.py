@@ -173,17 +173,19 @@ def _draw_detector_output(
         )
         if annotate:
             if obj.ellipse_angles[-1] is not None and obj.ellipse_axes_lengths_pairs[-1] is not None:
-                ellipse_axes_lengths = obj.ellipse_axes_lengths_pairs[-1].astype(int)
-                cv.ellipse(
-                    img,
-                    (obj.midpoints[-1][0], obj.midpoints[-1][1]),
-                    (ellipse_axes_lengths[0], ellipse_axes_lengths[1]),
-                    obj.ellipse_angles[-1],
-                    0,
-                    360,
-                    color,
-                    1 * scale,
-                )
+                if not np.isnan(obj.ellipse_axes_lengths_pairs[-1]).any():
+                    ellipse_axes_lengths = obj.ellipse_axes_lengths_pairs[-1].astype(int)
+                    # if no nan in ellipse_axes_lengths:
+                    cv.ellipse(
+                        img,
+                        (obj.midpoints[-1][0], obj.midpoints[-1][1]),
+                        (ellipse_axes_lengths[0], ellipse_axes_lengths[1]),
+                        obj.ellipse_angles[-1],
+                        0,
+                        360,
+                        color,
+                        1 * scale,
+                    )
             text = ""
             if len(obj.means_of_pixels_intensity) > 0:
                 ratio = obj.feature["bbox_size_to_stddev_ratio"]

@@ -6,6 +6,7 @@ input_directory: "data/raw/labels/"
 # Output
 csv_output_directory: "data/raw/labels/"
 csv_output_suffix: "_ground_truth.csv"
+overwrite_existing_csv: False
 
 # Enhancement
 four_images: False
