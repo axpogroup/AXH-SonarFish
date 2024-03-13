@@ -45,9 +45,18 @@ def calculate_average_pixel_intensity(detection):
 
 def trace_window_metrics(detection: pd.DataFrame, masks: dict[str, np.array]) -> pd.Series:
     frame_diff = detection["frame"].iloc[-1] - detection["frame"].iloc[0]
+    detection["v_parallel_river"], detection["v_orthogonal_river"] = velocity_relative_to_river_velocity(detection)
     time_ratio_near_rake, dist_near_rake = calculate_rake_path_ratio(detection, masks["rake_mask"])
     return pd.Series(
         {
+            "v_xr_avg": np.mean(np.diff(detection["x"])),
+            "v_yr_avg": np.mean(detection["v_yr"]),
+            "v_xr_median": np.median(detection["v_xr"]),
+            "v_yr_median": np.median(detection["v_yr"]),
+            "v_parallel_river_avg": np.nanmean(detection["v_parallel_river"]),
+            "v_orthogonal_river_avg": np.nanmean(detection["v_orthogonal_river"]),
+            "v_parallel_river_median": np.nanmedian(detection["v_parallel_river"]),
+            "v_orthogonal_river_median": np.nanmedian(detection["v_orthogonal_river"]),
             "traversed_distance": sum_euclidean_distance_between_positions(detection),
             "frame_diff": frame_diff,
             "average_curvature": calculate_curvature(detection),
@@ -88,6 +97,19 @@ def max_blob_count(detection: pd.DataFrame) -> int:
 
 def calculate_average_bbox_size(group: pd.DataFrame) -> float:
     return np.mean(group["w"] * group["h"])
+
+
+def velocity_relative_to_river_velocity(
+    detection: pd.DataFrame,
+    river_velocity: tuple[float, float] = np.array([2.35, -0.9]),
+) -> tuple[float, float]:
+    v = np.vstack((np.diff(detection["x"]), np.diff(detection["y"]))).T
+    river_velocity_normalized = river_velocity / np.linalg.norm(river_velocity)
+    v_parallel_river = v @ river_velocity_normalized
+    v_orthogonal_river = v @ river_velocity_normalized[::-1]
+    v_parallel_river = np.hstack((np.nan, v_parallel_river))
+    v_orthogonal_river = np.hstack((np.nan, v_orthogonal_river))
+    return v_parallel_river, v_orthogonal_river
 
 
 def calculate_rake_path_ratio(detection: pd.DataFrame, rake_mask: np.array) -> tuple[float, float]:

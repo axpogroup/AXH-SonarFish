@@ -1,5 +1,6 @@
 import itertools
 import json
+from copy import deepcopy
 from multiprocessing import Pool, cpu_count
 from pathlib import Path
 from typing import Callable, Iterator, Optional, Union
@@ -148,6 +149,7 @@ class FeatureGenerator(object):
     ) -> None:
         labels_dfs, gt_dfs, cache_paths = [], [], []
         for idx, (labels_df, gt_df, cache_path) in enumerate(self._read_csvs(labels_csv_paths, gt_csv_paths)):
+            gt_df["id"] = gt_df["id"].apply(lambda x: f"{idx}-{x}")
             gt_dfs.append(gt_df)
             labels_df["video_id"] = idx
             labels_df["id"] = labels_df.apply(lambda x: f"{x['video_id']}-{x['id']}", axis=1)
@@ -568,7 +570,7 @@ class FeatureGenerator(object):
                 df.loc[flow_area_indices, "assigned_label"], _ = self._filter_with_manual_thresholds(
                     df[flow_area_indices], manual_noise_thresholds_flow_area
                 )
-            df.loc[~flow_area_indices, "assigned_label"], model, scaler = (
+            df.loc[~flow_area_indices, "assigned_label"], model_non_flow, scaler = (
                 self._do_binary_classification_for_trajectory_subset(
                     df[~flow_area_indices], model, features, kfold_n_splits
                 )
@@ -582,13 +584,13 @@ class FeatureGenerator(object):
                 df_test = self.stacked_test_dfs.groupby("id").first().reset_index()
                 flow_area_indices = df_test["flow_area_time_ratio"] > 0.5
                 df_test.loc[flow_area_indices, "assigned_label"] = model_flow.predict(
-                    scaler_flow.transform(df_test[flow_area_indices][features])
+                    scaler_flow.transform(df_test[flow_area_indices][features_flow_area])
                 )
                 if manual_noise_thresholds_flow_area:
                     df_test.loc[flow_area_indices, "assigned_label"], _ = self._filter_with_manual_thresholds(
                         df_test[flow_area_indices], manual_noise_thresholds_flow_area
                     )
-                df_test.loc[~flow_area_indices, "assigned_label"] = model.predict(
+                df_test.loc[~flow_area_indices, "assigned_label"] = model_non_flow.predict(
                     scaler.transform(df_test[~flow_area_indices][features])
                 )
                 if manual_noise_thresholds:
@@ -665,12 +667,12 @@ class FeatureGenerator(object):
             X_train, X_val = scaler.transform(X_train), scaler.transform(X_val)
             y_train, _ = y[train_index], y[val_index]
 
-            model = model.fit(X_train, y_train)
+            model = deepcopy(model).fit(X_train, y_train)
             y_kfold[val_index] = model.predict(X_val)
 
         scaler_all = preprocessing.StandardScaler().fit(X)
         X = scaler_all.transform(X)
-        model_all = model.fit(X, y)
+        model_all = deepcopy(model).fit(X, y)
 
         return y_kfold, model_all, scaler_all
 
