@@ -212,24 +212,17 @@ class InputOutputHandler:
         detector,
         label_history=None,
     ):
-        # Total runtime
-        if self.last_output_time is not None:
-            total_time_per_frame = get_elapsed_ms(self.last_output_time)
-        else:
-            self.start_ticks = cv.getTickCount()
-        total_runtime = get_elapsed_ms(self.start_ticks)
-        self.last_output_time = cv.getTickCount()
-
+        total_runtime, total_time_per_frame = self.calculate_total_time()
         if self.frame_no % 20 == 0:
             if total_time_per_frame == 0:
                 total_time_per_frame = 1
+            down_sample_factor = self.fps_in / self.fps_out
             print(
-                f"Processed {'{:.1f}'.format(self.frame_no / self.frames_total * 100)} % of video. "
+                f"Processed {'{:.1f}'.format(self.frame_no * down_sample_factor / self.frames_total * 100)} % of video."
                 f"Runtimes [ms]: getFrame: {self.frame_retrieval_time} | Enhance: {runtimes['enhance']} | "
                 f"DetectTrack: {runtimes['detection_tracking']} | "
                 f"Total: {total_time_per_frame} | FPS: {'{:.1f}'.format(self.frame_no/(2*total_runtime/1000))}"
             )
-
         if self.settings_dict["display_output_video"] or self.settings_dict["record_output_video"]:
             extensive = self.settings_dict["display_mode_extensive"]
             disp = visualization_functions.get_visual_output(
@@ -240,7 +233,6 @@ class InputOutputHandler:
                 extensive=extensive,
                 save_frame=self.settings_dict["record_processing_frame"],
             )
-
             if self.settings_dict["record_output_video"]:
                 if not self.video_writer:
                     self.initialize_output_recording(
@@ -251,6 +243,16 @@ class InputOutputHandler:
 
             if self.settings_dict["display_output_video"]:
                 self.show_image(disp, detector)
+
+    def calculate_total_time(self):
+        if self.last_output_time is not None:
+            total_time_per_frame = get_elapsed_ms(self.last_output_time)
+        else:
+            self.start_ticks = cv.getTickCount()
+            total_time_per_frame = 0
+        total_runtime = get_elapsed_ms(self.start_ticks)
+        self.last_output_time = cv.getTickCount()
+        return total_runtime, total_time_per_frame
 
     def initialize_output_recording(
         self,

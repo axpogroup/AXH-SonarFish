@@ -16,6 +16,7 @@ from algorithm.InputOutputHandler import InputOutputHandler
 from algorithm.validation import mot16_metrics
 
 load_dotenv()
+TRUTH_LABEL_NO = 2
 
 
 def read_labels_into_dataframe(labels_path: Path, filename: str) -> Optional[pd.DataFrame]:
@@ -39,6 +40,7 @@ def extract_labels_history(
             identifier=row["id"],
             frame_number=row["frame"],
             contour=np.array(row[["x", "y", "w", "h"]]),
+            label=int(row.get("assigned_label", TRUTH_LABEL_NO)),
         )
         if row["id"] not in label_history:
             label_history[row["id"]] = truth_detected
@@ -57,7 +59,7 @@ def compute_metrics(settings_dict):
         return mot16_metrics_dict
 
 
-def main(settings_dict: dict):
+def main_algorithm(settings_dict: dict):
     labels_df = read_labels_into_dataframe(
         labels_path=Path(settings_dict.get("ground_truth_directory", "")),
         filename=Path(settings_dict["file_name"]).stem,
@@ -108,13 +110,13 @@ if __name__ == "__main__":
         workspace_name=os.getenv("WORKSPACE_NAME"),
         subscription_id=os.getenv("SUBSCRIPTION_ID"),
     )
-    main(settings)
+    main_algorithm(settings)
     if settings.get("track_azure_ml", False):
         mlflow.set_tracking_uri(workspace.get_mlflow_tracking_uri())
         experiment_name = settings["experiment_name"]
         mlflow.set_experiment(experiment_name)
         with mlflow.start_run():
             mlflow.log_params(settings)
-            main(settings)
+            main_algorithm(settings)
             metrics = compute_metrics(settings)
             mlflow.log_metrics(metrics)
