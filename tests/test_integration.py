@@ -4,10 +4,10 @@ import pandas as pd
 import pytest
 import yaml
 
-from algorithm.extract_labels_from_videos import main as label_extraction_main
-from algorithm.preprocess_raw_videos import main as preprocess_main
 from algorithm.run_algorithm import compute_metrics
 from algorithm.run_algorithm import main as run_algorithm_main
+from algorithm.scripts.extract_labels_from_videos import main as label_extraction_main
+from algorithm.scripts.preprocess_raw_videos import main as preprocess_main
 
 
 @pytest.fixture(scope="session")

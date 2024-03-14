@@ -63,7 +63,7 @@ def trace_window_metrics(group: pd.DataFrame) -> pd.Series:
 
 def load_csv_with_tiles(path: Path) -> pd.DataFrame:
     csv_with_tiles_df = pd.read_csv(path, delimiter=",")
-    csv_with_tiles_df["raw_image_tile"] = csv_with_tiles_df["raw_image_tile"].apply(lambda x: np.array(json.loads(x)))
+    # csv_with_tiles_df["raw_image_tile"] = csv_with_tiles_df["raw_image_tile"].apply(lambda x: np.array(json.loads(x)))
     csv_with_tiles_df["image_tile"] = csv_with_tiles_df["image_tile"].apply(lambda x: np.array(json.loads(x)))
     return csv_with_tiles_df
 
@@ -198,7 +198,7 @@ class FeatureGenerator(object):
         if not labels_df.empty:
             save_df = labels_df.copy()
             save_df["image_tile"] = save_df["image_tile"].apply(lambda x: x.tolist())
-            save_df["raw_image_tile"] = save_df["raw_image_tile"].apply(lambda x: x.tolist())
+            # save_df["raw_image_tile"] = save_df["raw_image_tile"].apply(lambda x: x.tolist())
             save_df.to_csv(cache_path, index=False)
             return labels_df
         else:
@@ -414,9 +414,7 @@ class FeatureGenerator(object):
         boxplot_split_thresholds: list[float] = [1],
     ) -> None:
         boxplot_split_thresholds = sorted(boxplot_split_thresholds)
-        features_to_print = [
-            feature for feature in self.feature_names if feature not in ["image_tile", "raw_image_tile", "video_id"]
-        ]
+        features_to_print = [feature for feature in self.feature_names if feature not in ["image_tile", "video_id"]]
         features_to_plot = [
             feature for feature in features_to_print if feature not in ["classification", "gt_label", "assigned_label"]
         ]
