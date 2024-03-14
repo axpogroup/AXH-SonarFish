@@ -32,7 +32,7 @@ def calculate_average_distance_from_start(detection: pd.DataFrame) -> ndarray:
 def calculate_mean_of_pixel_intensity(row):
     detection_box = row
     if 0 in detection_box.shape:
-        print("detection_box is empty")
+        # print("detection_box is empty")
         return
     mean, _ = cv.meanStdDev(detection_box)
     return mean[0]

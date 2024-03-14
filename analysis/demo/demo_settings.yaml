@@ -1,6 +1,6 @@
 # Input / Output
 file_name: "start_2023-09-14T17-59-27.693+00-00.mp4"
-input_directory:  "data/intermediate/videos/"
+input_directory:  "data/raw/videos/"
 mask_directory: "analysis/demo/masks"
 output_directory: "data/model_output/"
 ground_truth_directory: "data/labels/"
@@ -8,15 +8,19 @@ mask_file: "stroppel_non_object_space.png" # one of ["sonar_controls.png", "stro
 
 # Azure ML
 experiment_name: "how_much_is_the_fish"
+track_azure_ml: False
+
+
 
 tag: "label"
 record_output_video: True # Only works for full resolution output
 record_processing_frame: "raw" # one of ['raw', 'raw_downsampled', 'gray', 'gray_boosted', 'long_mean', 'short_mean', 'difference', 'absolute_difference', 'difference_thresholded', 'difference_thresholded_abs', 'median_filter', 'binary', 'dilated']
 draw_detections_on_saved_video: True
-store_raw_image_patch: True
-
-display_output_video: True
-display_mode_extensive: True
+store_raw_image_patch: False
+store_median_image_patch: False
+show_detections: False
+display_output_video: False
+display_mode_extensive: False
 display_trackbars: False
 
 # Size
@@ -62,5 +66,5 @@ min_occurences_for_fish: 20 # should be at least 20 for sensible calculation of 
 deviation_from_river_velocity: 0.5
 
 # Visualization
-no_more_show_after_x_frames: 5
+no_more_show_after_x_frames: 1
 video_colormap: "red"
