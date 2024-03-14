@@ -31,6 +31,7 @@ def extract_labels_history(
     label_history: dict[int, BoundingBox],
     labels: Optional[pd.DataFrame],
     current_frame: int,
+    feature_to_load: Optional[str] = None,
 ) -> Optional[dict[int, BoundingBox]]:
     if labels is None:
         return None
@@ -41,6 +42,7 @@ def extract_labels_history(
             frame_number=row["frame"],
             contour=np.array(row[["x", "y", "w", "h"]]),
             label=int(row.get("assigned_label", TRUTH_LABEL_NO)),
+            precalculated_feature=row.get(feature_to_load, None),
         )
         if row["id"] not in label_history:
             label_history[row["id"]] = truth_detected
@@ -78,6 +80,7 @@ def main_algorithm(settings_dict: dict):
             label_history,
             labels_df,
             input_output_handler.frame_no,
+            feature_to_load=settings_dict.get("feature_to_load"),
         )
         input_output_handler.handle_output(
             processed_frame=processed_frame_dict,
