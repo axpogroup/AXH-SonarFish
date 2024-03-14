@@ -3,7 +3,7 @@ import json
 from copy import deepcopy
 from multiprocessing import Pool, cpu_count
 from pathlib import Path
-from typing import Callable, Iterator, Optional, Union
+from typing import Any, Callable, Iterator, Optional, Union
 
 import cv2 as cv
 import matplotlib.cm as cm
@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 from matplotlib.lines import Line2D
 from motmetrics.distances import boxiou
+from pandas import DataFrame
 from scipy.optimize import linear_sum_assignment
 from sklearn import metrics, preprocessing
 from sklearn.model_selection import KFold
@@ -82,10 +83,10 @@ class FeatureGenerator(object):
         measurements_csv_paths: list[Union[str, Path]],
         gt_csv_paths: list[Union[str, Path]],
         test_csv_paths: Optional[list[Union[str, Path]]],
-        test_gt_csv_paths: Optional[list[Union[str, Path]]],
         rake_mask_path: Union[str, Path],
         flow_area_mask_path: Union[str, Path],
         non_flow_area_mask_path: Union[str, Path],
+        test_gt_csv_paths: Optional[list[Union[str, Path]]] = None,
         min_track_length: int = 10,
         force_feature_recalc: bool = False,
         min_overlapping_ratio: int = 1,
@@ -93,6 +94,10 @@ class FeatureGenerator(object):
         trajectory_min_overlap_ratio: float = 0.3,
         trajectory_max_iou_track_distance: float = 0.6,
     ):
+        self.test_all_measurements_gt_pairs_secondary = None
+        self.all_measurements_gt_pairs_secondary = None
+        self.all_measurements_gt_pairs = None
+        self.test_all_measurements_gt_pairs = None
         self.measurements_dfs = None
         self.test_dfs = None
         self.min_overlapping_ratio = min_overlapping_ratio
@@ -104,7 +109,10 @@ class FeatureGenerator(object):
         self.trajectory_min_overlap_ratio = trajectory_min_overlap_ratio
         self.trajectory_max_iou_track_distance = trajectory_max_iou_track_distance
         gt_csv_paths = [Path(p) for p in gt_csv_paths]
-        test_gt_csv_paths = [Path(p) for p in test_gt_csv_paths]
+        if test_gt_csv_paths:
+            self.test_gt_csv_paths = [Path(p) for p in test_gt_csv_paths]
+        else:
+            self.test_gt_csv_paths = None
         self.masks = {
             "rake_mask": self._read_mask(rake_mask_path),
             "flow_area_mask": self._read_mask(flow_area_mask_path),
@@ -146,11 +154,12 @@ class FeatureGenerator(object):
         self,
         labels_csv_paths: list[Path],
         gt_csv_paths: list[Path],
-    ) -> None:
+    ) -> tuple[list[Union[DataFrame, DataFrame]], list[Union[DataFrame, DataFrame]], list[Path]]:
         labels_dfs, gt_dfs, cache_paths = [], [], []
         for idx, (labels_df, gt_df, cache_path) in enumerate(self._read_csvs(labels_csv_paths, gt_csv_paths)):
-            gt_df["id"] = gt_df["id"].apply(lambda x: f"{idx}-{x}")
-            gt_dfs.append(gt_df)
+            if not gt_df.empty:
+                gt_df["id"] = gt_df["id"].apply(lambda x: f"{idx}-{x}")
+                gt_dfs.append(gt_df)
             labels_df["video_id"] = idx
             labels_df["id"] = labels_df.apply(lambda x: f"{x['video_id']}-{x['id']}", axis=1)
             labels_dfs.append(labels_df)
@@ -161,7 +170,7 @@ class FeatureGenerator(object):
         self,
         labels_csv_paths: list[Path],
         gt_csv_paths: list[Path],
-    ) -> None:
+    ) -> tuple[list[Union[DataFrame, DataFrame]], list[Union[DataFrame, DataFrame]], list[Path]]:
         labels_dfs = self.read_csvs_from_paths(labels_csv_paths)
         labels_dfs = self.format_old_classifications(labels_dfs)
         gt_dfs = self.read_csvs_from_paths(gt_csv_paths)
@@ -188,10 +197,13 @@ class FeatureGenerator(object):
         self.measurements_dfs, self.all_measurements_gt_pairs, self.all_measurements_gt_pairs_secondary = (
             self._map_measurements2gt_trajectory(self.measurements_dfs, self.gt_dfs)
         )
-        if self.test_dfs:
+        if len(self.test_gt_dfs) != 0:
             self.test_dfs, self.test_all_measurements_gt_pairs, self.test_all_measurements_gt_pairs_secondary = (
                 self._map_measurements2gt_trajectory(self.test_dfs, self.test_gt_dfs)
             )
+        else:
+            for df in self.test_dfs:
+                df["gt_label"] = None
 
     def _read_csvs(
         self,
@@ -201,7 +213,10 @@ class FeatureGenerator(object):
         print("Calculating/reading features")
         for path in tqdm(labels_csv_paths):
             cache_path = self._create_cache_path(path)
-            gt_df = pd.read_csv(gt_csv_paths[labels_csv_paths.index(path)], delimiter=",")
+            if gt_csv_paths:
+                gt_df = pd.read_csv(gt_csv_paths[labels_csv_paths.index(path)], delimiter=",")
+            else:
+                gt_df = pd.DataFrame()
             if cache_path.exists() and not self.force_feature_recalc:
                 print(f"Reading cached features from {cache_path}")
                 labels_df = load_csv_with_tiles(cache_path)
@@ -245,7 +260,9 @@ class FeatureGenerator(object):
         mask = mask[49:1001, 92:1831]  # Drop the border
         return cv.resize(mask, (480, 270)) > 0
 
-    def _map_measurements2gt_trajectory(self, labels_dfs_in: pd.DataFrame, gt_dfs_in: pd.DataFrame) -> None:
+    def _map_measurements2gt_trajectory(
+        self, labels_dfs_in: list[pd.DataFrame], gt_dfs_in: list[pd.DataFrame]
+    ) -> tuple[DataFrame, dict[Any, Any], dict[Any, Any]]:
         print("Mapping labels to ground truth trajectories")
 
         labels_dfs = labels_dfs_in.copy()
@@ -338,7 +355,10 @@ class FeatureGenerator(object):
                 raise ValueError(
                     "No clustering has been performed yet. Please perform clustering with the do_clustering method."
                 )
-            ground_truth = pd.concat(self.test_gt_dfs)
+            if len(self.test_gt_dfs) != 0:
+                ground_truth = pd.concat(self.test_gt_dfs)
+            else:
+                ground_truth = pd.DataFrame()
             stacked_labels_dfs = self.stacked_test_dfs
             all_measurements_gt_pairs = self.test_all_measurements_gt_pairs
             all_measurements_gt_pairs_secondary = self.test_all_measurements_gt_pairs_secondary
@@ -361,31 +381,57 @@ class FeatureGenerator(object):
             ax.imshow(self.masks[mask_to_show], cmap="gray", alpha=0.2)
         plt.gca().invert_yaxis()
 
-        # Plot assigned tracks
-        for measurements_track_id, gt_track_id in all_measurements_gt_pairs.items():
-            self.plot_tracks_and_annotations(
-                ax, colormap, measurements_track_id, stacked_labels_dfs, metric_to_show, show_track_id
+        if ground_truth.empty:
+            for measurements_track_id in stacked_labels_dfs.id.unique():
+                self.plot_tracks_and_annotations(
+                    ax, colormap, measurements_track_id, stacked_labels_dfs, metric_to_show, show_track_id
+                )
+            self.create_plot_components(
+                ax,
+                colormap,
+                n_labels,
+                show_legend,
+                title="Trajectories with assigned label",
+                type_of_label="Manual",
             )
-            gt_track_df = ground_truth[ground_truth.id == gt_track_id]
-            ax.plot(gt_track_df.x, gt_track_df.y, alpha=0.5, color=colormap(0), linestyle="dashed")
-
-        for measurements_track_id, gt_track_id in all_measurements_gt_pairs_secondary.items():
-            self.plot_tracks_and_annotations(
-                ax, colormap, measurements_track_id, stacked_labels_dfs, metric_to_show, show_track_id
+        else:
+            self.plot_assigned_tracks(
+                all_measurements_gt_pairs,
+                all_measurements_gt_pairs_secondary,
+                ax,
+                colormap,
+                ground_truth,
+                metric_to_show,
+                n_labels,
+                show_legend,
+                show_track_id,
+                stacked_labels_dfs,
             )
 
-        ax.set(ylabel="y", title="matched trajectories with assigned label", ylim=[270, 0], xlim=[0, 480])
-        ax.set_aspect("equal", adjustable="box")
+            self.plot_unassigned_tracks(
+                all_measurements_gt_pairs,
+                all_measurements_gt_pairs_secondary,
+                colormap,
+                mask_to_show,
+                metric_to_show,
+                n_labels,
+                show_legend,
+                show_track_id,
+                stacked_labels_dfs,
+            )
 
-        legend_elements = [Line2D([0], [0], color=colormap(0), lw=2, label="manually labeled")]
-        if show_legend:
-            for i in range(n_labels):
-                legend_elements.append(Line2D([0], [0], color=colormap(i + 1), lw=2, label=f"assigned label {i}"))
-        ax.legend(handles=legend_elements)
-
-        plt.show()
-
-        # Plot tracks that were not assigned to a ground truth
+    def plot_unassigned_tracks(
+        self,
+        all_measurements_gt_pairs,
+        all_measurements_gt_pairs_secondary,
+        colormap,
+        mask_to_show,
+        metric_to_show,
+        n_labels,
+        show_legend,
+        show_track_id,
+        stacked_labels_dfs,
+    ):
         _, ax = plt.subplots(nrows=1, ncols=1, sharex=True, figsize=(10, 10))
         if mask_to_show:
             ax.imshow(self.masks[mask_to_show], cmap="gray", alpha=0.2)
@@ -398,15 +444,56 @@ class FeatureGenerator(object):
                 self.plot_tracks_and_annotations(
                     ax, colormap, measurements_track_id, stacked_labels_dfs, metric_to_show, show_track_id
                 )
-        ax.set(ylabel="y", title="non-matched trajectories with assigned label", ylim=[270, 0], xlim=[0, 480])
-        ax.set_aspect("equal", adjustable="box")
+        self.create_plot_components(
+            ax,
+            colormap,
+            n_labels,
+            show_legend,
+            title="non-matched trajectories with assigned label",
+            type_of_label="",
+        )
 
-        legend_elements = [Line2D([0], [0], color=colormap(0), lw=2, label="Label")]
+    def plot_assigned_tracks(
+        self,
+        all_measurements_gt_pairs,
+        all_measurements_gt_pairs_secondary,
+        ax,
+        colormap,
+        ground_truth,
+        metric_to_show,
+        n_labels,
+        show_legend,
+        show_track_id,
+        stacked_labels_dfs,
+    ):
+        for measurements_track_id, gt_track_id in all_measurements_gt_pairs.items():
+            self.plot_tracks_and_annotations(
+                ax, colormap, measurements_track_id, stacked_labels_dfs, metric_to_show, show_track_id
+            )
+            if not ground_truth.empty:
+                gt_track_df = ground_truth[ground_truth.id == gt_track_id]
+                ax.plot(gt_track_df.x, gt_track_df.y, alpha=0.5, color=colormap(0), linestyle="dashed")
+        for measurements_track_id, gt_track_id in all_measurements_gt_pairs_secondary.items():
+            self.plot_tracks_and_annotations(
+                ax, colormap, measurements_track_id, stacked_labels_dfs, metric_to_show, show_track_id
+            )
+        self.create_plot_components(
+            ax,
+            colormap,
+            n_labels,
+            show_legend,
+            title="matched trajectories with assigned label",
+            type_of_label="Assigned",
+        )
+
+    def create_plot_components(self, ax, colormap, n_labels, show_legend, title, type_of_label):
+        ax.set(ylabel="y", title=title, ylim=[270, 0], xlim=[0, 480])
+        ax.set_aspect("equal", adjustable="box")
+        legend_elements = [Line2D([0], [0], color=colormap(0), lw=2, label=f"{type_of_label} label")]
         if show_legend:
             for i in range(n_labels):
                 legend_elements.append(Line2D([0], [0], color=colormap(i + 1), lw=2, label=f"label {i}"))
         ax.legend(handles=legend_elements)
-
         plt.show()
 
     def plot_tracks_and_annotations(

@@ -1,5 +1,5 @@
 # Input / Output
-file_name: "start_2023-09-14T17-59-27.693+00-00.mp4"
+file_name: "start_2023-10-29T17-45-57.425+00-00.mp4"
 input_directory:  "data/raw/videos/"
 mask_directory: "analysis/demo/masks"
 output_directory: "data/model_output/"
@@ -22,6 +22,7 @@ show_detections: False
 display_output_video: False
 display_mode_extensive: False
 display_trackbars: False
+feature_to_load: "max_blob_count"
 
 # Size
 input_pixels_per_mm: 0.0838
