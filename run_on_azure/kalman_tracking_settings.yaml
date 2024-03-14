@@ -1,7 +1,7 @@
 # Input / Output
 file_name: "start_2023-03-28T23-06-14.493+00-00.mp4"
 input_directory:  "data/raw/videos/"
-mask_directory: "analysis/demo/masks"
+mask_directory: "/masks"
 output_directory: "data/model_output/"
 ground_truth_directory: "data/labels/"
 mask_file: "stroppel_non_object_space.png" # one of ["sonar_controls.png", "stroppel_non_object_space.png", "herrendoebeli_non_object_space.png"]
@@ -16,8 +16,8 @@ record_processing_frame: "raw" # one of ['raw', 'raw_downsampled', 'gray', 'gray
 draw_detections_on_saved_video: True
 store_raw_image_patch: False
 store_median_image_patch: False
-show_detections: True
-display_output_video: True
+show_detections: False
+display_output_video: False
 display_mode_extensive: False
 display_trackbars: False
 
