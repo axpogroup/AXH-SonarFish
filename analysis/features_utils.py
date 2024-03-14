@@ -57,6 +57,8 @@ def trace_window_metrics(detection: pd.DataFrame, masks: dict[str, np.array]) ->
             "v_orthogonal_river_avg": np.nanmean(detection["v_orthogonal_river"]),
             "v_parallel_river_median": np.nanmedian(detection["v_parallel_river"]),
             "v_orthogonal_river_median": np.nanmedian(detection["v_orthogonal_river"]),
+            "x_avg": np.mean(detection["x"]),
+            "y_avg": np.mean(detection["y"]),
             "traversed_distance": sum_euclidean_distance_between_positions(detection),
             "frame_diff": frame_diff,
             "average_curvature": calculate_curvature(detection),

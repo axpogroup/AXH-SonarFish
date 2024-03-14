@@ -429,6 +429,7 @@ class FeatureGenerator(object):
             ax.annotate(
                 f"{measurements_track_id}, {metric_annotation}",
                 (track_df.x.iloc[0], track_df.y.iloc[0]),
+                fontsize=5,
             )
 
     def plot_image_tiles_along_trajectory(
@@ -558,7 +559,7 @@ class FeatureGenerator(object):
         manual_noise_thresholds: Optional[tuple[str, str, float]] = None,
         manual_noise_thresholds_flow_area: Optional[tuple[str, str, float]] = None,
     ):
-        if features_flow_area:
+        if features_flow_area is not None:
             df = self.stacked_dfs.groupby("id").first().reset_index()
             flow_area_indices = df["flow_area_time_ratio"] > 0.5
             df.loc[flow_area_indices, "assigned_label"], model_flow, scaler_flow = (
@@ -656,23 +657,28 @@ class FeatureGenerator(object):
         features: list[str],
         kfold_n_splits: int,
     ) -> tuple[np.array, Callable, preprocessing.StandardScaler]:
-        X = np.array(df[features])
-        y = np.array([1 if lbl == "fish" else 0 for lbl in df["gt_label"]])
+        if not features:
+            y_kfold = np.ones(df.shape[0])
+            model_all = NoFeatureModel()
+            scaler_all = NoFeatureScaler()
+        else:
+            X = np.array(df[features])
+            y = np.array([1 if lbl == "fish" else 0 for lbl in df["gt_label"]])
 
-        kf = KFold(n_splits=kfold_n_splits)
-        y_kfold = np.empty(y.shape)
-        for train_index, val_index in kf.split(X):
-            X_train, X_val = X[train_index], X[val_index]
-            scaler = preprocessing.StandardScaler().fit(X_train)
-            X_train, X_val = scaler.transform(X_train), scaler.transform(X_val)
-            y_train, _ = y[train_index], y[val_index]
+            kf = KFold(n_splits=kfold_n_splits)
+            y_kfold = np.empty(y.shape)
+            for train_index, val_index in kf.split(X):
+                X_train, X_val = X[train_index], X[val_index]
+                scaler = preprocessing.StandardScaler().fit(X_train)
+                X_train, X_val = scaler.transform(X_train), scaler.transform(X_val)
+                y_train, _ = y[train_index], y[val_index]
 
-            model = deepcopy(model).fit(X_train, y_train)
-            y_kfold[val_index] = model.predict(X_val)
+                model = deepcopy(model).fit(X_train, y_train)
+                y_kfold[val_index] = model.predict(X_val)
 
-        scaler_all = preprocessing.StandardScaler().fit(X)
-        X = scaler_all.transform(X)
-        model_all = deepcopy(model).fit(X, y)
+            scaler_all = preprocessing.StandardScaler().fit(X)
+            X = scaler_all.transform(X)
+            model_all = deepcopy(model).fit(X, y)
 
         return y_kfold, model_all, scaler_all
 
@@ -819,3 +825,21 @@ class FeatureGenerator(object):
     @property
     def stacked_test_dfs(self):
         return pd.concat(self.test_dfs)
+
+
+class NoFeatureModel(object):
+
+    def __init__(self):
+        pass
+
+    def predict(self, X):
+        return np.ones(X.shape[0])
+
+
+class NoFeatureScaler(object):
+
+    def __init__(self):
+        pass
+
+    def transform(self, X):
+        return X
