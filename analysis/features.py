@@ -457,9 +457,7 @@ class FeatureGenerator(object):
         boxplot_split_thresholds: list[float] = [1],
     ) -> None:
         boxplot_split_thresholds = sorted(boxplot_split_thresholds)
-        features_to_print = [
-            feature for feature in self.feature_names if feature not in ["image_tile", "raw_image_tile", "video_id"]
-        ]
+        features_to_print = [feature for feature in self.feature_names if feature not in ["image_tile", "video_id"]]
         features_to_plot = [
             feature for feature in features_to_print if feature not in ["classification", "gt_label", "assigned_label"]
         ]

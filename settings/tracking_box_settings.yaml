@@ -1,10 +1,10 @@
 # Code written by Leiv Andresen, HTD-A, leiv.andresen@axpo.com
 
 # Input
-input_directory: "data/intermediate/labels/"
+input_directory: "data/raw/labels/"
 
 # Output
-csv_output_directory: "data/labels/"
+csv_output_directory: "data/raw/labels/"
 csv_output_suffix: "_ground_truth.csv"
 overwrite_existing_csv: False
 

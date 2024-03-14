@@ -5,12 +5,7 @@ import numpy as np
 
 
 class BoundingBox:
-    def __init__(
-        self,
-        identifier: int,
-        contour: np.ndarray,
-        frame_number: int,
-    ):
+    def __init__(self, identifier: int, contour: np.ndarray, frame_number: int, label: Optional[str] = None):
         self.frames_observed = [frame_number]
         self.x, self.y, self.w, self.h = contour if contour.shape == (4,) else cv.boundingRect(contour)
         self.x = int(self.x)
@@ -24,6 +19,7 @@ class BoundingBox:
         self._contour = contour
         self.frame_number = frame_number
         self.ID = identifier
+        self.label = label
 
     def update_object(self, detection_box):
         self.frames_observed.append(detection_box.frames_observed[-1])
@@ -41,7 +37,7 @@ class DetectedBlob(BoundingBox):
         contour: np.ndarray,
         frame_number: int,
         frame: dict[str, np.ndarray],
-        store_raw_image_patch: Optional[bool] = None,
+        input_settings: dict,
     ):
         super().__init__(
             identifier,
@@ -52,27 +48,40 @@ class DetectedBlob(BoundingBox):
         self.means_of_pixels_intensity = []
         self.areas = [self.w * self.h if contour.shape == (4,) else cv.contourArea(contour)]
         self.feature_patch = [self.get_feature_patch(frame, "difference_thresholded")]
-        if store_raw_image_patch:
-            self.raw_image_patch = [self.get_feature_patch(frame, "raw")]
         self.calculate_average_pixel_intensity(frame["difference"])
+        self.feature = {
+            "center_pos": self.center_pos,
+            "contour": self.contour,
+            "detection_id": self.ID,
+            "area": self.area,
+            # "patch": self.get_feature_patch(frame, "difference_thresholded"),
+            # "sift": self.sift_features(self.get_feature_patch(frame, "difference_thresholded")),
+            "histogram": self.histogram(frame=frame),
+            "fft": self.fft(frame=frame),
+            "bbox_size_to_stddev_ratio": self.bbox_size_to_stddev_ratio(
+                input_settings.get("bbox_size_to_stddev_ratio_threshold")
+            ),
+        }
+        if input_settings.get("store_raw_image_patch"):
+            self.raw_image_patch = [self.get_feature_patch(frame, "raw")]
 
     def update_object(self, detection):
         super().update_object(detection)
         self.areas.append(detection.areas[-1])
         self.means_of_pixels_intensity.append(detection.means_of_pixels_intensity[-1])
         self.stddevs_of_pixels_intensity.append(detection.stddevs_of_pixels_intensity[-1])
-        self.feature_patch.append(detection.feature_patch[-1])
+        if hasattr(self, "feature_patch"):
+            self.feature_patch.append(detection.feature_patch[-1])
         if hasattr(self, "raw_image_patch"):
             self.raw_image_patch.append(detection.raw_image_patch[-1])
+        self.feature = detection.feature
 
     def calculate_average_pixel_intensity(self, reference_frame: np.ndarray):
         detection_box = reference_frame[self.y : self.y + self.h, self.x : self.x + self.w]
-        if 0 in detection_box.shape:
-            print("detection_box is empty")
-            return
-        mean, stddev = cv.meanStdDev(detection_box)
-        self.means_of_pixels_intensity.append(mean[0][0])
-        self.stddevs_of_pixels_intensity.append(stddev[0][0])
+        if 0 not in detection_box.shape:
+            mean, stddev = cv.meanStdDev(detection_box)
+            self.means_of_pixels_intensity.append(mean[0][0])
+            self.stddevs_of_pixels_intensity.append(stddev[0][0])
 
     def to_xyah(self):
         """Convert bounding box to format `(center x, center y, aspect ratio,
@@ -83,23 +92,8 @@ class DetectedBlob(BoundingBox):
         ret[2] /= ret[3]
         return ret
 
-    def get_feature_patch(self, frame, processing_step: str):
+    def get_feature_patch(self, frame, processing_step: str) -> np.ndarray:
         return frame[processing_step][self.y : self.y + self.h, self.x : self.x + self.w]
-
-    @property
-    def feature(self):
-        feature = {
-            "center_pos": self.center_pos,
-            "contour": self.contour,
-            "detection_id": self.ID,
-            "area": self.area,
-            "patch": self.feature_patch,
-            "sift": self.sift_features,
-            "histogram": self.histogram,
-            "fft": self.fft,
-            "bbox_size_to_stddev_ratio": self.bbox_size_to_stddev_ratio,
-        }
-        return feature
 
     @property
     def center_pos(self):
@@ -113,23 +107,26 @@ class DetectedBlob(BoundingBox):
     def area(self):
         return self.areas[-1]
 
-    @property
-    def histogram(self):
-        img = self.feature_patch[-1]
-        hist_raw = np.histogram(img, bins=range(257))[0].reshape(-1, 1).astype(np.float32)
-
+    def histogram(self, frame: dict[str, np.ndarray]):
+        hist_raw = (
+            np.histogram(self.get_feature_patch(frame, "difference_thresholded"), bins=range(257))[0]
+            .reshape(-1, 1)
+            .astype(np.float32)
+        )
         return cv.normalize(hist_raw, hist_raw, alpha=0, beta=1, norm_type=cv.NORM_MINMAX)
 
-    @property
-    def sift_features(self):
-        patch = self.feature_patch[-1]
-        return cv.SIFT_create().detectAndCompute(patch, None)
+    def sift_features(self, feature_patch: np.ndarray):
+        return cv.SIFT_create().detectAndCompute(feature_patch, None)
 
-    @property
-    def fft(self):
-        patch = self.feature_patch[-1]
-        patch_resized = cv.resize(patch, (64, 64))
-        return np.fft.fft2(patch_resized)
+    def fft(self, frame: dict[str, np.ndarray]):
+        feature_patch = self.get_feature_patch(frame, "difference_thresholded")
+        try:
+            patch_resized = cv.resize(feature_patch, (64, 64))
+            return np.fft.fft2(patch_resized)
+        except Exception as e:
+            print(str(e))
+            print(feature_patch)
+            return None
 
     @property
     def mean_pixel_intensity(self):
@@ -143,10 +140,11 @@ class DetectedBlob(BoundingBox):
     def tlwh(self):
         return np.array([self.x, self.y, self.w, self.h])
 
-    @property
-    def bbox_size_to_stddev_ratio(self):
+    def bbox_size_to_stddev_ratio(self, bbox_size_to_stddev_ratio_threshold):
         if len(self.stddevs_of_pixels_intensity) == 0 or len(self.areas) == 0:
             return None
+        if self.stddevs_of_pixels_intensity[-1] == 0:
+            return bbox_size_to_stddev_ratio_threshold
         return self.areas[-1] / self.stddevs_of_pixels_intensity[-1]
 
 
@@ -157,7 +155,7 @@ class KalmanTrackedBlob(DetectedBlob):
         frame_number: int,
         contour: np.ndarray,
         frame: dict[str, np.ndarray],
-        store_raw_image_patch: bool,
+        input_settings: dict,
         ellipse_angle: Optional[float] = None,
         ellipse_axes_lengths: Optional[tuple[int, int]] = None,
         detection_is_tracked: bool = False,
@@ -167,7 +165,7 @@ class KalmanTrackedBlob(DetectedBlob):
             contour=contour,
             frame_number=frame_number,
             frame=frame,
-            store_raw_image_patch=store_raw_image_patch,
+            input_settings=input_settings,
         )
         self.detection_is_tracked = detection_is_tracked
         self.ellipse_angles = [ellipse_angle]
