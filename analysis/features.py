@@ -1,9 +1,10 @@
 import itertools
 import json
+import pickle
 from copy import deepcopy
 from multiprocessing import Pool, cpu_count
 from pathlib import Path
-from typing import Callable, Iterator, Optional, Union
+from typing import Any, Callable, Iterator, Optional, Union
 
 import cv2 as cv
 import matplotlib.cm as cm
@@ -554,72 +555,47 @@ class FeatureGenerator(object):
         features: list[str],
         features_flow_area: list[str],
         kfold_n_splits: int,
+        models: dict[str, Any] = [],
+        scalers: dict[str, Any] = [],
         manual_noise_thresholds: Optional[tuple[str, str, float]] = None,
         manual_noise_thresholds_flow_area: Optional[tuple[str, str, float]] = None,
     ):
         if features_flow_area is not None:
-            df = self.stacked_dfs.groupby("id").first().reset_index()
-            flow_area_indices = df["flow_area_time_ratio"] > 0.5
-            df.loc[flow_area_indices, "assigned_label"], model_flow, scaler_flow = (
-                self._do_binary_classification_for_trajectory_subset(
-                    df[flow_area_indices], model, features_flow_area, kfold_n_splits
+            if len(models) == 0 and len(scalers) == 0:
+                df, models, scalers = self.perform_flow_area_classification(
+                    features,
+                    features_flow_area,
+                    kfold_n_splits,
+                    manual_noise_thresholds,
+                    manual_noise_thresholds_flow_area,
+                    model,
                 )
+                self.save_model_and_scaler_pickles(
+                    models=models,
+                    scalers=scalers,
+                )
+                self.dump_manual_noise_thresholds_with_models_and_scalers_to_json(
+                    manual_noise_thresholds,
+                    manual_noise_thresholds_flow_area,
+                )
+                self.merge_assigned_labels_to_measurements(df)
+            elif len(models) == 1 and len(scalers) == 1:
+                if "non_flow" in models and "non_flow" in scalers:
+                    models["flow"] = NoFeatureModel()
+                    scalers["flow"] = NoFeatureScaler()
+                else:
+                    raise ValueError("Invalid model and scaler input")
+            df_test = self.score_test_data(
+                features,
+                features_flow_area,
+                manual_noise_thresholds,
+                manual_noise_thresholds_flow_area,
+                models,
+                scalers,
             )
-            if manual_noise_thresholds_flow_area:
-                df.loc[flow_area_indices, "assigned_label"], _ = self._filter_with_manual_thresholds(
-                    df[flow_area_indices], manual_noise_thresholds_flow_area
-                )
-            df.loc[~flow_area_indices, "assigned_label"], model_non_flow, scaler = (
-                self._do_binary_classification_for_trajectory_subset(
-                    df[~flow_area_indices], model, features, kfold_n_splits
-                )
-            )
-            if manual_noise_thresholds:
-                df.loc[~flow_area_indices, "assigned_label"], _ = self._filter_with_manual_thresholds(
-                    df[~flow_area_indices], manual_noise_thresholds
-                )
-            # score on test data
-            if self.test_dfs:
-                df_test = self.stacked_test_dfs.groupby("id").first().reset_index()
-                flow_area_indices = df_test["flow_area_time_ratio"] > 0.5
-                df_test.loc[flow_area_indices, "assigned_label"] = model_flow.predict(
-                    scaler_flow.transform(df_test[flow_area_indices][features_flow_area])
-                )
-                if manual_noise_thresholds_flow_area:
-                    df_test.loc[flow_area_indices, "assigned_label"], _ = self._filter_with_manual_thresholds(
-                        df_test[flow_area_indices], manual_noise_thresholds_flow_area
-                    )
-                df_test.loc[~flow_area_indices, "assigned_label"] = model_non_flow.predict(
-                    scaler.transform(df_test[~flow_area_indices][features])
-                )
-                if manual_noise_thresholds:
-                    df_test.loc[~flow_area_indices, "assigned_label"], _ = self._filter_with_manual_thresholds(
-                        df_test[~flow_area_indices], manual_noise_thresholds
-                    )
-
         else:
-            df = self.stacked_dfs.groupby("id").first().reset_index()
-            df["assigned_label"] = self._do_binary_classification_for_trajectory_subset(
-                df, model, features, kfold_n_splits
-            )
-            # score on test data
-            if self.test_dfs:
-                df_test = self.stacked_test_dfs.groupby("id").first().reset_index()
-                df_test["assigned_label"] = model.predict(scaler.transform(df_test[features]))
-
-            if manual_noise_thresholds:
-                df, _ = self._filter_with_manual_thresholds(df, manual_noise_thresholds)
-                if self.test_dfs:
-                    df_test, _ = self._filter_with_manual_thresholds(df_test, manual_noise_thresholds)
-
-        for idx, measurement_df in enumerate(self.measurements_dfs):
-            try:
-                measurement_df.drop(columns=["assigned_label"], inplace=True)
-            except KeyError:
-                pass
-            video_id = measurement_df["video_id"].iloc[0]
-            right_df = df[df["video_id"] == video_id][["id", "assigned_label"]]
-            self.measurements_dfs[idx] = measurement_df.merge(right_df, on="id", how="left")
+            # TODO rain model for all trajectories if features_flow_area is None
+            raise NotImplementedError("Not supported anymore")
 
         if self.test_dfs:
             for idx, test_df in enumerate(self.test_dfs):
@@ -630,6 +606,95 @@ class FeatureGenerator(object):
                 video_id = test_df["video_id"].iloc[0]
                 right_df = df_test[df_test["video_id"] == video_id][["id", "assigned_label"]]
                 self.test_dfs[idx] = test_df.merge(right_df, on="id", how="left")
+
+    def merge_assigned_labels_to_measurements(self, df):
+        for idx, measurement_df in enumerate(self.measurements_dfs):
+            try:
+                measurement_df.drop(columns=["assigned_label"], inplace=True)
+            except KeyError:
+                pass
+            video_id = measurement_df["video_id"].iloc[0]
+            right_df = df[df["video_id"] == video_id][["id", "assigned_label"]]
+            self.measurements_dfs[idx] = measurement_df.merge(right_df, on="id", how="left")
+
+    def perform_flow_area_classification(
+        self,
+        features,
+        features_flow_area,
+        kfold_n_splits,
+        manual_noise_thresholds,
+        manual_noise_thresholds_flow_area,
+        model,
+    ):
+        df = self.stacked_dfs.groupby("id").first().reset_index()
+        flow_area_indices = df["flow_area_time_ratio"] > 0.5
+        df.loc[flow_area_indices, "assigned_label"], model_flow, scaler_flow = (
+            self._do_binary_classification_for_trajectory_subset(
+                df[flow_area_indices], model, features_flow_area, kfold_n_splits
+            )
+        )
+        if manual_noise_thresholds_flow_area:
+            df.loc[flow_area_indices, "assigned_label"], _ = self._filter_with_manual_thresholds(
+                df[flow_area_indices], manual_noise_thresholds_flow_area
+            )
+        df.loc[~flow_area_indices, "assigned_label"], model_non_flow, scaler = (
+            self._do_binary_classification_for_trajectory_subset(
+                df[~flow_area_indices], model, features, kfold_n_splits
+            )
+        )
+        if manual_noise_thresholds:
+            df.loc[~flow_area_indices, "assigned_label"], _ = self._filter_with_manual_thresholds(
+                df[~flow_area_indices], manual_noise_thresholds
+            )
+        models = {"flow": model_flow, "non_flow": model_non_flow}
+        scalers = {"flow": scaler_flow, "non_flow": scaler}
+        return df, models, scalers
+
+    def save_model_and_scaler_pickles(self, models: dict, scalers: dict):
+        saved_models = []
+        saved_scalers = []
+        for key, model in models.items():
+            if not isinstance(model, NoFeatureModel):
+                model_pkl_file = f"{key}_classifier_model.pkl"
+                with open(model_pkl_file, "wb") as file:
+                    saved_models.append(model_pkl_file)
+                    pickle.dump(model, file)
+        for key, scaler in scalers.items():
+            if not isinstance(scaler, NoFeatureScaler):
+                scaler_pkl_file = f"{key}_scaler.pkl"
+                with open(scaler_pkl_file, "wb") as file:
+                    saved_scalers.append(scaler_pkl_file)
+                    pickle.dump(scaler, file)
+        self.saved_models = saved_models
+        self.saved_scalers = saved_scalers
+
+    def score_test_data(
+        self,
+        features,
+        features_flow_area,
+        manual_noise_thresholds,
+        manual_noise_thresholds_flow_area,
+        models,
+        scalers,
+    ):
+        if self.test_dfs:
+            df_test = self.stacked_test_dfs.groupby("id").first().reset_index()
+            flow_area_indices = df_test["flow_area_time_ratio"] > 0.5
+            df_test.loc[flow_area_indices, "assigned_label"] = models["flow"].predict(
+                scalers["flow"].transform(df_test[flow_area_indices][features_flow_area])
+            )
+            if manual_noise_thresholds_flow_area:
+                df_test.loc[flow_area_indices, "assigned_label"], _ = self._filter_with_manual_thresholds(
+                    df_test[flow_area_indices], manual_noise_thresholds_flow_area
+                )
+            df_test.loc[~flow_area_indices, "assigned_label"] = models["non_flow"].predict(
+                scalers["non_flow"].transform(df_test[~flow_area_indices][features])
+            )
+            if manual_noise_thresholds:
+                df_test.loc[~flow_area_indices, "assigned_label"], _ = self._filter_with_manual_thresholds(
+                    df_test[~flow_area_indices], manual_noise_thresholds
+                )
+        return df_test
 
     @staticmethod
     def _filter_with_manual_thresholds(
@@ -811,6 +876,18 @@ class FeatureGenerator(object):
             save_df = df.copy()
             save_df.drop(columns=["image_tile", "raw_image_tile"], inplace=True, errors="ignore")
             save_df.to_csv(save_path, index=False)
+
+    def dump_manual_noise_thresholds_with_models_and_scalers_to_json(
+        self, manual_noise_thresholds, manual_noise_thresholds_flow_area
+    ):
+        json_to_save = {
+            "manual_noise_thresholds": manual_noise_thresholds,
+            "manual_noise_thresholds_flow_area": manual_noise_thresholds_flow_area,
+            "saved_models": self.saved_models,
+            "saved_scalers": self.saved_scalers,
+        }
+        with open("classification_parameters.json", "w") as file:
+            json.dump(json_to_save, file)
 
     @property
     def feature_names(self):

@@ -55,6 +55,8 @@ def trace_window_metrics(detection: pd.DataFrame, masks: dict[str, np.array]) ->
             "v_yr_median": np.median(detection["v_yr"]),
             "v_parallel_river_avg": np.nanmean(detection["v_parallel_river"]),
             "v_orthogonal_river_avg": np.nanmean(detection["v_orthogonal_river"]),
+            "v_orthogonal_abs_sum": np.sum(np.abs(detection["v_orthogonal_river"])),
+            "v_orthogonal_abs_avg": np.mean(np.abs(detection["v_orthogonal_river"])),
             "v_parallel_river_median": np.nanmedian(detection["v_parallel_river"]),
             "v_orthogonal_river_median": np.nanmedian(detection["v_orthogonal_river"]),
             "x_avg": np.mean(detection["x"]),
