@@ -378,6 +378,14 @@ class FeatureGenerator(object):
         ax.set(ylabel="y", title="matched trajectories with assigned label", ylim=[270, 0], xlim=[0, 480])
         ax.set_aspect("equal", adjustable="box")
 
+        # Plot ground truths that were not assigned a track
+        for gt_track_id in ground_truth.id.unique():
+            if (gt_track_id not in all_measurements_gt_pairs.values()) and (
+                gt_track_id not in all_measurements_gt_pairs_secondary.values()
+            ):
+                gt_track_df = ground_truth[ground_truth.id == gt_track_id]
+                ax.plot(gt_track_df.x, gt_track_df.y, alpha=0.5, color=colormap(0), linestyle="dashed")
+
         legend_elements = [Line2D([0], [0], color=colormap(0), lw=2, label="manually labeled")]
         if show_legend:
             for i in range(n_labels):
