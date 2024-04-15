@@ -31,9 +31,11 @@ def extract_labels_history(
     label_history: dict[int, BoundingBox],
     labels: Optional[pd.DataFrame],
     current_frame: int,
+    down_sample_factor: int = 1,
 ) -> Optional[dict[int, BoundingBox]]:
     if labels is None:
         return None
+    # current_frame_df = labels[labels["frame"] == int(current_frame * down_sample_factor)]
     current_frame_df = labels[labels["frame"] == current_frame]
     for _, row in current_frame_df.iterrows():
         truth_detected = BoundingBox(
@@ -78,6 +80,7 @@ def main_algorithm(settings_dict: dict):
             label_history,
             labels_df,
             input_output_handler.frame_no,
+            down_sample_factor=input_output_handler.down_sample_factor,
         )
         input_output_handler.handle_output(
             processed_frame=processed_frame_dict,
