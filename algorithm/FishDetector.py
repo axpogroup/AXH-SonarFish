@@ -35,7 +35,6 @@ class FishDetector:
             (Path(self.conf["mask_directory"]) / mask_file).as_posix(),
             cv.IMREAD_GRAYSCALE,
         )
-        assert self.mask is not None, f"Mask file not found: {mask_file}"
 
     def detect_objects(self, raw_frame) -> tuple[Dict[int, DetectedBlob], dict, dict]:
         start = cv.getTickCount()
