@@ -2,15 +2,14 @@ from pathlib import Path
 
 import cv2
 import yaml
-from tqdm import tqdm
 
 
 def main(settings_dict: dict):
     input_directory_path = Path(settings_dict["input_directory"])
     output_directory_path = Path(settings_dict["output_directory"])
-    input_video_file_paths = list(input_directory_path.glob("**/*.mp4"))
+    input_video_file_paths = input_directory_path.glob("**/*.mp4")
 
-    for file_path in tqdm(input_video_file_paths, desc="Processing videos"):
+    for file_path in input_video_file_paths:
         output_file_path = output_directory_path / file_path.relative_to(input_directory_path)
         if output_file_path.exists() and not settings_dict["overwrite_existing_files"]:
             print(f"Skipping {file_path} since it already exists")
@@ -24,6 +23,8 @@ def main(settings_dict: dict):
         )
 
 
+# Stackoverflow:
+# https://stackoverflow.com/questions/69306191/how-to-change-frame-per-second-fps-while-using-cv2-when-converting-video-to
 def down_sample_frame_rate_of_video(input_file: Path, output_file: Path, fps_out: int):
     vidcap = cv2.VideoCapture(input_file.__str__())
     assert vidcap.isOpened()
@@ -40,23 +41,21 @@ def down_sample_frame_rate_of_video(input_file: Path, output_file: Path, fps_out
         frameSize=(int(width), int(height)),
     )
     fail_rate = 0
-    total_frames = int(vidcap.get(cv2.CAP_PROP_FRAME_COUNT))
-    with tqdm(total=total_frames, desc="Processing frames") as pbar:
-        while True:
-            success = vidcap.grab()
-            if success:
-                index_in += 1
-                fail_rate = 0
-                out_due = int(index_in / fps_in * fps_out)
-                if out_due > index_out:
-                    success, frame = vidcap.retrieve()
-                    if success:
-                        index_out += 1
-                        video_writer.write(frame)
-                        pbar.update(1)
-            fail_rate += 1
-            if fail_rate > 30:
-                break
+    while True:
+        success = vidcap.grab()
+        if success:
+            index_in += 1
+            fail_rate = 0
+            out_due = int(index_in / fps_in * fps_out)
+            if out_due > index_out:
+                success, frame = vidcap.retrieve()
+                if success:
+                    index_out += 1
+                    video_writer.write(frame)
+                    print(f"Frame {index_in} -> {index_out} (due {out_due})")
+        fail_rate += 1
+        if fail_rate > 30:
+            break
     # Release everything if job is finished
     vidcap.release()
     video_writer.release()
