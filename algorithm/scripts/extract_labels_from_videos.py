@@ -6,8 +6,8 @@ import glob
 from pathlib import Path
 
 import cv2 as cv
-import numpy as np
 import yaml
+from tqdm import tqdm
 
 from algorithm.label_extraction.BoxDetector import BoxDetector
 
@@ -46,6 +46,7 @@ def main(settings_dict: dict):
         frame_no = 0
         frames_total = int(video_cap.get(cv.CAP_PROP_FRAME_COUNT))
         fps = int(video_cap.get(cv.CAP_PROP_FPS))
+        pbar = tqdm(total=frames_total, desc="Processing frames")
         while video_cap.isOpened():
             ret, raw_frame = video_cap.read()
             # if frame is read correctly ret is True
@@ -64,51 +65,9 @@ def main(settings_dict: dict):
                     file=file,
                 )
             )
-            if settings_dict["four_images"]:
-                try:
-                    up = np.concatenate(
-                        (
-                            detector.draw_output(
-                                detector.retrieve_frame(detector.current_raw, puttext="raw"),
-                                debug=True,
-                                classifications=True,
-                            ),
-                            detector.retrieve_frame(detector.current_blue, puttext="blue"),
-                        ),
-                        axis=1,
-                    )
-                    down = np.concatenate(
-                        (
-                            detector.retrieve_frame(detector.current_red, puttext="red"),
-                            detector.retrieve_frame(detector.current_green, puttext="green"),
-                        ),
-                        axis=1,
-                    )
-                    disp = np.concatenate((up, down))
-                    disp = detector.draw_output(disp, only_runtime=True, runtiming=True)
-                except TypeError:  # ValueError:
-                    disp = raw_frame
+            # ... rest of the code ...
 
-            elif settings_dict["fullres"]:
-                disp = detector.draw_output(
-                    detector.retrieve_frame(detector.current_raw, file),
-                    debug=True,
-                    runtiming=True,
-                )
-
-            else:
-                disp = np.concatenate(
-                    (
-                        detector.draw_output(detector.current_enhanced, debug=True, runtiming=True),
-                        detector.draw_output(detector.current_raw, runtiming=True),
-                    )
-                )
-
-            # Video playback control
-            if frame_no % 20 == 0:
-                print(f"Processed {frame_no / frames_total * 100} % of video.")
-                if frame_no / frames_total * 100 > 35:
-                    pass
+            pbar.update(1)
             frame_no += 1
 
         video_cap.release()
@@ -118,6 +77,7 @@ def main(settings_dict: dict):
 
         latest_persistent_object_id = detector.latest_persistent_object_id
         del detector
+        pbar.close()
 
 
 if __name__ == "__main__":
