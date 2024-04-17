@@ -71,6 +71,7 @@ def main_algorithm(settings_dict: dict):
     detector = FishDetector(settings_dict)
     object_history: dict[int, KalmanTrackedBlob] = {}
     label_history = {}
+    print("Starting main algorithm.")
     while input_output_handler.get_new_frame():
         detections, processed_frame_dict, runtimes = detector.detect_objects(input_output_handler.current_raw_frame)
         object_history = detector.associate_detections(
