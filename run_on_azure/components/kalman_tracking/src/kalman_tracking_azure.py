@@ -2,6 +2,7 @@ import argparse
 import logging
 from pathlib import Path
 
+import cv2 as cv
 import mlflow
 import yaml
 
@@ -18,19 +19,23 @@ def init():
     parser = get_parser()
     args, _ = parser.parse_known_args()
     TRACKING_CONFIG = args.tracking_config
+    if args.job_output_path is None:
+        print("job_output_path is None, setting it to job_inputs_path/outputs")
+        args.job_output_path = args.job_inputs_path + "/outputs"
     OUTPUT_PATH = args.job_output_path
     LOG_LEVEL = args.log_level
     DATA_PATH = args.job_inputs_path
+    print("OpenCV build information: ")
+    print(cv.getBuildInformation())
     print("Pass through init done")
 
 
 def run(mini_batch):
     """Run."""
     logging.basicConfig(level=logging.getLevelName(LOG_LEVEL))
-    logger = logging.getLogger(__name__)
+    # logger = logging.getLogger(__name__)
 
     # mini_batch is a list of file paths for File Data
-    output_csv_names = []
     for file_path in mini_batch:
         file = Path(file_path)
         file_base_path = file.parent.as_posix()
@@ -52,14 +57,12 @@ def run(mini_batch):
             settings = yaml.load(f, Loader=yaml.SafeLoader)
 
         with mlflow.start_run():
-            logger.info(f"replacing input directory with {file_base_path}.")
-            logger.info(f"replacing output directory with {OUTPUT_PATH}.")
+            print(f"replacing input directory with {file_base_path}.")
+            print(f"replacing output directory with {OUTPUT_PATH}.")
             settings["input_directory"] = file_base_path
             settings["output_directory"] = OUTPUT_PATH
             settings["file_name"] = file_name
-            output_csv_names.append(main_algorithm(settings))
-
-    return output_csv_names
+            main_algorithm(settings)
 
 
 def get_parser() -> argparse.ArgumentParser:
@@ -73,11 +76,24 @@ def get_parser() -> argparse.ArgumentParser:
         help="path to the input video files directory, only needed when not running as parallel pipeline",
         required=True,
     )
-    parser.add_argument("--job_output_path", type=str, help="path to the output directory", required=True)
     parser.add_argument(
-        "--tracking_config", type=str, help="path to the YAML settings file", default="kalman_tracking_settings.yaml"
+        "--job_output_path",
+        type=str,
+        help="path to the output directory",
+        default=None,
     )
-    parser.add_argument("--log_level", type=str, help="log level", default="INFO")
+    parser.add_argument(
+        "--tracking_config",
+        type=str,
+        help="path to the YAML settings file",
+        default="kalman_tracking_settings.yaml",
+    )
+    parser.add_argument(
+        "--log_level",
+        type=str,
+        help="log level",
+        default="INFO",
+    )
     return parser
 
 
