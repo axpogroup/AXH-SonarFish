@@ -5,7 +5,14 @@ import numpy as np
 
 
 class BoundingBox:
-    def __init__(self, identifier: int, contour: np.ndarray, frame_number: int, label: Optional[str] = None):
+    def __init__(
+        self,
+        identifier: int,
+        contour: np.ndarray,
+        frame_number: int,
+        label: Optional[int] = None,
+        precalculated_feature: Optional[str] = None,
+    ):
         self.frames_observed = [frame_number]
         self.x, self.y, self.w, self.h = contour if contour.shape == (4,) else cv.boundingRect(contour)
         self.x = int(self.x)
@@ -20,6 +27,7 @@ class BoundingBox:
         self.frame_number = frame_number
         self.ID = identifier
         self.label = label
+        self.precalculated_feature = precalculated_feature
 
     def update_object(self, detection_box):
         self.frames_observed.append(detection_box.frames_observed[-1])

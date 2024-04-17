@@ -140,7 +140,6 @@ def _draw_labels(
     label_history: dict[int, BoundingBox],
     detector,
     img,
-    color=(255, 200, 200),
     paths=False,
     fullres=False,
     association_dist=False,
@@ -247,6 +246,8 @@ def draw_basic_bounding_box_and_path(
             1 * scale,
         )
     if label:
+        if label == "fish" and obj.precalculated_feature is not None:
+            label += f", {obj.precalculated_feature}"
         cv.putText(
             img,
             label,

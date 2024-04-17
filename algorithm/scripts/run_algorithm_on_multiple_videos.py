@@ -15,9 +15,6 @@ if __name__ == "__main__":
 
     with open(args.yaml_file) as f:
         settings = yaml.load(f, Loader=yaml.SafeLoader)
-        if args.input_file is not None:
-            print("replacing input file.")
-            settings["file_name"] = args.input_file
 
     workspace = Workspace(
         resource_group=os.getenv("RESOURCE_GROUP"),
@@ -33,6 +30,7 @@ if __name__ == "__main__":
     )
 
     input_video_file_paths = input_directory_path.glob("**/*.mp4")
+    csv_output_directory = input_directory_path / settings["output_directory"]
     for input_video_path in input_video_file_paths:
         settings["file_name"] = input_video_path.name
         main_algorithm(settings)
