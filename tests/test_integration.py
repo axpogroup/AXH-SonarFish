@@ -5,14 +5,14 @@ import pytest
 import yaml
 
 from algorithm.run_algorithm import compute_metrics
-from algorithm.run_algorithm import main as run_algorithm_main
+from algorithm.run_algorithm import main_algorithm as run_algorithm_main
 from algorithm.scripts.extract_labels_from_videos import main as label_extraction_main
 from algorithm.scripts.preprocess_raw_videos import main as preprocess_main
 
 
 @pytest.fixture(scope="session")
 def labels_directory():
-    return "data/labels"
+    return "data/raw/labels"
 
 
 @pytest.fixture(scope="session")
@@ -56,14 +56,18 @@ def relevant_csv_columns():
 def clear_directory(directory):
     files = os.listdir(directory)
     for file in files:
-        if file != ".gitkeep":
+        if file != ".gitkeep" and not (directory.endswith("raw/labels") and file == "trimmed_video.mp4"):
             os.remove(f"{directory}/{file}")
 
 
 def assert_directory_empty(directory: str):
+    allowed_files = [".gitkeep", "trimmed_video.mp4"]
     files = os.listdir(directory)
-    if not (len(files) == 1 and files[0] == ".gitkeep"):
-        raise Exception(f"The {directory} directory should be empty before running the test, but it has {files=}")
+    disallowed_files = [file for file in files if file not in allowed_files]
+    if disallowed_files:
+        raise Exception(
+            f"The {directory} directory should be empty before running the test, but it has {disallowed_files=}"
+        )
 
 
 class TestIntegration:
