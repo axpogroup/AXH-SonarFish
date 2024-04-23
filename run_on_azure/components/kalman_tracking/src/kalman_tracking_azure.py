@@ -73,7 +73,8 @@ def get_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--job_inputs_path",
         type=str,
-        help="path to the input video files directory, only needed when not running as parallel pipeline",
+        help="path to the input video files directory or individual file path, \
+              only needed when not running as parallel pipeline",
         required=True,
     )
     parser.add_argument(
@@ -98,8 +99,11 @@ def get_parser() -> argparse.ArgumentParser:
 
 
 def main():
-    input_video_file_paths = list(Path(DATA_PATH).glob("**/*.mp4"))
-    print(f"Found {len(input_video_file_paths)} video files in {DATA_PATH}")
+    if Path(DATA_PATH).is_dir():
+        input_video_file_paths = list(Path(DATA_PATH).glob("**/*.mp4"))
+        print(f"Found {len(input_video_file_paths)} video files in the given directory.")
+    else:
+        input_video_file_paths = [DATA_PATH]
     print(f"Processing {input_video_file_paths}")
     run(input_video_file_paths)
 

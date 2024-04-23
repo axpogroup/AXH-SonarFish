@@ -22,10 +22,26 @@ environment: azureml:fishy_environment:6
 # queue_settings:
 #   job_tier: spot
 code: src
-command: >-
-  python kalman_tracking_azure.py 
-  --job_inputs_path ${{inputs.data}}
-  --job_output_path ${{outputs.detections}}
-  $[[--tracking_config_path ${{inputs.tracking_config}}]]
-  $[[--log_level ${{inputs.logging_level}}]]
+command: |
+  success_count=0 
+  total_count=0 
+  for file in ${{inputs.data}}/*; do 
+    total_count=$((total_count+1)) 
+    for attempt in {1..2}; do 
+      python kalman_tracking_azure.py \
+      --job_inputs_path "$file" \
+      --job_output_path ${{outputs.detections}} \
+      $[[--tracking_config_path ${{inputs.tracking_config}}]] \
+      $[[--log_level ${{inputs.logging_level}}]] && { success_count=$((success_count+1)); break; } 
+      echo "Warning: Attempt $attempt failed. Retrying..." 
+    done 
+  done 
+  echo "Number of successful executions: $success_count out of $total_count"
+# for a single file
+# command: >-
+#   python kalman_tracking_azure.py 
+#   --job_inputs_path ${{inputs.data}}
+#   --job_output_path ${{outputs.detections}}
+#   $[[--tracking_config_path ${{inputs.tracking_config}}]]
+#   $[[--log_level ${{inputs.logging_level}}]]
 # </component>
