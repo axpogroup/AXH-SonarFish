@@ -646,6 +646,8 @@ class FeatureGenerator(object):
         scalers: dict[str, Any] = [],
         manual_noise_thresholds: Optional[tuple[str, str, float]] = None,
         manual_noise_thresholds_flow_area: Optional[tuple[str, str, float]] = None,
+        class_overrides: Optional[dict[str, str, float, int]] = None,
+        class_overrides_flow_area: Optional[dict[str, str, float, int]] = None,
     ):
         if features_flow_area is not None:
             if len(models) == 0 and len(scalers) == 0:
@@ -655,6 +657,8 @@ class FeatureGenerator(object):
                     kfold_n_splits,
                     manual_noise_thresholds,
                     manual_noise_thresholds_flow_area,
+                    class_overrides,
+                    class_overrides_flow_area,
                     model,
                 )
                 self.save_model_and_scaler_pickles(
@@ -711,6 +715,8 @@ class FeatureGenerator(object):
         kfold_n_splits,
         manual_noise_thresholds,
         manual_noise_thresholds_flow_area,
+        class_overrides,
+        class_overrides_flow_area,
         model,
     ):
         df = self.stacked_dfs.groupby("id").first().reset_index()
@@ -722,7 +728,9 @@ class FeatureGenerator(object):
         )
         if manual_noise_thresholds_flow_area:
             df.loc[flow_area_indices, "assigned_label"], _ = self._filter_with_manual_thresholds(
-                df[flow_area_indices], manual_noise_thresholds_flow_area
+                df[flow_area_indices],
+                manual_noise_thresholds_flow_area,
+                class_overrides_flow_area,
             )
         df.loc[~flow_area_indices, "assigned_label"], model_non_flow, scaler = (
             self._do_binary_classification_for_trajectory_subset(
@@ -731,7 +739,9 @@ class FeatureGenerator(object):
         )
         if manual_noise_thresholds:
             df.loc[~flow_area_indices, "assigned_label"], _ = self._filter_with_manual_thresholds(
-                df[~flow_area_indices], manual_noise_thresholds
+                df[~flow_area_indices],
+                manual_noise_thresholds,
+                class_overrides,
             )
         models = {"flow": model_flow, "non_flow": model_non_flow}
         scalers = {"flow": scaler_flow, "non_flow": scaler}
@@ -785,7 +795,9 @@ class FeatureGenerator(object):
 
     @staticmethod
     def _filter_with_manual_thresholds(
-        df_in: pd.DataFrame, manual_thresholds: tuple[str, str, float]
+        df_in: pd.DataFrame,
+        manual_thresholds: tuple[str, str, float],
+        class_overrides: Optional[tuple[str, str, float, int]] = None,
     ) -> tuple[pd.Series, np.array]:
         df = df_in.copy()
         removed_indices = np.zeros(len(df))
@@ -798,6 +810,18 @@ class FeatureGenerator(object):
                 removed_indices = np.logical_or(removed_indices, df[feature] > threshold)
             else:
                 raise ValueError(f"Invalid operator: {operator}")
+
+        if class_overrides:
+            for feature, operator, threshold, label in class_overrides:
+                if operator == "smaller":
+                    df.loc[df[feature] < threshold, "assigned_label"] = label
+                    removed_indices = np.logical_or(removed_indices, df[feature] < threshold)
+                elif operator == "larger":
+                    df.loc[df[feature] > threshold, "assigned_label"] = label
+                    removed_indices = np.logical_or(removed_indices, df[feature] > threshold)
+                else:
+                    raise ValueError(f"Invalid operator: {operator}")
+
         return df["assigned_label"], removed_indices
 
     @staticmethod
@@ -902,6 +926,7 @@ class FeatureGenerator(object):
             df = self.stacked_dfs.groupby(["id"]).first().reset_index()
 
         df["gt_label"] = df["gt_label"].apply(lambda x: 1 if x == "fish" else 0)
+        df["assigned_label"] = df["assigned_label"].apply(lambda x: 1 if x == 1 else 0)
 
         if distinguish_flow_areas:
             flow_area_indices = df["flow_area_time_ratio"] > 0.5
