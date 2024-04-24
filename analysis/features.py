@@ -139,7 +139,7 @@ class FeatureGenerator(object):
     def format_old_classifications(self, labels_dfs: list[pd.DataFrame]):
         dfs = labels_dfs.copy()
         for idx, df in enumerate(dfs):
-            dfs[idx]["assigned_label"] = df["classification"].apply(lambda x: 1 if x == "fish" else 0)
+            dfs[idx]["classification_v2"] = df["classification"].apply(lambda x: 1 if x == "fish" else 0)
             feature_df = (
                 dfs[idx]
                 .groupby("id")
@@ -352,7 +352,7 @@ class FeatureGenerator(object):
         show_track_id: bool = False,
     ) -> None:
         if plot_test_data:
-            if "assigned_label" not in self.test_dfs[0].columns:
+            if "classification_v2" not in self.test_dfs[0].columns:
                 raise ValueError(
                     "No clustering has been performed yet. Please perform clustering with the do_clustering method."
                 )
@@ -364,7 +364,7 @@ class FeatureGenerator(object):
             all_measurements_gt_pairs = self.test_all_measurements_gt_pairs
             all_measurements_gt_pairs_secondary = self.test_all_measurements_gt_pairs_secondary
         else:
-            if "assigned_label" not in self.measurements_dfs[0].columns:
+            if "classification_v2" not in self.measurements_dfs[0].columns:
                 raise ValueError(
                     "No clustering has been performed yet. Please perform clustering with the do_clustering method."
                 )
@@ -373,7 +373,7 @@ class FeatureGenerator(object):
             all_measurements_gt_pairs = self.all_measurements_gt_pairs
             all_measurements_gt_pairs_secondary = self.all_measurements_gt_pairs_secondary
 
-        n_labels = stacked_labels_dfs["assigned_label"].nunique()
+        n_labels = stacked_labels_dfs["classification_v2"].nunique()
         show_legend = True if n_labels <= 6 else False
         colormap = cm.get_cmap("viridis", n_labels + 1)  # +1 for the ground truth color
 
@@ -510,7 +510,7 @@ class FeatureGenerator(object):
         ax.plot(
             track_df.x,
             track_df.y,
-            color=colormap(int(track_df.assigned_label.iloc[0]) + 1),
+            color=colormap(int(track_df.classification_v2.iloc[0]) + 1),
         )
         metric_annotation = str(track_df[metric_to_show].iloc[0])[:6] if metric_to_show else ""
         if show_track_id:
@@ -547,7 +547,9 @@ class FeatureGenerator(object):
         boxplot_split_thresholds = sorted(boxplot_split_thresholds)
         features_to_print = [feature for feature in self.feature_names if feature not in ["image_tile", "video_id"]]
         features_to_plot = [
-            feature for feature in features_to_print if feature not in ["classification", "gt_label", "assigned_label"]
+            feature
+            for feature in features_to_print
+            if feature not in ["classification", "gt_label", "classification_v2"]
         ]
 
         all_tracks_df = self.stacked_dfs.groupby(["video_id", "id"]).first().reset_index()
@@ -630,11 +632,11 @@ class FeatureGenerator(object):
         clustering.fit(X)
         for idx, df in enumerate(self.measurements_dfs):
             X_val = scaler.transform(df[features])
-            self.measurements_dfs[idx]["assigned_label"] = clustering.predict(X_val)
+            self.measurements_dfs[idx]["classification_v2"] = clustering.predict(X_val)
 
         for idx, df in enumerate(self.test_dfs):
             X_test = scaler.transform(df[features])
-            self.test_dfs[idx]["assigned_label"] = clustering.predict(X_test)
+            self.test_dfs[idx]["classification_v2"] = clustering.predict(X_test)
 
     def do_binary_classification(
         self,
@@ -669,7 +671,7 @@ class FeatureGenerator(object):
                     manual_noise_thresholds,
                     manual_noise_thresholds_flow_area,
                 )
-                self.merge_assigned_labels_to_measurements(df)
+                self.merge_classification_v2s_to_measurements(df)
             elif len(models) == 1 and len(scalers) == 1:
                 if "non_flow" in models and "non_flow" in scalers:
                     models["flow"] = NoFeatureModel()
@@ -681,6 +683,8 @@ class FeatureGenerator(object):
                 features_flow_area,
                 manual_noise_thresholds,
                 manual_noise_thresholds_flow_area,
+                class_overrides,
+                class_overrides_flow_area,
                 models,
                 scalers,
             )
@@ -691,21 +695,21 @@ class FeatureGenerator(object):
         if self.test_dfs:
             for idx, test_df in enumerate(self.test_dfs):
                 try:
-                    test_df.drop(columns=["assigned_label"], inplace=True)
+                    test_df.drop(columns=["classification_v2"], inplace=True)
                 except KeyError:
                     pass
                 video_id = test_df["video_id"].iloc[0]
-                right_df = df_test[df_test["video_id"] == video_id][["id", "assigned_label"]]
+                right_df = df_test[df_test["video_id"] == video_id][["id", "classification_v2"]]
                 self.test_dfs[idx] = test_df.merge(right_df, on="id", how="left")
 
-    def merge_assigned_labels_to_measurements(self, df):
+    def merge_classification_v2s_to_measurements(self, df):
         for idx, measurement_df in enumerate(self.measurements_dfs):
             try:
-                measurement_df.drop(columns=["assigned_label"], inplace=True)
+                measurement_df.drop(columns=["classification_v2"], inplace=True)
             except KeyError:
                 pass
             video_id = measurement_df["video_id"].iloc[0]
-            right_df = df[df["video_id"] == video_id][["id", "assigned_label"]]
+            right_df = df[df["video_id"] == video_id][["id", "classification_v2"]]
             self.measurements_dfs[idx] = measurement_df.merge(right_df, on="id", how="left")
 
     def perform_flow_area_classification(
@@ -721,24 +725,24 @@ class FeatureGenerator(object):
     ):
         df = self.stacked_dfs.groupby("id").first().reset_index()
         flow_area_indices = df["flow_area_time_ratio"] > 0.5
-        df.loc[flow_area_indices, "assigned_label"], model_flow, scaler_flow = (
+        df.loc[flow_area_indices, "classification_v2"], model_flow, scaler_flow = (
             self._do_binary_classification_for_trajectory_subset(
                 df[flow_area_indices], model, features_flow_area, kfold_n_splits
             )
         )
         if manual_noise_thresholds_flow_area:
-            df.loc[flow_area_indices, "assigned_label"], _ = self._filter_with_manual_thresholds(
+            df.loc[flow_area_indices, "classification_v2"], _ = self._filter_with_manual_thresholds(
                 df[flow_area_indices],
                 manual_noise_thresholds_flow_area,
                 class_overrides_flow_area,
             )
-        df.loc[~flow_area_indices, "assigned_label"], model_non_flow, scaler = (
+        df.loc[~flow_area_indices, "classification_v2"], model_non_flow, scaler = (
             self._do_binary_classification_for_trajectory_subset(
                 df[~flow_area_indices], model, features, kfold_n_splits
             )
         )
         if manual_noise_thresholds:
-            df.loc[~flow_area_indices, "assigned_label"], _ = self._filter_with_manual_thresholds(
+            df.loc[~flow_area_indices, "classification_v2"], _ = self._filter_with_manual_thresholds(
                 df[~flow_area_indices],
                 manual_noise_thresholds,
                 class_overrides,
@@ -771,25 +775,31 @@ class FeatureGenerator(object):
         features_flow_area,
         manual_noise_thresholds,
         manual_noise_thresholds_flow_area,
+        class_overrides,
+        class_overrides_flow_area,
         models,
         scalers,
     ):
         if self.test_dfs:
             df_test = self.stacked_test_dfs.groupby("id").first().reset_index()
             flow_area_indices = df_test["flow_area_time_ratio"] > 0.5
-            df_test.loc[flow_area_indices, "assigned_label"] = models["flow"].predict(
+            df_test.loc[flow_area_indices, "classification_v2"] = models["flow"].predict(
                 scalers["flow"].transform(df_test[flow_area_indices][features_flow_area])
             )
             if manual_noise_thresholds_flow_area:
-                df_test.loc[flow_area_indices, "assigned_label"], _ = self._filter_with_manual_thresholds(
-                    df_test[flow_area_indices], manual_noise_thresholds_flow_area
+                df_test.loc[flow_area_indices, "classification_v2"], _ = self._filter_with_manual_thresholds(
+                    df_test[flow_area_indices],
+                    manual_noise_thresholds_flow_area,
+                    class_overrides_flow_area,
                 )
-            df_test.loc[~flow_area_indices, "assigned_label"] = models["non_flow"].predict(
+            df_test.loc[~flow_area_indices, "classification_v2"] = models["non_flow"].predict(
                 scalers["non_flow"].transform(df_test[~flow_area_indices][features])
             )
             if manual_noise_thresholds:
-                df_test.loc[~flow_area_indices, "assigned_label"], _ = self._filter_with_manual_thresholds(
-                    df_test[~flow_area_indices], manual_noise_thresholds
+                df_test.loc[~flow_area_indices, "classification_v2"], _ = self._filter_with_manual_thresholds(
+                    df_test[~flow_area_indices],
+                    manual_noise_thresholds,
+                    class_overrides,
                 )
         return df_test
 
@@ -803,10 +813,10 @@ class FeatureGenerator(object):
         removed_indices = np.zeros(len(df))
         for feature, operator, threshold in manual_thresholds:
             if operator == "smaller":
-                df.loc[df[feature] < threshold, "assigned_label"] = 0
+                df.loc[df[feature] < threshold, "classification_v2"] = 0
                 removed_indices = np.logical_or(removed_indices, df[feature] < threshold)
             elif operator == "larger":
-                df.loc[df[feature] > threshold, "assigned_label"] = 0
+                df.loc[df[feature] > threshold, "classification_v2"] = 0
                 removed_indices = np.logical_or(removed_indices, df[feature] > threshold)
             else:
                 raise ValueError(f"Invalid operator: {operator}")
@@ -814,15 +824,15 @@ class FeatureGenerator(object):
         if class_overrides:
             for feature, operator, threshold, label in class_overrides:
                 if operator == "smaller":
-                    df.loc[df[feature] < threshold, "assigned_label"] = label
+                    df.loc[df[feature] < threshold, "classification_v2"] = label
                     removed_indices = np.logical_or(removed_indices, df[feature] < threshold)
                 elif operator == "larger":
-                    df.loc[df[feature] > threshold, "assigned_label"] = label
+                    df.loc[df[feature] > threshold, "classification_v2"] = label
                     removed_indices = np.logical_or(removed_indices, df[feature] > threshold)
                 else:
                     raise ValueError(f"Invalid operator: {operator}")
 
-        return df["assigned_label"], removed_indices
+        return df["classification_v2"], removed_indices
 
     @staticmethod
     def _do_binary_classification_for_trajectory_subset(
@@ -880,7 +890,7 @@ class FeatureGenerator(object):
                 "video_id",
                 "classification",
                 "gt_label",
-                "assigned_label",
+                "classification_v2",
                 "binary_image",
             ]
         ]
@@ -900,13 +910,13 @@ class FeatureGenerator(object):
         self,
         feature_thresholding_values: Optional[dict[str, float]] = None,
     ) -> None:
-        self.stacked_dfs["assigned_label"] = "fish"
+        self.stacked_dfs["classification_v2"] = "fish"
         for feat, thresh in feature_thresholding_values.items():
             if feat.endswith("_min"):
                 feat = feat.replace("_min", "")
-                self.stacked_dfs.loc[self.stacked_dfs[feat] < thresh, "assigned_label"] = "noise"
+                self.stacked_dfs.loc[self.stacked_dfs[feat] < thresh, "classification_v2"] = "noise"
             elif feat.endswith("_max"):
-                self.stacked_dfs.loc[self.stacked_dfs[feat] > thresh, "assigned_label"] = "noise"
+                self.stacked_dfs.loc[self.stacked_dfs[feat] > thresh, "classification_v2"] = "noise"
             else:
                 print(f"Invalid feature threshold name: {feat}. Must end with '_min' or '_max'")
 
@@ -926,25 +936,25 @@ class FeatureGenerator(object):
             df = self.stacked_dfs.groupby(["id"]).first().reset_index()
 
         df["gt_label"] = df["gt_label"].apply(lambda x: 1 if x == "fish" else 0)
-        df["assigned_label"] = df["assigned_label"].apply(lambda x: 1 if x == 1 else 0)
+        df["classification_v2"] = df["classification_v2"].apply(lambda x: 1 if x == 1 else 0)
 
         if distinguish_flow_areas:
             flow_area_indices = df["flow_area_time_ratio"] > 0.5
             input_dict = {
                 "flow_area": [
                     df.loc[flow_area_indices, "gt_label"],
-                    df.loc[flow_area_indices, "assigned_label"],
+                    df.loc[flow_area_indices, "classification_v2"],
                 ],
                 "non_flow_area": [
                     df.loc[~flow_area_indices, "gt_label"],
-                    df.loc[~flow_area_indices, "assigned_label"],
+                    df.loc[~flow_area_indices, "classification_v2"],
                 ],
             }
         else:
             input_dict = {
                 "all": [
                     df["gt_label"],
-                    df["assigned_label"],
+                    df["classification_v2"],
                 ]
             }
 
@@ -982,11 +992,17 @@ class FeatureGenerator(object):
 
         return metrics_dict
 
-    def save_classified_tracks_to_csv(self):
-        for path, df in zip(self.test_csv_paths + self.measurements_csv_paths, self.test_dfs + self.measurements_dfs):
+    def save_classified_tracks_to_csv(self, only_test=True):
+        paths = self.test_csv_paths
+        dataframes = self.test_dfs
+        if not only_test:
+            paths += self.measurements_csv_paths
+            dataframes += self.measurements_dfs
+
+        for path, df in zip(paths, dataframes):
             save_path = self._create_classification_save_path(path)
             save_df = df.copy()
-            save_df.drop(columns=["image_tile", "raw_image_tile"], inplace=True, errors="ignore")
+            save_df.drop(columns=["image_tile", "raw_image_tile", "binary_image"], inplace=True, errors="ignore")
             save_df.to_csv(save_path, index=False)
 
     def dump_manual_noise_thresholds_with_models_and_scalers_to_json(
