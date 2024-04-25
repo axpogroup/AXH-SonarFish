@@ -14,13 +14,13 @@ from algorithm.DetectedObject import BoundingBox, KalmanTrackedBlob
 from algorithm.FishDetector import FishDetector
 from algorithm.InputOutputHandler import InputOutputHandler
 from algorithm.validation import mot16_metrics
+from algorithm.visualization_functions import TRUTH_LABEL_NO
 
 load_dotenv()
-TRUTH_LABEL_NO = 2
 
 
-def read_labels_into_dataframe(labels_path: Path, filename: str) -> Optional[pd.DataFrame]:
-    labels_path = Path(labels_path) / Path(filename + "_ground_truth.csv")
+def read_labels_into_dataframe(labels_path: Path, labels_filename: str) -> Optional[pd.DataFrame]:
+    labels_path = Path(labels_path) / labels_filename
     if not labels_path.exists():
         print("No labels file found.")
         return None
@@ -66,7 +66,9 @@ def compute_metrics(settings_dict):
 def main_algorithm(settings_dict: dict):
     labels_df = read_labels_into_dataframe(
         labels_path=Path(settings_dict.get("ground_truth_directory", "")),
-        filename=Path(settings_dict["file_name"]).stem,
+        labels_filename=Path(settings_dict["file_name"]).stem
+        + settings_dict.get("labels_file_suffix", "_ground_truth")
+        + ".csv",
     )
 
     input_output_handler = InputOutputHandler(settings_dict)
