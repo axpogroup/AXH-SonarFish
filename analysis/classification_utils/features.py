@@ -361,17 +361,17 @@ class FeatureGenerator(object):
         plot_test_data: bool = False,
         show_track_id: bool = False,
         save_dir: Optional[Union[str, Path]] = None,
+        n_labels: Optional[int] = None,
+        plot_results_individually: bool = False,
     ) -> None:
         if plot_test_data:
             if "classification_v2" not in self.test_dfs[0].columns:
                 raise ValueError(
                     "No clustering has been performed yet. Please perform clustering with the do_clustering method."
                 )
-            if len(self.test_gt_dfs) != 0:
-                ground_truth = pd.concat(self.test_gt_dfs)
-            else:
-                ground_truth = pd.DataFrame()
-            stacked_labels_dfs = self.stacked_test_dfs
+            ground_truth_dfs = self.test_gt_dfs
+            dfs = self.test_dfs
+            dfs_file_names = self.test_csv_paths
             all_measurements_gt_pairs = self.test_all_measurements_gt_pairs
             all_measurements_gt_pairs_secondary = self.test_all_measurements_gt_pairs_secondary
         else:
@@ -379,63 +379,74 @@ class FeatureGenerator(object):
                 raise ValueError(
                     "No clustering has been performed yet. Please perform clustering with the do_clustering method."
                 )
-            ground_truth = pd.concat(self.gt_dfs)
-            stacked_labels_dfs = self.stacked_dfs
+            ground_truth_dfs = self.gt_dfs
+            dfs = self.measurements_dfs
+            dfs_file_names = self.measurements_csv_paths
             all_measurements_gt_pairs = self.all_measurements_gt_pairs
             all_measurements_gt_pairs_secondary = self.all_measurements_gt_pairs_secondary
 
-        n_labels = stacked_labels_dfs["classification_v2"].nunique()
+        if not plot_results_individually:
+            dfs = [pd.concat(dfs)]
+
+        if not n_labels:
+            n_labels = dfs[0]["classification_v2"].nunique()
         show_legend = True if n_labels <= 6 else False
         colormap = cm.get_cmap("viridis", n_labels + 1)  # +1 for the ground truth color
-
-        _, ax = plt.subplots(nrows=1, ncols=1, sharex=True, figsize=(10, 10))
-        if mask_to_show:
-            ax.imshow(self.masks[mask_to_show], cmap="gray", alpha=0.2)
-        plt.gca().invert_yaxis()
-
-        if ground_truth.empty:
-            for measurements_track_id in stacked_labels_dfs.id.unique():
-                self.plot_tracks_and_annotations(
-                    ax, colormap, measurements_track_id, stacked_labels_dfs, metric_to_show, show_track_id
-                )
-            self.create_plot_components(
-                ax,
-                colormap,
-                n_labels,
-                show_legend,
-                title="Trajectories with assigned label",
-                type_of_label="Manual",
-            )
-        else:
-            self.plot_assigned_tracks(
-                all_measurements_gt_pairs,
-                all_measurements_gt_pairs_secondary,
-                ax,
-                colormap,
-                ground_truth,
-                metric_to_show,
-                n_labels,
-                show_legend,
-                show_track_id,
-                stacked_labels_dfs,
-            )
-
-            self.plot_unassigned_tracks(
-                all_measurements_gt_pairs,
-                all_measurements_gt_pairs_secondary,
-                colormap,
-                mask_to_show,
-                metric_to_show,
-                n_labels,
-                show_legend,
-                show_track_id,
-                stacked_labels_dfs,
-            )
 
         if save_dir:
             save_dir = Path(save_dir)
             save_dir.mkdir(parents=True, exist_ok=True)
-            ax.get_figure().savefig(save_dir / f"{self.test_csv_paths[0].name.replace('.csv', '')}_track_pairings.png")
+
+        for i, (labels_df, gt_df) in enumerate(itertools.zip_longest(dfs, ground_truth_dfs)):
+            _, ax = plt.subplots(nrows=1, ncols=1, sharex=True, figsize=(10, 10))
+            if mask_to_show:
+                ax.imshow(self.masks[mask_to_show], cmap="gray", alpha=0.2)
+            plt.gca().invert_yaxis()
+
+            filename_prepend = dfs_file_names[i].stem if plot_results_individually else "all"
+            filename_prepend += "_test" if plot_test_data else "_train"
+
+            if not gt_df:
+                for measurements_track_id in labels_df.id.unique():
+                    self.plot_tracks_and_annotations(
+                        ax, colormap, measurements_track_id, labels_df, metric_to_show, show_track_id
+                    )
+                self.create_plot_components(
+                    ax,
+                    colormap,
+                    n_labels,
+                    show_legend,
+                    title=f"Trajectories with assigned label - DataFrame {i+1}",
+                    type_of_label="Manual",
+                    save_path=save_dir / f"{filename_prepend}_non_gt_assigned_tracks.png",
+                )
+            else:
+                self.plot_assigned_tracks(
+                    all_measurements_gt_pairs,
+                    all_measurements_gt_pairs_secondary,
+                    ax,
+                    colormap,
+                    gt_df,
+                    metric_to_show,
+                    n_labels,
+                    show_legend,
+                    show_track_id,
+                    labels_df,
+                    save_path=save_dir / f"{filename_prepend}_gt_assigned_tracks.png",
+                )
+
+                self.plot_unassigned_tracks(
+                    all_measurements_gt_pairs,
+                    all_measurements_gt_pairs_secondary,
+                    colormap,
+                    mask_to_show,
+                    metric_to_show,
+                    n_labels,
+                    show_legend,
+                    show_track_id,
+                    labels_df,
+                    save_path=save_dir / f"{filename_prepend}_non_gt_assigned_tracks.png",
+                )
 
     def plot_unassigned_tracks(
         self,
@@ -448,6 +459,7 @@ class FeatureGenerator(object):
         show_legend,
         show_track_id,
         stacked_labels_dfs,
+        save_path: Optional[Path] = None,
     ):
         _, ax = plt.subplots(nrows=1, ncols=1, sharex=True, figsize=(10, 10))
         if mask_to_show:
@@ -468,6 +480,7 @@ class FeatureGenerator(object):
             show_legend,
             title="non-matched trajectories with assigned label",
             type_of_label="",
+            save_path=save_path,
         )
 
     def plot_assigned_tracks(
@@ -482,6 +495,7 @@ class FeatureGenerator(object):
         show_legend,
         show_track_id,
         stacked_labels_dfs,
+        save_path: Optional[Path] = None,
     ):
         for measurements_track_id, gt_track_id in all_measurements_gt_pairs.items():
             self.plot_tracks_and_annotations(
@@ -501,9 +515,19 @@ class FeatureGenerator(object):
             show_legend,
             title="matched trajectories with assigned label",
             type_of_label="Assigned",
+            save_path=save_path,
         )
 
-    def create_plot_components(self, ax, colormap, n_labels, show_legend, title, type_of_label):
+    def create_plot_components(
+        self,
+        ax,
+        colormap,
+        n_labels,
+        show_legend,
+        title,
+        type_of_label,
+        save_path: Optional[Path] = None,
+    ) -> None:
         ax.set(ylabel="y", title=title, ylim=[270, 0], xlim=[0, 480])
         ax.set_aspect("equal", adjustable="box")
         legend_elements = [Line2D([0], [0], color=colormap(0), lw=2, label=f"{type_of_label} label")]
@@ -511,6 +535,9 @@ class FeatureGenerator(object):
             for i in range(n_labels):
                 legend_elements.append(Line2D([0], [0], color=colormap(i + 1), lw=2, label=f"label {i}"))
         ax.legend(handles=legend_elements)
+
+        if save_path:
+            ax.get_figure().savefig(save_path)
         plt.show()
 
     def plot_tracks_and_annotations(
@@ -523,18 +550,19 @@ class FeatureGenerator(object):
         show_track_id: bool = False,
     ) -> None:
         track_df = model_detections[model_detections.id == measurements_track_id]
-        ax.plot(
-            track_df.x,
-            track_df.y,
-            color=colormap(int(track_df.classification_v2.iloc[0]) + 1),
-        )
-        metric_annotation = str(track_df[metric_to_show].iloc[0])[:6] if metric_to_show else ""
-        if show_track_id:
-            ax.annotate(
-                f"{measurements_track_id}, {metric_annotation}",
-                (track_df.x.iloc[0], track_df.y.iloc[0]),
-                fontsize=5,
+        if len(track_df) > 0:
+            ax.plot(
+                track_df.x,
+                track_df.y,
+                color=colormap(int(track_df.classification_v2.iloc[0]) + 1),
             )
+            metric_annotation = str(track_df[metric_to_show].iloc[0])[:6] if metric_to_show else ""
+            if show_track_id:
+                ax.annotate(
+                    f"{measurements_track_id}, {metric_annotation}",
+                    (track_df.x.iloc[0], track_df.y.iloc[0]),
+                    fontsize=5,
+                )
 
     def plot_image_tiles_along_trajectory(
         self,
