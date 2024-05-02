@@ -1,9 +1,9 @@
 # Input / Output
 file_name: "start_2023-05-08T18-00-05.025+00-00.mp4"
-input_directory:  "data/sanity_check/videos/"
+input_directory:  "data/raw/videos/"
 mask_directory: "analysis/demo/masks"
-output_directory: "data/sanity_check_output/"
-ground_truth_directory: "data/sanity_check_output/"
+output_directory: "data/model_output/"
+ground_truth_directory: "data/labels/"
 labels_file_suffix: "_classification_min_track_length_30"
 mask_file: "stroppel_non_object_space.png" # one of ["sonar_controls.png", "stroppel_non_object_space.png", "herrendoebeli_non_object_space.png"]
 
