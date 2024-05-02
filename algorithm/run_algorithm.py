@@ -1,5 +1,6 @@
 import argparse
 import os
+import sys
 from pathlib import Path
 from typing import Optional
 
@@ -10,6 +11,7 @@ import yaml
 from azureml.core import Workspace
 from dotenv import load_dotenv
 
+sys.path.append(".")
 from algorithm.DetectedObject import BoundingBox, KalmanTrackedBlob
 from algorithm.FishDetector import FishDetector
 from algorithm.InputOutputHandler import InputOutputHandler
@@ -21,7 +23,9 @@ load_dotenv()
 
 def read_labels_into_dataframe(labels_path: Path, labels_filename: str) -> Optional[pd.DataFrame]:
     labels_path = Path(labels_path) / labels_filename
-    if not labels_path.exists():
+    if labels_path.exists():
+        print(f"Found labels file: {labels_path}")
+    else:
         print("No labels file found.")
         return None
     return pd.read_csv(labels_path)
@@ -43,7 +47,7 @@ def extract_labels_history(
             identifier=row["id"],
             frame_number=row["frame"],
             contour=np.array(row[["x", "y", "w", "h"]]),
-            label=int(row.get("assigned_label", TRUTH_LABEL_NO)),
+            label=int(row.get("assigned_label") or row.get("classification_v2", TRUTH_LABEL_NO)),
             precalculated_feature=row.get(feature_to_load, None),
         )
         if row["id"] not in label_history:

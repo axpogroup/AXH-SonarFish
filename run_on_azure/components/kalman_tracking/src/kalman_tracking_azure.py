@@ -1,5 +1,6 @@
 import argparse
 import logging
+import os
 from pathlib import Path
 
 import cv2 as cv
@@ -14,6 +15,8 @@ def init():
     global DATA_PATH
     global OUTPUT_PATH
     global TRACKING_CONFIG
+    global LABELS_DIR
+    global SAVE_OUTPUT_VIDEO
     global LOG_LEVEL
 
     parser = get_parser()
@@ -25,6 +28,8 @@ def init():
     OUTPUT_PATH = args.job_output_path
     LOG_LEVEL = args.log_level
     DATA_PATH = args.job_inputs_path
+    LABELS_DIR = args.labels_dir
+    SAVE_OUTPUT_VIDEO = args.save_output_video
     print("OpenCV build information: ")
     print(cv.getBuildInformation())
     print("Pass through init done")
@@ -44,6 +49,11 @@ def run(mini_batch):
         assert file.exists()
         assert file.suffix == ".mp4", "Only support .mp4 file"
 
+        # Check if file size is over 50MB
+        if os.stat(file_path).st_size < 50 * 1024 * 1024:  # size in bytes
+            print(f"Skipping {file_name} as its size is less than 50MB.")
+            continue
+
         # Two customers reported transient error when using OutputFileDatasetConfig.
         # It hits "FileNotFoundError" when writing to a file in the output_dir folder,
         #  even the folder did exist per logs.
@@ -59,10 +69,26 @@ def run(mini_batch):
         with mlflow.start_run():
             print(f"replacing input directory with {file_base_path}.")
             print(f"replacing output directory with {OUTPUT_PATH}.")
+            print(f"replacing file name with {file_name}.")
+            print(f"replacing ground truth directory with {LABELS_DIR}.")
+            print(f"replacing record_output_video with {SAVE_OUTPUT_VIDEO}.")
             settings["input_directory"] = file_base_path
             settings["output_directory"] = OUTPUT_PATH
             settings["file_name"] = file_name
+            settings["ground_truth_directory"] = LABELS_DIR or "."
+            settings["record_output_video"] = SAVE_OUTPUT_VIDEO
             main_algorithm(settings)
+
+
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ("yes", "true", "t", "y", "1"):
+        return True
+    elif v.lower() in ("no", "false", "f", "n", "0"):
+        return False
+    else:
+        raise argparse.ArgumentTypeError("Boolean value expected.")
 
 
 def get_parser() -> argparse.ArgumentParser:
@@ -90,6 +116,18 @@ def get_parser() -> argparse.ArgumentParser:
         default="kalman_tracking_settings.yaml",
     )
     parser.add_argument(
+        "--labels_dir",
+        type=str,
+        help="path to the directory containing the labels files, the correct one is chosen automatically",
+        default=None,
+    )
+    parser.add_argument(
+        "--save_output_video",
+        type=str2bool,
+        help="save the output video or not",
+        default=False,
+    )
+    parser.add_argument(
         "--log_level",
         type=str,
         help="log level",
@@ -100,8 +138,8 @@ def get_parser() -> argparse.ArgumentParser:
 
 def main():
     if Path(DATA_PATH).is_dir():
-        input_video_file_paths = list(Path(DATA_PATH).glob("**/*.mp4"))
-        print(f"Found {len(input_video_file_paths)} video files in the given directory.")
+        input_video_file_paths = list(Path(DATA_PATH).glob("*.mp4"))
+        print(f"Found {len(input_video_file_paths)} video files in the given directory")
     else:
         input_video_file_paths = [DATA_PATH]
     print(f"Processing {input_video_file_paths}")

@@ -82,6 +82,8 @@ def main(args):
     print("Saving classified tracks to csv...")
     gen.save_classified_tracks_to_csv(save_dir=args.job_output_dir)
 
+    # TODO: figure out why this fails here but works in the notebook
+
 
 if __name__ == "__main__":
     args = parse_arguments()

@@ -1,8 +1,10 @@
 # Input / Output
-file_name: ""
-input_directory:  ""
+file_name: "."
+input_directory:  "."
 mask_directory: "./masks/"
-output_directory: ""
+output_directory: "."
+ground_truth_directory: "."
+labels_file_suffix: "_classification_min_track_length_30"
 mask_file: "stroppel_non_object_space.png" # one of ["sonar_controls.png", "stroppel_non_object_space.png", "herrendoebeli_non_object_space.png", "lavey_non_object_space.png"]
 
 # Azure ML
@@ -15,7 +17,7 @@ record_processing_frame: "raw" # one of ['raw', 'raw_downsampled', 'gray', 'gray
 draw_detections_on_saved_video: True
 store_raw_image_patch: False
 store_median_image_patch: False
-show_detections: False
+show_detections: True
 display_output_video: False
 display_mode_extensive: False
 display_trackbars: False

@@ -1,5 +1,6 @@
 import itertools
 import json
+import os
 import pickle
 from copy import deepcopy
 from multiprocessing import Pool, cpu_count
@@ -237,9 +238,14 @@ class FeatureGenerator(object):
             yield labels_df, gt_df, cache_path
 
     def _create_cache_path(self, path: Path) -> Path:
-        return path.with_stem(path.stem + f"_cached_features_min_track_length_{self.min_track_length}").with_suffix(
-            ".csv"
-        )
+        cache_path = path.with_stem(
+            path.stem + f"_cached_features_min_track_length_{self.min_track_length}"
+        ).with_suffix(".csv")
+        if os.access(cache_path.parent, os.W_OK):
+            return cache_path
+        else:
+            print(f"Cache path {cache_path} not writable. Saving to current working directory instead.")
+            return Path(os.getcwd()) / cache_path.name
 
     def _create_classification_save_path(self, path: Path) -> Path:
         return path.with_stem(path.stem + f"_classification_min_track_length_{self.min_track_length}").with_suffix(
@@ -259,7 +265,10 @@ class FeatureGenerator(object):
                 save_df["raw_image_tile"] = save_df["raw_image_tile"].apply(lambda x: x.tolist())
             except KeyError:
                 pass
-            save_df.to_csv(cache_path, index=False)
+            try:
+                save_df.to_csv(cache_path, index=False)
+            except OSError as e:
+                print(f"Error writing to file {cache_path}: {e}. Not saving features to csv.")
             return labels_df
         else:
             return pd.DataFrame()
@@ -387,6 +396,7 @@ class FeatureGenerator(object):
 
         if not plot_results_individually:
             dfs = [pd.concat(dfs)]
+            ground_truth_dfs = [pd.concat(ground_truth_dfs)]
 
         if not n_labels:
             n_labels = dfs[0]["classification_v2"].nunique()
@@ -406,7 +416,7 @@ class FeatureGenerator(object):
             filename_prepend = dfs_file_names[i].stem if plot_results_individually else "all"
             filename_prepend += "_test" if plot_test_data else "_train"
 
-            if not gt_df:
+            if gt_df is None:
                 for measurements_track_id in labels_df.id.unique():
                     self.plot_tracks_and_annotations(
                         ax, colormap, measurements_track_id, labels_df, metric_to_show, show_track_id
@@ -418,7 +428,7 @@ class FeatureGenerator(object):
                     show_legend,
                     title=f"Trajectories with assigned label - DataFrame {i+1}",
                     type_of_label="Manual",
-                    save_path=save_dir / f"{filename_prepend}_non_gt_assigned_tracks.png",
+                    save_path=save_dir / f"{filename_prepend}_non_gt_assigned_tracks.png" if save_dir else None,
                 )
             else:
                 self.plot_assigned_tracks(
@@ -432,7 +442,7 @@ class FeatureGenerator(object):
                     show_legend,
                     show_track_id,
                     labels_df,
-                    save_path=save_dir / f"{filename_prepend}_gt_assigned_tracks.png",
+                    save_path=save_dir / f"{filename_prepend}_gt_assigned_tracks.png" if save_dir else None,
                 )
 
                 self.plot_unassigned_tracks(
@@ -445,7 +455,7 @@ class FeatureGenerator(object):
                     show_legend,
                     show_track_id,
                     labels_df,
-                    save_path=save_dir / f"{filename_prepend}_non_gt_assigned_tracks.png",
+                    save_path=save_dir / f"{filename_prepend}_non_gt_assigned_tracks.png" if save_dir else None,
                 )
 
     def plot_unassigned_tracks(
@@ -827,24 +837,28 @@ class FeatureGenerator(object):
         if self.test_dfs:
             df_test = self.stacked_test_dfs.groupby("id").first().reset_index()
             flow_area_indices = df_test["flow_area_time_ratio"] > 0.5
-            df_test.loc[flow_area_indices, "classification_v2"] = models["flow"].predict(
-                scalers["flow"].transform(df_test[flow_area_indices][features_flow_area])
-            )
-            if manual_noise_thresholds_flow_area:
-                df_test.loc[flow_area_indices, "classification_v2"], _ = self._filter_with_manual_thresholds(
-                    df_test[flow_area_indices],
-                    manual_noise_thresholds_flow_area,
-                    class_overrides_flow_area,
+
+            if flow_area_indices.any():
+                df_test.loc[flow_area_indices, "classification_v2"] = models["flow"].predict(
+                    scalers["flow"].transform(df_test[flow_area_indices][features_flow_area])
                 )
-            df_test.loc[~flow_area_indices, "classification_v2"] = models["non_flow"].predict(
-                scalers["non_flow"].transform(df_test[~flow_area_indices][features])
-            )
-            if manual_noise_thresholds:
-                df_test.loc[~flow_area_indices, "classification_v2"], _ = self._filter_with_manual_thresholds(
-                    df_test[~flow_area_indices],
-                    manual_noise_thresholds,
-                    class_overrides,
+                if manual_noise_thresholds_flow_area:
+                    df_test.loc[flow_area_indices, "classification_v2"], _ = self._filter_with_manual_thresholds(
+                        df_test[flow_area_indices],
+                        manual_noise_thresholds_flow_area,
+                        class_overrides_flow_area,
+                    )
+
+            if (~flow_area_indices).any():
+                df_test.loc[~flow_area_indices, "classification_v2"] = models["non_flow"].predict(
+                    scalers["non_flow"].transform(df_test[~flow_area_indices][features])
                 )
+                if manual_noise_thresholds:
+                    df_test.loc[~flow_area_indices, "classification_v2"], _ = self._filter_with_manual_thresholds(
+                        df_test[~flow_area_indices],
+                        manual_noise_thresholds,
+                        class_overrides,
+                    )
         return df_test
 
     @staticmethod
@@ -899,7 +913,7 @@ class FeatureGenerator(object):
                 X_train, X_val = X[train_index], X[val_index]
                 scaler = preprocessing.StandardScaler().fit(X_train)
                 X_train, X_val = scaler.transform(X_train), scaler.transform(X_val)
-                y_train, _ = y[train_index], y[val_index]
+                y_train = y[train_index]
 
                 model = deepcopy(model).fit(X_train, y_train)
                 y_kfold[val_index] = model.predict(X_val)
