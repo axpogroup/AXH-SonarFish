@@ -140,6 +140,7 @@ labeling/
 *.mp4
 !./tests/**/*.mp4
 demo_*
+!demo_settings.yaml
 .venv
 .vscode
 .env

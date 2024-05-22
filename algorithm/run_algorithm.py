@@ -20,6 +20,9 @@ from algorithm.visualization_functions import TRUTH_LABEL_NO
 
 load_dotenv()
 
+# TODO: fix tests
+# TODO: try different settings
+
 
 def read_labels_into_dataframe(labels_path: Path, labels_filename: str) -> Optional[pd.DataFrame]:
     labels_path = Path(labels_path) / labels_filename
@@ -121,7 +124,7 @@ if __name__ == "__main__":
             settings["file_name"] = args.input_file
 
     main_algorithm(settings)
-    
+
     if settings.get("track_azure_ml", False):
         workspace = Workspace(
             resource_group=os.getenv("RESOURCE_GROUP"),
