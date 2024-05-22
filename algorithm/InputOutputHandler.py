@@ -16,9 +16,12 @@ class InputOutputHandler:
         self.fps_out = 10
         self.video_writer = None
         self.settings_dict = settings_dict
+        input_file_path = Path(self.settings_dict["input_directory"]) / self.settings_dict["file_name"]
+        assert input_file_path.exists(), f"Error: Input file {input_file_path} does not exist."
         self.video_cap = cv.VideoCapture(
             str(Path(self.settings_dict["input_directory"]) / self.settings_dict["file_name"])
         )
+        assert self.video_cap.isOpened(), "Error: Video Capturer could not be opened."
         self.input_filename = Path(self.settings_dict["file_name"])
         self.output_dir_name = self.settings_dict["output_directory"]
         self.output_csv_name = None

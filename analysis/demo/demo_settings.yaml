@@ -1,10 +1,11 @@
 # Input / Output
-file_name: "Passe3_Mar11_12-37-58.mp4"
+file_name: "start_2023-05-08T18-00-05.025+00-00.mp4"
 input_directory:  "data/raw/videos/"
 mask_directory: "analysis/demo/masks"
 output_directory: "data/model_output/"
 ground_truth_directory: "data/labels/"
-mask_file: "lavey_non_object_space.png" # one of ["sonar_controls.png", "stroppel_non_object_space.png", "herrendoebeli_non_object_space.png"]
+labels_file_suffix: "_classification_min_track_length_30"
+mask_file: "stroppel_non_object_space.png" # one of ["sonar_controls.png", "stroppel_non_object_space.png", "herrendoebeli_non_object_space.png"]
 
 # Azure ML
 experiment_name: "how_much_is_the_fish"
@@ -16,10 +17,11 @@ record_processing_frame: "raw" # one of ['raw', 'raw_downsampled', 'gray', 'gray
 draw_detections_on_saved_video: True
 store_raw_image_patch: False
 store_median_image_patch: False
-show_detections: True
+show_detections: False
 display_output_video: False
 display_mode_extensive: False
 display_trackbars: False
+feature_to_load: "max_blob_count"
 
 # Size
 input_pixels_per_mm: 0.0838
@@ -28,11 +30,11 @@ input_pixels_per_mm: 0.0838
 downsample: 25
 contrast: 2
 brightness: 30
-long_mean_frames: 200
+long_mean_frames: 400
 short_mean_frames: 10
 difference_threshold_scaler: 0.30
-dilation_kernel_mm: 200
-median_filter_kernel_mm: 50
+dilation_kernel_mm: 500
+median_filter_kernel_mm: 200
 erosion_kernel_mm: 100
 
 
@@ -50,12 +52,12 @@ kalman_rotate_mmt_noise_in_river_direction: False
 kalman_trace_history_matching_budget: 10
 kalman_max_iou_distance: 0.5 # basically (1 - iou_min)
 kalman_max_age: 35
-kalman_n_init: 17
+kalman_n_init: 35
 filter_nearest_neighbor:
 filter_blob_matching_metric: "histogram" # one of ['euclidean_distance', 'blob_area', 'histogram', 'mutual_information', 'fft']
 filter_association_thresh: 0.3
 filter_blob_elimination_metric: "euclidean_distance" # one of ['euclidean_distance']
-bbox_size_to_stddev_ratio_threshold: 10
+bbox_size_to_stddev_ratio_threshold: 100
 
 
 # Classification
