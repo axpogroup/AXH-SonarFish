@@ -120,13 +120,14 @@ if __name__ == "__main__":
             print("replacing input file.")
             settings["file_name"] = args.input_file
 
-    workspace = Workspace(
-        resource_group=os.getenv("RESOURCE_GROUP"),
-        workspace_name=os.getenv("WORKSPACE_NAME"),
-        subscription_id=os.getenv("SUBSCRIPTION_ID"),
-    )
     main_algorithm(settings)
+    
     if settings.get("track_azure_ml", False):
+        workspace = Workspace(
+            resource_group=os.getenv("RESOURCE_GROUP"),
+            workspace_name=os.getenv("WORKSPACE_NAME"),
+            subscription_id=os.getenv("SUBSCRIPTION_ID"),
+        )
         mlflow.set_tracking_uri(workspace.get_mlflow_tracking_uri())
         experiment_name = settings["experiment_name"]
         mlflow.set_experiment(experiment_name)
