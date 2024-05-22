@@ -5,7 +5,7 @@ mask_directory: "analysis/demo/masks"
 output_directory: "data/model_output/"
 ground_truth_directory: "data/labels/"
 labels_file_suffix: "_ground_truth"
-mask_file: "stroppel_non_object_space.png" # one of ["sonar_controls.png", "stroppel_non_object_space.png", "herrendoebeli_non_object_space.png"]
+mask_file: "lavey_non_object_space.png" # one of ["sonar_controls.png", "stroppel_non_object_space.png", "herrendoebeli_non_object_space.png"]
 
 # Azure ML
 experiment_name: "how_much_is_the_fish_at_lavey"
@@ -30,18 +30,18 @@ input_pixels_per_mm: 0.0838
 downsample: 25
 contrast: 2
 brightness: 30
-long_mean_frames: 400
+long_mean_frames: 50
 short_mean_frames: 10
-difference_threshold_scaler: 0.30
-dilation_kernel_mm: 500
-median_filter_kernel_mm: 200
+difference_threshold_scaler: 0.3
+dilation_kernel_mm: 100
+median_filter_kernel_mm: 100
 erosion_kernel_mm: 100
 
 
 # Tracking
 tracking_method: "kalman" # one of ['nearest_neighbor', 'kalman']
-max_association_dist_mm: 500
-phase_out_after_x_frames: 30
+max_association_dist_mm: 200
+phase_out_after_x_frames: 20
 kalman_std_obj_initialization_factor: 0.1
 kalman_std_obj_initialization_trace: [1, 1, 0.1, 1, 0.5, 0.5, 0.0001, 0.5] # [x, y, w, h, vx, vy, va, vh]
 kalman_std_process_noise_factor: 0.2
@@ -51,8 +51,8 @@ kalman_std_mmt_noise_trace: [5, 1.7, 1, 0.05] # [x, y, a, h]
 kalman_rotate_mmt_noise_in_river_direction: False
 kalman_trace_history_matching_budget: 10
 kalman_max_iou_distance: 0.5 # basically (1 - iou_min)
-kalman_max_age: 35
-kalman_n_init: 35
+kalman_max_age: 20
+kalman_n_init: 20
 filter_nearest_neighbor:
 filter_blob_matching_metric: "histogram" # one of ['euclidean_distance', 'blob_area', 'histogram', 'mutual_information', 'fft']
 filter_association_thresh: 0.3
