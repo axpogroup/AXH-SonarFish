@@ -13,11 +13,11 @@
             "cwd": "${workspaceFolder}",
             "justMyCode": false,
             "args": [
-                // "-yf", "analysis/demo/demo_settings.yaml",
-                "--train_val_data_dir", "./data/train_data/",
-                "--train_val_gt_data_dir", "./data/labels/",
-                "--test_data_dir", "./data/test_data/",
-                "--job_output_dir", "./data/classification_test_output/",
+                "-yf", "settings/settings_lavey.yaml",
+                // "--train_val_data_dir", "./data/train_data/",
+                // "--train_val_gt_data_dir", "./data/labels/",
+                // "--test_data_dir", "./data/test_data/",
+                // "--job_output_dir", "./data/classification_test_output/",
             ],
             "env": {
                 "PYTHONPATH": "${workspaceFolder};${env:PYTHONPATH}"
