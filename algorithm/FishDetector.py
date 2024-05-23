@@ -132,7 +132,7 @@ class FishDetector:
                 self.kf_metric_matching_thresh,
                 budget=self.conf["kalman_trace_history_matching_budget"],
             )
-            if "filter_blob_elimination_metric" in self.conf:
+            if self.conf.get("filter_blob_elimination_metric"):
                 elimination_metric = DistanceMetric(
                     self.conf["filter_blob_elimination_metric"],
                     self.max_association_distance_px,
