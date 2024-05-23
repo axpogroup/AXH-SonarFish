@@ -20,7 +20,7 @@ store_median_image_patch: False
 show_detections: True
 display_output_video: True
 display_mode_extensive: True
-display_trackbars: False
+display_trackbars: True
 feature_to_load: "max_blob_count"
 
 # Size
@@ -28,13 +28,13 @@ input_pixels_per_mm: 0.0838
 
 # Enhancement
 downsample: 25
-contrast: 2
+contrast: 3
 brightness: 30
-long_mean_frames: 50
-short_mean_frames: 10
-difference_threshold_scaler: 0.3
-dilation_kernel_mm: 100
-median_filter_kernel_mm: 100
+long_mean_frames: 200
+short_mean_frames: 5
+difference_threshold_scaler: 0.45
+dilation_kernel_mm: 50
+median_filter_kernel_mm: 130
 erosion_kernel_mm: 100
 
 
@@ -52,16 +52,16 @@ kalman_rotate_mmt_noise_in_river_direction: False
 kalman_trace_history_matching_budget: 10
 kalman_max_iou_distance: 0.5 # basically (1 - iou_min)
 kalman_max_age: 20
-kalman_n_init: 20
+kalman_n_init: 5
 filter_nearest_neighbor:
-filter_blob_matching_metric: "histogram" # one of ['euclidean_distance', 'blob_area', 'histogram', 'mutual_information', 'fft']
-filter_association_thresh: 0.3
-filter_blob_elimination_metric: "euclidean_distance" # one of ['euclidean_distance']
-bbox_size_to_stddev_ratio_threshold: 100
+filter_blob_matching_metric: "euclidean_distance" # one of ['euclidean_distance', 'blob_area', 'histogram', 'mutual_information', 'fft']
+filter_association_thresh: 2.0
+# filter_blob_elimination_metric: "euclidean_distance" # one of ['euclidean_distance']
+bbox_size_to_stddev_ratio_threshold: 15
 
 
 # Classification
-river_pixel_velocity: [2.35, -0.9] # At full resolution
+river_pixel_velocity: [2.35, -0.9] # At full resolution, used to limit velocity
 min_occurences_for_fish: 20 # should be at least 20 for sensible calculation of velocity
 deviation_from_river_velocity: 0.5
 

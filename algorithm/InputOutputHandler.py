@@ -38,6 +38,7 @@ class InputOutputHandler:
         self.frame_retrieval_time = None
         self.last_output_time = None
         self.current_raw_frame = None
+        self.created_trackbars = False
 
     def get_new_frame(self):
         start = cv.getTickCount()
@@ -131,7 +132,7 @@ class InputOutputHandler:
             detector.conf["brightness"] = value
 
         def change_diff_thresh(value):
-            detector.conf["difference_threshold_scaler"] = value / 10
+            detector.conf["difference_threshold_scaler"] = value / 100
 
         def change_median_filter_kernel(value):
             detector.conf["median_filter_kernel_mm"] = value
@@ -162,9 +163,9 @@ class InputOutputHandler:
             change_long_mean_frames,
         )
         cv.createTrackbar(
-            "diff_thresh*10",
+            "diff_thresh*100",
             "frame",
-            int(detector.conf["difference_threshold_scaler"] * 10),
+            int(detector.conf["difference_threshold_scaler"] * 100),
             127,
             change_diff_thresh,
         )
@@ -182,11 +183,12 @@ class InputOutputHandler:
             1200,
             change_dilatation_kernel,
         )
+        self.created_trackbars = True
 
     def show_image(self, img, detector):
         cv.imshow("frame", img)
 
-        if "display_trackbars" in self.settings_dict.keys() and self.settings_dict["display_trackbars"]:
+        if self.settings_dict.get('display_trackbars', False) and not self.created_trackbars:
             self.trackbars(detector)
 
         # Wait briefly for user input unless the video is paused

@@ -20,9 +20,6 @@ from algorithm.visualization_functions import TRUTH_LABEL_NO
 
 load_dotenv()
 
-# TODO: fix tests
-# TODO: try different settings
-
 
 def read_labels_into_dataframe(labels_path: Path, labels_filename: str) -> Optional[pd.DataFrame]:
     labels_path = Path(labels_path) / labels_filename
