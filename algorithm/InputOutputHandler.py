@@ -188,7 +188,7 @@ class InputOutputHandler:
     def show_image(self, img, detector):
         cv.imshow("frame", img)
 
-        if self.settings_dict.get('display_trackbars', False) and not self.created_trackbars:
+        if self.settings_dict.get("display_trackbars", False) and not self.created_trackbars:
             self.trackbars(detector)
 
         # Wait briefly for user input unless the video is paused
