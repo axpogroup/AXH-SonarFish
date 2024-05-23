@@ -65,7 +65,7 @@ def min_cost_matching(
     indices = np.hstack(
         [
             indices[0].reshape(((indices[0].shape[0]), 1)),
-            indices[1].reshape(((indices[0].shape[0]), 1)),  
+            indices[1].reshape(((indices[0].shape[0]), 1)),
         ]
     )
 
