@@ -144,3 +144,4 @@ demo_*
 .venv
 .vscode
 .env
+*.pkl
