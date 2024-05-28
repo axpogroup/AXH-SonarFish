@@ -53,12 +53,12 @@ def trace_window_metrics(detection: pd.DataFrame, masks: dict[str, np.array]) ->
             "v_yr_avg": np.mean(detection["v_yr"]),
             "v_xr_median": np.median(detection["v_xr"]),
             "v_yr_median": np.median(detection["v_yr"]),
-            "v_avg": np.mean(calculate_velocity(detection)),
-            "v_10th_percentile": np.percentile(calculate_velocity(detection), 10),
-            "v_30th_percentile": np.percentile(calculate_velocity(detection), 30),
-            "v_50th_percentile": np.percentile(calculate_velocity(detection), 50),
-            "v_70th_percentile": np.percentile(calculate_velocity(detection), 70),
-            "v_90th_percentile": np.percentile(calculate_velocity(detection), 90),
+            "v_avg": np.mean(calculate_velocity(detection, smoothing_window=29)),
+            "v_10th_percentile": np.percentile(calculate_velocity(detection, smoothing_window=29), 10),
+            "v_30th_percentile": np.percentile(calculate_velocity(detection, smoothing_window=29), 30),
+            "v_50th_percentile": np.percentile(calculate_velocity(detection, smoothing_window=29), 50),
+            "v_70th_percentile": np.percentile(calculate_velocity(detection, smoothing_window=29), 70),
+            "v_90th_percentile": np.percentile(calculate_velocity(detection, smoothing_window=29), 90),
             "v_parallel_river_avg": np.nanmean(detection["v_parallel_river"]),
             "v_orthogonal_river_avg": np.nanmean(detection["v_orthogonal_river"]),
             "v_orthogonal_abs_sum": np.sum(np.abs(detection["v_orthogonal_river"])),
@@ -109,10 +109,12 @@ def calculate_average_bbox_size(group: pd.DataFrame) -> float:
     return np.mean(group["w"] * group["h"])
 
 
-def calculate_velocity(detection: pd.DataFrame) -> np.array:
+def calculate_velocity(detection: pd.DataFrame, smoothing_window: int = 5) -> np.array:
     v_x = np.diff(detection["x"])
     v_y = np.diff(detection["y"])
-    return np.sqrt(v_x**2 + v_y**2)
+    smoothed_v_x = savgol_filter(v_x, window_length=smoothing_window, polyorder=2)
+    smoothed_v_y = savgol_filter(v_y, window_length=smoothing_window, polyorder=2)
+    return np.sqrt(smoothed_v_x**2 + smoothed_v_y**2)
 
 
 def velocity_relative_to_river_velocity(
