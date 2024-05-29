@@ -13,6 +13,7 @@ from algorithm.utils import get_elapsed_ms
 
 class InputOutputHandler:
     def __init__(self, settings_dict):
+        self.fps_out = 10
         self.video_writer = None
         self.settings_dict = settings_dict
         self.video_cap = cv.VideoCapture(
@@ -21,19 +22,17 @@ class InputOutputHandler:
         self.input_filename = Path(self.settings_dict["file_name"])
         self.output_dir_name = self.settings_dict["output_directory"]
         self.output_csv_name = None
-
         self.output_csv_name = os.path.join(self.output_dir_name, (self.input_filename.stem + ".csv"))
-
         self.playback_paused = False
         self.usr_input = None
         self.frame_no = 0
         self.frames_total = int(self.video_cap.get(cv.CAP_PROP_FRAME_COUNT))
-        self.fps = int(self.video_cap.get(cv.CAP_PROP_FPS))
+        self.fps_in = int(self.video_cap.get(cv.CAP_PROP_FPS))
         self.start_ticks = 1
-
+        self.index_in = -1
+        self.index_out = -1
         self.frame_retrieval_time = None
         self.last_output_time = None
-
         self.current_raw_frame = None
 
     def get_new_frame(self):
@@ -41,49 +40,72 @@ class InputOutputHandler:
         tries = 0
         if self.video_cap.isOpened():
             while tries < 5:
-                ret, self.current_raw_frame = self.video_cap.read()
-                self.frame_retrieval_time = get_elapsed_ms(start)
-
-                # if frame is read correctly ret is True
-                if not ret:
-                    tries += 1
+                success = self.video_cap.grab()
+                if success:
+                    self.index_in += 1
+                    out_due = int(self.index_in / self.fps_in * self.fps_out)
+                    if out_due > self.index_out:
+                        success, frame = self.video_cap.retrieve()
+                        if success:
+                            self.index_out += 1
+                            self.current_raw_frame = frame
+                            self.frame_no += 1
+                            self.frame_retrieval_time = get_elapsed_ms(start)
+                            return True
                 else:
-                    self.frame_no += 1
-                    return True
-
+                    tries += 1
             print("Can't receive frame (stream end?). Exiting ...")
             self.shutdown()
+            self.frame_retrieval_time = get_elapsed_ms(start)
             return False
 
         else:
             print("ERROR: Video Capturer is not open.")
+            self.frame_retrieval_time = get_elapsed_ms(start)
             return False
 
     @staticmethod
     def get_detections_pd(object_history: dict[int, KalmanTrackedBlob]) -> pd.DataFrame:
         rows = []
         for _, obj in object_history.items():
-            for i in range(len(obj.frames_observed)):
-                rows.append(
-                    [
-                        obj.frames_observed[i],
-                        obj.ID,
-                        obj.top_lefts_x[i],
-                        obj.top_lefts_y[i],
-                        obj.bounding_boxes[i][0],
-                        obj.bounding_boxes[i][1],
-                        obj.velocities[i][0] if len(obj.velocities) > i else np.nan,
-                        obj.velocities[i][1] if len(obj.velocities) > i else np.nan,
-                        obj.areas[i],
-                        np.array(obj.feature_patch[i]),
-                    ]
-                )
+            if obj.detection_is_tracked:
+                for i in range(len(obj.frames_observed)):
+                    rows.append(
+                        [
+                            obj.frames_observed[i],
+                            obj.ID,
+                            obj.top_lefts_x[i],
+                            obj.top_lefts_y[i],
+                            obj.bounding_boxes[i][0],
+                            obj.bounding_boxes[i][1],
+                            obj.velocities[i][0] if len(obj.velocities) > i else np.nan,
+                            obj.velocities[i][1] if len(obj.velocities) > i else np.nan,
+                            obj.areas[i],
+                            np.array(obj.feature_patch[i]),
+                            # np.array(obj.raw_image_patch[i]),
+                            obj.stddevs_of_pixels_intensity[i],
+                        ]
+                    )
 
         detections_df = pd.DataFrame(
             rows,
-            columns=["frame", "id", "x", "y", "w", "h", "v_x", "v_y", "contour_area", "image_tile"],
+            columns=[
+                "frame",
+                "id",
+                "x",
+                "y",
+                "w",
+                "h",
+                "v_x",
+                "v_y",
+                "contour_area",
+                "image_tile",
+                # "raw_image_tile",
+                "stddev_of_intensity",
+            ],
         )
         detections_df["image_tile"] = detections_df["image_tile"].apply(lambda x: json.dumps(x.tolist()))
+        # detections_df["raw_image_tile"] = detections_df["raw_image_tile"].apply(lambda x: json.dumps(x.tolist()))
         return detections_df
 
     def trackbars(self, detector):
@@ -190,24 +212,17 @@ class InputOutputHandler:
         detector,
         label_history=None,
     ):
-        # Total runtime
-        if self.last_output_time is not None:
-            total_time_per_frame = get_elapsed_ms(self.last_output_time)
-        else:
-            self.start_ticks = cv.getTickCount()
-        total_runtime = get_elapsed_ms(self.start_ticks)
-        self.last_output_time = cv.getTickCount()
-
+        total_runtime, total_time_per_frame = self.calculate_total_time()
         if self.frame_no % 20 == 0:
             if total_time_per_frame == 0:
                 total_time_per_frame = 1
+            down_sample_factor = self.fps_in / self.fps_out
             print(
-                f"Processed {'{:.1f}'.format(self.frame_no / self.frames_total * 100)} % of video. "
+                f"Processed {'{:.1f}'.format(self.frame_no * down_sample_factor / self.frames_total * 100)} % of video."
                 f"Runtimes [ms]: getFrame: {self.frame_retrieval_time} | Enhance: {runtimes['enhance']} | "
                 f"DetectTrack: {runtimes['detection_tracking']} | "
                 f"Total: {total_time_per_frame} | FPS: {'{:.1f}'.format(self.frame_no/(2*total_runtime/1000))}"
             )
-
         if self.settings_dict["display_output_video"] or self.settings_dict["record_output_video"]:
             extensive = self.settings_dict["display_mode_extensive"]
             disp = visualization_functions.get_visual_output(
@@ -218,7 +233,6 @@ class InputOutputHandler:
                 extensive=extensive,
                 save_frame=self.settings_dict["record_processing_frame"],
             )
-
             if self.settings_dict["record_output_video"]:
                 if not self.video_writer:
                     self.initialize_output_recording(
@@ -230,6 +244,16 @@ class InputOutputHandler:
             if self.settings_dict["display_output_video"]:
                 self.show_image(disp, detector)
 
+    def calculate_total_time(self):
+        if self.last_output_time is not None:
+            total_time_per_frame = get_elapsed_ms(self.last_output_time)
+        else:
+            self.start_ticks = cv.getTickCount()
+            total_time_per_frame = 0
+        total_runtime = get_elapsed_ms(self.start_ticks)
+        self.last_output_time = cv.getTickCount()
+        return total_runtime, total_time_per_frame
+
     def initialize_output_recording(
         self,
         frame_width: int = None,
@@ -238,7 +262,7 @@ class InputOutputHandler:
         # grab the width, height, fps and length of the video stream.
         frame_width = int(self.video_cap.get(cv.CAP_PROP_FRAME_WIDTH)) if frame_width is None else frame_width
         frame_height = int(self.video_cap.get(cv.CAP_PROP_FRAME_HEIGHT)) if frame_height is None else frame_height
-        fps = int(self.video_cap.get(cv.CAP_PROP_FPS))
+        fps = self.fps_in
         if self.settings_dict["record_processing_frame"] != "raw":
             fps = fps // 2
 
@@ -253,14 +277,8 @@ class InputOutputHandler:
             (frame_width, frame_height),
         )
 
-    def get_video_output_settings(self):
-        frame_width = int(self.video_cap.get(cv.CAP_PROP_FRAME_WIDTH))
-        frame_height = int(self.video_cap.get(cv.CAP_PROP_FRAME_HEIGHT))
-        fps = int(self.video_cap.get(cv.CAP_PROP_FPS))
-        return fps, frame_height, frame_width
-
     def shutdown(self):
         self.video_cap.release()
-        if "record_output_video" in self.settings_dict.keys():
+        if self.settings_dict.get("record_output_video"):
             self.video_writer.release()
         cv.destroyAllWindows()

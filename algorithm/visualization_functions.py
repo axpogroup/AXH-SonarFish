@@ -23,7 +23,6 @@ def get_visual_output(
     processed_frame: dict[str, np.ndarray],
     extensive=False,
     color=(255, 200, 200),
-    truth_color=(57, 255, 20),
     save_frame: str = "raw",
 ):
     if extensive:
@@ -55,7 +54,6 @@ def get_visual_output(
             paths=True,
             association_dist=True,
             color=color,
-            truth_color=truth_color,
         )
 
         third_row_raw = _draw_detections_and_labels(
@@ -63,7 +61,6 @@ def get_visual_output(
             label_history=label_history,
             detector=detector,
             processed_frame=_retrieve_frame("raw_downsampled", processed_frame, puttext="Final"),
-            truth_color=truth_color,
             color=color,
         )
 
@@ -87,7 +84,6 @@ def get_visual_output(
                 label_history=label_history,
                 processed_frame=_retrieve_frame("raw", processed_frame),
                 color=color,
-                truth_color=truth_color,
                 paths=True,
                 fullres=True,
             )
@@ -103,12 +99,13 @@ def _draw_detections_and_labels(
     label_history: Optional[dict[int, BoundingBox]],
     processed_frame: dict[str, np.ndarray],
     color: tuple,
-    truth_color: tuple,
     **kwargs,
 ):
-    disp = _draw_detector_output(object_history, detector, processed_frame, color=color, **kwargs)
+    disp = processed_frame
+    if detector.conf["show_detections"]:
+        disp = _draw_detector_output(object_history, detector, processed_frame, color=color, **kwargs)
     if label_history is not None:
-        disp = _draw_labels(label_history, detector, disp, color=truth_color, **kwargs)
+        disp = _draw_labels(label_history, detector, disp, **kwargs)
     return disp
 
 
@@ -143,15 +140,20 @@ def _draw_labels(
     label_history: dict[int, BoundingBox],
     detector,
     img,
-    color=(255, 200, 200),
     paths=False,
     fullres=False,
     association_dist=False,
 ):
+    labels_map = {0: "noise", 1: "fish", 2: "truth"}
     for ID, obj in label_history.items():
         if is_detection_outdated(obj, detector):
             continue
-        draw_basic_bounding_box_and_path(association_dist, color, detector, fullres, img, obj, paths)
+        label = labels_map.get(obj.label)
+        if label == "fish" or label == "truth":
+            color = (57, 255, 20)
+        else:
+            color = (57, 30, 255)
+        draw_basic_bounding_box_and_path(association_dist, color, detector, fullres, img, obj, paths, label=label)
     return img
 
 
@@ -173,20 +175,22 @@ def _draw_detector_output(
         )
         if annotate:
             if obj.ellipse_angles[-1] is not None and obj.ellipse_axes_lengths_pairs[-1] is not None:
-                ellipse_axes_lengths = obj.ellipse_axes_lengths_pairs[-1].astype(int)
-                cv.ellipse(
-                    img,
-                    (obj.midpoints[-1][0], obj.midpoints[-1][1]),
-                    (ellipse_axes_lengths[0], ellipse_axes_lengths[1]),
-                    obj.ellipse_angles[-1],
-                    0,
-                    360,
-                    color,
-                    1 * scale,
-                )
+                if not np.isnan(obj.ellipse_axes_lengths_pairs[-1]).any():
+                    ellipse_axes_lengths = obj.ellipse_axes_lengths_pairs[-1].astype(int)
+                    # if no nan in ellipse_axes_lengths:
+                    cv.ellipse(
+                        img,
+                        (obj.midpoints[-1][0], obj.midpoints[-1][1]),
+                        (ellipse_axes_lengths[0], ellipse_axes_lengths[1]),
+                        obj.ellipse_angles[-1],
+                        0,
+                        360,
+                        color,
+                        1 * scale,
+                    )
             text = ""
             if len(obj.means_of_pixels_intensity) > 0:
-                ratio = obj.bbox_size_to_stddev_ratio
+                ratio = obj.feature["bbox_size_to_stddev_ratio"]
                 text = f"ID:{obj.ID}, ratio: {int(ratio)}"
                 if len(obj.velocities) > 100:
                     text += f", v [px/frame]: {obj.velocities[-1] * scale}"
@@ -202,7 +206,9 @@ def _draw_detector_output(
     return img
 
 
-def draw_basic_bounding_box_and_path(association_dist, color, detector, fullres, img, obj, paths):
+def draw_basic_bounding_box_and_path(
+    association_dist, color, detector, fullres, img, obj, paths, label: Optional[str] = None
+):
     if fullres:
         scale = int(100 / detector.conf["downsample"])
     else:
@@ -238,6 +244,18 @@ def draw_basic_bounding_box_and_path(association_dist, color, detector, fullres,
             int(detector.mm_to_px(detector.conf["max_association_dist_mm"]) * scale),
             (0, 0, 255),
             1 * scale,
+        )
+    if label:
+        if label == "fish" and obj.precalculated_feature is not None:
+            label += f", {obj.precalculated_feature}"
+        cv.putText(
+            img,
+            label,
+            (x - int(w / 2), y - int(h / 2) - 2 * scale),
+            cv.FONT_HERSHEY_SIMPLEX,
+            0.5,
+            color,
+            2,
         )
     return h, scale, w, x, y
 

@@ -2,7 +2,7 @@ import os
 
 import pytest
 
-from algorithm.convert_video_red_to_jet import (
+from algorithm.scripts.convert_video_red_to_jet import (
     process_video,  # replace with the actual module name
 )
 

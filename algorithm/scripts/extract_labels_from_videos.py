@@ -19,12 +19,13 @@ def main(settings_dict: dict):
     latest_persistent_object_id = 250
 
     for file in filenames:
-        print(f"\nProcessing  {file}")
         file_name = Path(file).stem
-        csv_file = open(
-            settings_dict["csv_output_directory"] + file_name + settings_dict["csv_output_suffix"],
-            "w",
-        )
+        csv_path = Path(settings_dict["csv_output_directory"] + file_name + settings_dict["csv_output_suffix"])
+        if csv_path.exists() and not settings_dict["overwrite_existing_csv"]:
+            print(f"File {csv_path} already exists. Skipping.")
+            continue
+        print(f"\nProcessing  {file}")
+        csv_file = open(csv_path.as_posix(), "w")
         csv_writer = csv.writer(csv_file)
         csv_writer.writerow(
             [

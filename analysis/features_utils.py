@@ -4,23 +4,134 @@ from typing import Optional
 import cv2 as cv
 import numpy as np
 import pandas as pd
+from numpy import ndarray
+from scipy.signal import savgol_filter
 
 
-def calculate_features(measurements_df: pd.DataFrame) -> pd.DataFrame:
-    feature_df = measurements_df.groupby("id").apply(trace_window_metrics)
+def calculate_features(measurements_df: pd.DataFrame, masks: dict[str, np.ndarray]) -> pd.DataFrame:
+    measurements_df["binary_image"], measurements_df["tile_blob_counts"] = grayscale_to_binary(
+        measurements_df["image_tile"]
+    )
+    feature_df = measurements_df.groupby("id").apply(lambda x: trace_window_metrics(x, masks))
     return measurements_df.join(feature_df, on="id", how="left")
 
 
-def trace_window_metrics(detection: pd.DataFrame) -> pd.Series:
+def calculate_distance_between_starting_and_ending_point(detection):
+    start_x, start_y = detection["x"].iloc[0], detection["y"].iloc[0]
+    end_x, end_y = detection["x"].iloc[-1], detection["y"].iloc[-1]
+    distance = np.sqrt((end_x - start_x) ** 2 + (end_y - start_y) ** 2)
+    return distance
+
+
+def calculate_average_distance_from_start(detection: pd.DataFrame) -> ndarray:
+    start_x, start_y = detection["x"].iloc[0], detection["y"].iloc[0]
+    distances = np.sqrt((detection["x"] - start_x) ** 2 + (detection["y"] - start_y) ** 2)
+    return np.nanmean(distances)
+
+
+def calculate_mean_of_pixel_intensity(row):
+    detection_box = row
+    if 0 in detection_box.shape:
+        # print("detection_box is empty")
+        return
+    mean, _ = cv.meanStdDev(detection_box)
+    return mean[0]
+
+
+def calculate_average_pixel_intensity(detection):
+    stddevs = detection["image_tile"].apply(lambda x: calculate_mean_of_pixel_intensity(x))
+    return np.nanmean(stddevs)[0]
+
+
+def trace_window_metrics(detection: pd.DataFrame, masks: dict[str, np.array]) -> pd.Series:
     frame_diff = detection["frame"].iloc[-1] - detection["frame"].iloc[0]
+    detection["v_parallel_river"], detection["v_orthogonal_river"] = velocity_relative_to_river_velocity(detection)
+    time_ratio_near_rake, dist_near_rake = calculate_rake_path_ratio(detection, masks["rake_mask"])
     return pd.Series(
         {
+            "v_xr_avg": np.mean(np.diff(detection["x"])),
+            "v_yr_avg": np.mean(detection["v_yr"]),
+            "v_xr_median": np.median(detection["v_xr"]),
+            "v_yr_median": np.median(detection["v_yr"]),
+            "v_parallel_river_avg": np.nanmean(detection["v_parallel_river"]),
+            "v_orthogonal_river_avg": np.nanmean(detection["v_orthogonal_river"]),
+            "v_parallel_river_median": np.nanmedian(detection["v_parallel_river"]),
+            "v_orthogonal_river_median": np.nanmedian(detection["v_orthogonal_river"]),
+            "x_avg": np.mean(detection["x"]),
+            "y_avg": np.mean(detection["y"]),
             "traversed_distance": sum_euclidean_distance_between_positions(detection),
             "frame_diff": frame_diff,
-            "average_curvature": calculate_average_curvature(detection),
+            "average_curvature": calculate_curvature(detection),
+            "average_smoothed_curvature_15": calculate_curvature(
+                detection, operator="mean", window_length=15, polyorder=2
+            ),
+            "average_smoothed_curvature_30": calculate_curvature(
+                detection, operator="mean", window_length=30, polyorder=2
+            ),
+            "median_curvature": calculate_curvature(detection, operator="median"),
+            "median_smoothed_curvature_15": calculate_curvature(
+                detection, operator="median", window_length=15, polyorder=2
+            ),
+            "median_smoothed_curvature_30": calculate_curvature(
+                detection, operator="median", window_length=30, polyorder=2
+            ),
             "average_overlap_ratio": calculate_average_overlap_ratio(detection),
+            "average_bbox_size": calculate_average_bbox_size(detection),
+            "rake_time_ratio": time_ratio_near_rake,
+            "dist_near_rake": dist_near_rake,
+            "flow_area_time_ratio": calculate_flow_area_time_ratio(detection, masks["flow_area_mask"]),
+            "average_distance_from_start": calculate_average_distance_from_start(detection),
+            "average_contour_area": np.mean(detection["contour_area"]),
+            "distance_between_starting_and_ending_point": calculate_distance_between_starting_and_ending_point(
+                detection
+            ),
+            "average_pixel_intensity": calculate_average_pixel_intensity(detection),
+            "max_blob_count": max_blob_count(detection),
+            "average_distance_from_start/traversed_distance": calculate_average_distance_from_start(detection)
+            / sum_euclidean_distance_between_positions(detection),
         }
     )
+
+
+def max_blob_count(detection: pd.DataFrame) -> int:
+    return max(detection["tile_blob_counts"])
+
+
+def calculate_average_bbox_size(group: pd.DataFrame) -> float:
+    return np.mean(group["w"] * group["h"])
+
+
+def velocity_relative_to_river_velocity(
+    detection: pd.DataFrame,
+    river_velocity: tuple[float, float] = np.array([2.35, -0.9]),
+) -> tuple[float, float]:
+    v = np.vstack((np.diff(detection["x"]), np.diff(detection["y"]))).T
+    river_velocity_normalized = river_velocity / np.linalg.norm(river_velocity)
+    v_parallel_river = v @ river_velocity_normalized
+    v_orthogonal_river = v @ river_velocity_normalized[::-1]
+    v_parallel_river = np.hstack((np.nan, v_parallel_river))
+    v_orthogonal_river = np.hstack((np.nan, v_orthogonal_river))
+    return v_parallel_river, v_orthogonal_river
+
+
+def calculate_rake_path_ratio(detection: pd.DataFrame, rake_mask: np.array) -> tuple[float, float]:
+    x = detection["x"].values
+    y = detection["y"].values
+    is_near_rake = rake_mask[y.astype(int), x.astype(int)]
+    time_ratio_near_rake = np.sum(is_near_rake) / len(is_near_rake)
+
+    x_diff = np.diff(x[is_near_rake])
+    y_diff = np.diff(y[is_near_rake])
+    dist_near_rake = np.sum(np.sqrt(x_diff**2 + y_diff**2))
+    return time_ratio_near_rake, dist_near_rake
+
+
+def calculate_flow_area_time_ratio(detection: pd.DataFrame, flow_mask: np.array) -> float:
+    x = detection["x"].values
+    y = detection["y"].values
+    is_in_flow = flow_mask[y.astype(int), x.astype(int)]
+    time_ratio_in_flow = np.sum(is_in_flow) / len(is_in_flow)
+    return time_ratio_in_flow
 
 
 def sum_euclidean_distance_between_positions(detection: pd.DataFrame):
@@ -31,15 +142,30 @@ def sum_euclidean_distance_between_positions(detection: pd.DataFrame):
     return traversed_distance
 
 
-def calculate_average_curvature(detection: pd.DataFrame) -> float:
+def calculate_curvature(
+    detection: pd.DataFrame,
+    operator: str = "mean",
+    window_length: int = 7,
+    polyorder: int = 2,
+) -> float:
     if len(detection["x"]) < 2 or len(detection["y"]) < 2:
         print(f"Skipping detection {detection['id']} because it has too few points.")
         return 0
-    dx_dt, dy_dt = np.gradient(detection["x"]), np.gradient(detection["y"])
+
+    # Apply Savitzky-Golay filter to smooth the trajectory
+    x_smooth = savgol_filter(detection["x"], window_length, polyorder)
+    y_smooth = savgol_filter(detection["y"], window_length, polyorder)
+
+    dx_dt, dy_dt = np.gradient(x_smooth), np.gradient(y_smooth)
     d2x_dt2, d2y_dt2 = np.gradient(dx_dt), np.gradient(dy_dt)
-    curvature = np.abs(dx_dt * d2y_dt2 - dy_dt * d2x_dt2) / (dx_dt**2 + dy_dt**2) ** (3 / 2)
-    avg_curvature = np.nanmean(curvature)
-    return float(avg_curvature)
+    curvature = np.abs(dx_dt * d2y_dt2 - dy_dt * d2x_dt2) / (dx_dt**2 + dy_dt**2 + 1e-8) ** (3 / 2)
+
+    if operator == "mean":
+        return float(np.nanmean(curvature))
+    elif operator == "median":
+        return float(np.nanmedian(curvature))
+    else:
+        raise ValueError(f"Invalid operator: {operator}")
 
 
 def calculate_average_overlap_ratio(detection: pd.DataFrame):
@@ -51,7 +177,7 @@ def calculate_average_overlap_ratio(detection: pd.DataFrame):
             img, prev_img = pad_images_to_have_same_shape(img, prev_img)
             overlap_ratios.append(get_overlap_ratio(prev_img, img))
         prev_img = img
-    return np.mean(overlap_ratios)
+    return np.mean(overlap_ratios[:-5])
 
 
 # Code from https://stackoverflow.com/questions/74657074/find-new-blobs-comparing-two-different-binary-images
@@ -170,3 +296,59 @@ def pad_images_to_have_same_shape(img, prev_img):
     prev_img = cv.copyMakeBorder(prev_img, top2, bottom2, left2, right2, cv.BORDER_CONSTANT, value=[0, 0, 0])
     img = cv.copyMakeBorder(img, top1, bottom1, left1, right1, cv.BORDER_CONSTANT, value=[0, 0, 0])
     return img, prev_img
+
+
+def grayscale_to_binary(
+    detection: pd.Series,
+    difference_threshold_scaler: float = 0.3,
+) -> np.ndarray:
+    binaries = []
+    blob_counts = []
+    for image in detection:
+        try:
+            adaptive_threshold = difference_threshold_scaler * cv.blur(image.astype("uint8"), (10, 10))
+            image[np.abs(image) < adaptive_threshold] = 0
+            image = (np.abs(image) + 127).astype("uint8")
+            _, binary_image = cv.threshold(image, 127 + difference_threshold_scaler, 255, 0)
+            binary_image = np.squeeze(binary_image)
+            binary_image, img_blob_counts = remove_small_blobs(binary_image)
+        except IndexError:
+            binary_image = None
+        binaries.append(binary_image)
+        blob_counts.append(img_blob_counts)
+
+    return binaries, blob_counts
+
+
+def remove_small_blobs(
+    binary_image: np.ndarray,
+    min_blob_to_area_ratio: int = 4,
+    min_blob_pixel_count: int = 5,
+) -> tuple[np.ndarray, int]:
+    # Invert the binary image
+    inverted_image = 255 - binary_image
+
+    # Find contours in the inverted image
+    contours, _ = cv.findContours(inverted_image, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+
+    # Calculate the area for each contour
+    areas = [cv.contourArea(cnt) for cnt in contours]
+
+    # Calculate the average area
+    avg_area = np.mean(areas)
+
+    # Create a new binary image
+    new_binary_image = np.zeros_like(binary_image)
+    blob_counts = 0
+    for cnt in contours:
+        if (
+            cv.contourArea(cnt) > 1.0 / min_blob_to_area_ratio * avg_area
+            and cv.contourArea(cnt) >= min_blob_pixel_count
+        ):
+            cv.drawContours(new_binary_image, [cnt], -1, 255, thickness=cv.FILLED)
+            blob_counts += 1
+
+    # Invert the new binary image back to its original state
+    new_binary_image = 255 - new_binary_image
+
+    return new_binary_image, blob_counts
