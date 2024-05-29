@@ -11,6 +11,11 @@ def main(settings_dict: dict):
 
     for file_path in input_video_file_paths:
         output_file_path = output_directory_path / file_path.relative_to(input_directory_path)
+        if output_file_path.exists() and not settings_dict["overwrite_existing_files"]:
+            print(f"Skipping {file_path} since it already exists")
+            continue
+
+        print(f"Processing {file_path} -> {output_file_path}")
         down_sample_frame_rate_of_video(
             input_file=file_path,
             output_file=output_file_path,

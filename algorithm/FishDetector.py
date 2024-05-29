@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 from typing import Dict
 
 import cv2 as cv
@@ -21,24 +21,22 @@ class FishDetector:
         self.frame_number = 0
         self.latest_obj_index = 0
 
-        # Masks
-        self.non_object_space_mask = cv.imread(
-            os.path.join(self.conf["mask_directory"], "fish.png"),
-            cv.IMREAD_GRAYSCALE,
-        )
-        self.sonar_controls_mask = cv.imread(
-            os.path.join(self.conf["mask_directory"], "full.png"),
-            cv.IMREAD_GRAYSCALE,
-        )
-
         # Enhancement
         self.framebuffer = None
         self.mean_buffer = None
         self.mean_buffer_counter = None
         self.short_mean_float = None
         self.long_mean_float = None
+        if self.conf.get("mask_file"):
+            mask_file = self.conf["mask_file"]
+        else:
+            mask_file = "sonar_controls.png"
+        self.mask = cv.imread(
+            (Path(self.conf["mask_directory"]) / mask_file).as_posix(),
+            cv.IMREAD_GRAYSCALE,
+        )
 
-    def detect_objects(self, raw_frame) -> (Dict[int, DetectedBlob], dict, dict):
+    def detect_objects(self, raw_frame) -> tuple[Dict[int, DetectedBlob], dict, dict]:
         start = cv.getTickCount()
         runtimes_ms = {}
         frame_dict = {"raw": raw_frame}
@@ -48,75 +46,54 @@ class FishDetector:
             runtimes_ms["enhance"] = get_elapsed_ms(start)
             runtimes_ms["detection_tracking"] = get_elapsed_ms(start) - runtimes_ms["enhance"]
             runtimes_ms["total"] = get_elapsed_ms(start)
-
             return {}, frame_dict, runtimes_ms
         else:
             enhanced_temp = (self.short_mean_float - self.long_mean_float).astype("int16")
+            frame_dict["difference"] = (enhanced_temp + 127).astype("uint8")
             frame_dict["long_mean"] = self.long_mean_float.astype("uint8")
             frame_dict["short_mean"] = self.short_mean_float.astype("uint8")
-            frame_dict["difference"] = (enhanced_temp + 127).astype("uint8")
-            frame_dict["absolute_difference"] = (abs(enhanced_temp) + 127).astype("uint8")
-
             adaptive_threshold = self.conf["difference_threshold_scaler"] * cv.blur(
                 self.long_mean_float.astype("uint8"), (10, 10)
             )
             enhanced_temp[abs(enhanced_temp) < adaptive_threshold] = 0
             frame_dict["difference_thresholded"] = (enhanced_temp + 127).astype("uint8")
-
             enhanced_temp = (abs(enhanced_temp) + 127).astype("uint8")
-            frame_dict["difference_thresholded_abs"] = enhanced_temp
             median_filter_kernel_px = self.mm_to_px(self.conf["median_filter_kernel_mm"])
             enhanced_temp = cv.medianBlur(enhanced_temp, self.ceil_to_odd_int(median_filter_kernel_px))
             frame_dict["median_filter"] = enhanced_temp
             runtimes_ms["enhance"] = get_elapsed_ms(start)
-
             # Threshold to binary
             ret, thres = cv.threshold(enhanced_temp, 127 + self.conf["difference_threshold_scaler"], 255, 0)
-            ret, thres_raw = cv.threshold(
-                frame_dict["difference_thresholded_abs"],
-                127 + self.conf["difference_threshold_scaler"],
-                255,
-                0,
-            )
-            frame_dict["binary"] = thres
-            # frame_dict["raw_binary"] = thres_raw
-            dilation_kernel_px = self.mm_to_px(self.conf["dilation_kernel_mm"])
-            kernel = cv.getStructuringElement(
-                cv.MORPH_ELLIPSE,
-                (
-                    self.ceil_to_odd_int(dilation_kernel_px),
-                    self.ceil_to_odd_int(dilation_kernel_px),
-                ),
-            )
-            frame_dict["dilated"] = cv.dilate(thres, kernel, iterations=1)
-            # frame_dict["closed"] = cv.morphologyEx(thres, cv.MORPH_CLOSE, kernel)
-            # frame_dict["opened"] = cv.morphologyEx(thres, cv.MORPH_OPEN, kernel)
-            # frame_dict["internal_external"] = (
-            #     frame_dict["dilated"] - frame_dict["raw_binary"]
-            # )
-
+            self.dilate_frame(frame_dict, thres)
             detections = self.extract_keypoints(frame_dict)
-
             runtimes_ms["detection_tracking"] = get_elapsed_ms(start) - runtimes_ms["enhance"]
-
         runtimes_ms["total"] = get_elapsed_ms(start)
         return detections, frame_dict, runtimes_ms
 
+    def dilate_frame(self, frame_dict, thres):
+        dilation_kernel_px = self.mm_to_px(self.conf["dilation_kernel_mm"])
+        kernel = cv.getStructuringElement(
+            cv.MORPH_ELLIPSE,
+            (
+                self.ceil_to_odd_int(dilation_kernel_px),
+                self.ceil_to_odd_int(dilation_kernel_px),
+            ),
+        )
+        frame_dict["dilated"] = cv.dilate(thres, kernel, iterations=1)
+
     def enhance_image(self, frame_dict):
-        # Image enhancement
         if self.conf.get("downsample"):
             frame_dict["raw_downsampled"] = resize_img(frame_dict["raw"], self.conf["downsample"])
             frame_dict["gray"] = self.rgb_to_gray(frame_dict["raw_downsampled"])
         else:
             frame_dict["gray"] = self.rgb_to_gray(frame_dict["raw"])
-        enhanced_temp = self.mask_regions(frame_dict["gray"], area="sonar_controls")
+        enhanced_temp = self.mask_regions(frame_dict["gray"])
         enhanced_temp = cv.convertScaleAbs(enhanced_temp, alpha=self.conf["contrast"], beta=self.conf["brightness"])
         self.update_buffers_calculate_means(enhanced_temp)
         frame_dict["gray_boosted"] = enhanced_temp
         return frame_dict
 
     def extract_keypoints(self, frame_dict) -> Dict[int, DetectedBlob]:
-        # Extract keypoints
         contours, _ = cv.findContours(frame_dict["dilated"], cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
         detections: list[DetectedBlob] = {}
         for contour in contours:
@@ -125,6 +102,7 @@ class FishDetector:
                 frame_number=self.frame_number,
                 contour=contour,
                 frame=frame_dict,
+                input_settings=self.conf,
             )
             detections[new_object.ID] = new_object
             self.latest_obj_index += 1
@@ -170,7 +148,6 @@ class FishDetector:
                 object_history=object_history,
                 frame_number=self.frame_number,
                 processed_frame_dict=processed_frame_dict,
-                bbox_size_to_stddev_ratio_threshold=self.conf.get("bbox_size_to_stddev_ratio_threshold"),
             )
         else:
             raise ValueError(f"Invalid tracking method: {self.conf['tracking_method']}")
@@ -243,29 +220,18 @@ class FishDetector:
             else:
                 self.mean_buffer_counter += 1
 
-    def mask_regions(self, img, area="sonar_controls"):
-        if area == "non_object_space":
-            if img.shape[:1] != self.non_object_space_mask.shape[:1]:
-                percent_difference = img.shape[0] / self.non_object_space_mask.shape[0] * 100
+    def mask_regions(self, img):
+        if img.shape[:1] != self.mask.shape[:1]:
+            percent_difference = img.shape[0] / self.mask.shape[0] * 100
 
-                np.place(
-                    img,
-                    resize_img(self.non_object_space_mask, percent_difference) < 100,
-                    0,
-                )
-            else:
-                np.place(img, self.non_object_space_mask < 100, 0)
-        elif area == "sonar_controls":
-            if img.shape[:1] != self.sonar_controls_mask.shape[:1]:
-                percent_difference = img.shape[0] / self.sonar_controls_mask.shape[0] * 100
+            np.place(
+                img,
+                resize_img(self.mask, percent_difference) < 100,
+                0,
+            )
+        else:
+            np.place(img, self.mask < 100, 0)
 
-                np.place(
-                    img,
-                    resize_img(self.sonar_controls_mask, percent_difference) < 100,
-                    0,
-                )
-            else:
-                np.place(img, self.sonar_controls_mask < 100, 0)
         return img
 
     def rgb_to_gray(self, img):
