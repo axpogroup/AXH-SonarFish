@@ -1,5 +1,5 @@
 # Input / Output
-file_name: "Passe3_Apr08_07-00-00.mp4"
+file_name: "Passe3_Apr01_02-07-45.mp4"
 input_directory:  "data/raw/videos/"
 mask_directory: "analysis/demo/masks"
 output_directory: "data/model_output/"
@@ -52,7 +52,7 @@ kalman_rotate_mmt_noise_in_river_direction: False
 kalman_trace_history_matching_budget: 10
 kalman_max_iou_distance: 0.5 # basically (1 - iou_min)
 kalman_max_age: 20
-kalman_n_init: 15
+kalman_n_init: 10
 filter_nearest_neighbor:
 filter_blob_matching_metric: "histogram" # one of ['euclidean_distance', 'blob_area', 'histogram', 'mutual_information', 'fft']
 filter_association_thresh: 0.3
