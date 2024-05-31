@@ -230,13 +230,13 @@ class InputOutputHandler:
                 f"Total: {total_time_per_frame} | FPS: {'{:.1f}'.format(self.frame_no/(2*total_runtime/1000))}"
             )
         if self.settings_dict["display_output_video"] or self.settings_dict["record_output_video"]:
-            extensive = self.settings_dict["display_mode_extensive"]
             disp = visualization_functions.get_visual_output(
                 object_history=object_history,
                 label_history=label_history,
                 detector=detector,
                 processed_frame=processed_frame,
-                extensive=extensive,
+                extensive=self.settings_dict.get("display_mode_extensive", False),
+                dual_output=self.settings_dict.get("display_mode_dual", False),
                 save_frame=self.settings_dict["record_processing_frame"],
             )
             if self.settings_dict["record_output_video"]:

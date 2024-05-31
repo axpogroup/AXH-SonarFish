@@ -23,10 +23,30 @@ def get_visual_output(
     detector: FishDetector,
     processed_frame: dict[str, np.ndarray],
     extensive=False,
+    dual_output=False,
     color=(255, 200, 200),
     save_frame: str = "raw",
 ):
-    if extensive:
+    assert not (dual_output and extensive), "dual_output and extensive can't both be True"
+
+    if dual_output:
+        # Get the raw frame without detections
+        raw_frame = _retrieve_frame(save_frame, processed_frame)
+
+        # Get the raw frame with detections
+        detected_frame = _draw_detections_and_labels(
+            detector=detector,
+            object_history=object_history,
+            label_history=label_history,
+            processed_frame=_retrieve_frame(save_frame, processed_frame),
+            color=color,
+            paths=True,
+            fullres=True,
+        )
+
+        # Concatenate the two frames horizontally
+        disp = np.concatenate((raw_frame, detected_frame), axis=1)
+    elif extensive:
         first_row_images = np.ndarray(shape=(270, 0, 3), dtype="uint8")
         second_row_images = np.ndarray(shape=(270, 0, 3), dtype="uint8")
         for frame_type in FIRST_ROW:
@@ -109,7 +129,6 @@ def _draw_detections_and_labels(
             detector,
             processed_frame,
             color=color,
-            annotate=detector.conf["annotate_detections"],
             **kwargs,
         )
     if label_history is not None:
@@ -191,21 +210,24 @@ def _draw_detector_output(
                     # if no nan in ellipse_axes_lengths:
                     cv.ellipse(
                         img,
-                        (obj.midpoints[-1][0], obj.midpoints[-1][1]),
-                        (ellipse_axes_lengths[0], ellipse_axes_lengths[1]),
+                        (obj.midpoints[-1][0] * scale, obj.midpoints[-1][1] * scale),
+                        (ellipse_axes_lengths[0] * scale, ellipse_axes_lengths[1] * scale),
                         obj.ellipse_angles[-1],
                         0,
                         360,
                         color,
-                        1 * scale,
+                        1,
                     )
             text = ""
             if len(obj.means_of_pixels_intensity) > 0:
-                ratio = obj.feature["bbox_size_to_stddev_ratio"]
-                text = f"ID:{obj.ID}, ratio: {int(ratio)}"
-                if len(obj.velocities) > 100:
-                    text += f", v [px/frame]: {obj.velocities[-1] * scale}"
-            if annotate:
+                text = f"ID:{obj.ID}"
+                for feature in detector.conf.get("features_to_annotate", []):
+                    if feature == "velocity":
+                        if len(obj.velocities) > 0:
+                            text += f", {feature}: {obj.velocities[-1] * scale}"
+                    else:
+                        text += f", {feature}: {obj.feature[feature]}"
+            if detector.conf.get("annotate_detections", False):
                 cv.putText(
                     img,
                     text,
@@ -238,14 +260,14 @@ def draw_basic_bounding_box_and_path(
         (x - int(w / 2), y - int(h / 2)),
         (x + int(w / 2), y + int(h / 2)),
         color,
-        thickness=1 * scale,
+        thickness=1,
     )
     if paths:
         for point in obj.midpoints:
             cv.circle(
                 img,
                 (point[0] * scale, point[1] * scale),
-                1 * scale,
+                1,
                 color,
                 thickness=-1,
             )
