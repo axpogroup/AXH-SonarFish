@@ -104,7 +104,14 @@ def _draw_detections_and_labels(
 ):
     disp = processed_frame
     if detector.conf["show_detections"]:
-        disp = _draw_detector_output(object_history, detector, processed_frame, color=color, **kwargs)
+        disp = _draw_detector_output(
+            object_history,
+            detector,
+            processed_frame,
+            color=color,
+            annotate=detector.conf["annotate_detections"],
+            **kwargs,
+        )
     if label_history is not None:
         disp = _draw_labels(label_history, detector, disp, **kwargs)
     return disp
@@ -167,7 +174,8 @@ def _draw_detector_output(
     paths=False,
     fullres=False,
     association_dist=False,
-    annotate=True,
+    draw_detections: bool = True,
+    annotate: bool = True,
     color=(255, 200, 200),
 ):
     for ID, obj in object_history.items():
@@ -176,7 +184,7 @@ def _draw_detector_output(
         h, scale, w, x, y = draw_basic_bounding_box_and_path(
             association_dist, color, detector, fullres, img, obj, paths
         )
-        if annotate:
+        if draw_detections:
             if obj.ellipse_angles[-1] is not None and obj.ellipse_axes_lengths_pairs[-1] is not None:
                 if not np.isnan(obj.ellipse_axes_lengths_pairs[-1]).any():
                     ellipse_axes_lengths = obj.ellipse_axes_lengths_pairs[-1].astype(int)
@@ -197,15 +205,16 @@ def _draw_detector_output(
                 text = f"ID:{obj.ID}, ratio: {int(ratio)}"
                 if len(obj.velocities) > 100:
                     text += f", v [px/frame]: {obj.velocities[-1] * scale}"
-            cv.putText(
-                img,
-                text,
-                (x - int(w / 2), y - int(h / 2) - 2 * scale),
-                cv.FONT_HERSHEY_SIMPLEX,
-                0.5,
-                color,
-                2,
-            )
+            if annotate:
+                cv.putText(
+                    img,
+                    text,
+                    (x - int(w / 2), y - int(h / 2) - 2 * scale),
+                    cv.FONT_HERSHEY_SIMPLEX,
+                    0.5,
+                    color,
+                    2,
+                )
     return img
 
 
