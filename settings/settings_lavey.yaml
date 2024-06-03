@@ -17,7 +17,7 @@ record_output_video: True # Only works for full resolution output
 record_processing_frame: "raw" # one of ['raw', 'raw_downsampled', 'gray', 'gray_boosted', 'long_mean', 'short_mean', 'difference', 'absolute_difference', 'difference_thresholded', 'difference_thresholded_abs', 'median_filter', 'binary', 'dilated']
 draw_detections_on_saved_video: True
 store_raw_image_patch: False
-store_median_image_patch: False
+store_median_image_patch: True
 show_detections: True
 annotate_detections: True
 features_to_annotate: [] # ["bbox_size_to_stddev_ratio", "velocity"]
@@ -46,7 +46,7 @@ erosion_kernel_mm: 100
 
 # Tracking
 tracking_method: "kalman" # one of ['nearest_neighbor', 'kalman']
-max_association_dist_mm: 200
+max_association_dist_mm: 70
 phase_out_after_x_frames: 20
 kalman_std_obj_initialization_factor: 0.2
 kalman_std_obj_initialization_trace: [1, 1, 0.1, 1, 0.5, 0.5, 0.0001, 0.5] # [x, y, w, h, vx, vy, va, vh]
@@ -55,14 +55,14 @@ kalman_std_process_noise_trace: [1, 1, 0.1, 1, 0.05, 0.05, 0.0001, 0.05] # [x, y
 kalman_std_mmt_noise_factor: 50
 kalman_std_mmt_noise_trace: [5, 5, 1, 0.05] # [x, y, a, h]
 kalman_rotate_mmt_noise_in_river_direction: False
-kalman_trace_history_matching_budget: 10
+kalman_trace_history_matching_budget: 5
 kalman_max_iou_distance: 0.85 # basically (1 - iou_min)
 kalman_max_age: 20
 kalman_n_init: 20
 filter_nearest_neighbor:
 filter_blob_matching_metric: "histogram" # one of ['euclidean_distance', 'blob_area', 'histogram', 'mutual_information', 'fft']
 filter_association_thresh: 0.2 # not relevant if euclidean_distance is chosen (uses max_association_dist_mm)
-# filter_blob_elimination_metric: "euclidean_distance" # one of ['euclidean_distance']
+filter_blob_elimination_metric: "euclidean_distance" # one of ['euclidean_distance']
 bbox_size_to_stddev_ratio_threshold: 10
 
 
