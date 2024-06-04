@@ -27,8 +27,6 @@ display_mode_dual: True
 display_trackbars: True
 feature_to_load: "max_blob_count"
 
-# TODO: check saving video with dual output mode, then run on Passe videos
-
 # Size
 input_pixels_per_mm: 0.0838
 
