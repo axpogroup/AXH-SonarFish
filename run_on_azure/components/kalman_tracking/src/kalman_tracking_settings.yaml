@@ -20,10 +20,10 @@ store_median_image_patch: True
 show_detections: True
 annotate_detections: True
 features_to_annotate: [] # ["bbox_size_to_stddev_ratio", "velocity"]
-display_output_video: True
+display_output_video: False
 display_mode_extensive: False
 display_mode_dual: True
-display_trackbars: True
+display_trackbars: False
 feature_to_load: "max_blob_count"
 
 # TODO: check saving video with dual output mode, then run on Passe videos
