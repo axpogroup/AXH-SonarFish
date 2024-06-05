@@ -4,8 +4,8 @@ input_directory:  "."
 mask_directory: "./masks/"
 output_directory: "."
 ground_truth_directory: "."
-labels_file_suffix: "_classification_min_track_length_30"
-mask_file: "lavey_non_object_space.png" # one of ["sonar_controls.png", "stroppel_non_object_space.png", "herrendoebeli_non_object_space.png", "lavey_non_object_space.png"]
+labels_file_suffix: "_ground_truth"
+mask_file: "sonar_controls.png" # one of ["sonar_controls.png", "stroppel_non_object_space.png", "herrendoebeli_non_object_space.png", "lavey_non_object_space.png"]
 
 # Azure ML
 experiment_name: "how_much_is_the_fish_at_lavey"
