@@ -1,7 +1,9 @@
 import itertools
 import json
+import yaml
 import os
 import pickle
+import warnings
 from copy import deepcopy
 from multiprocessing import Pool, cpu_count
 from pathlib import Path
@@ -83,15 +85,19 @@ def load_csv_with_tiles(path: Path) -> pd.DataFrame:
 class FeatureGenerator(object):
     def __init__(
         self,
-        load_old_measurements: bool,
-        load_old_test_files: bool,
-        measurements_csv_paths: list[Union[str, Path]],
-        gt_csv_paths: list[Union[str, Path]],
-        test_csv_paths: Optional[list[Union[str, Path]]],
         rake_mask_path: Union[str, Path],
         flow_area_mask_path: Union[str, Path],
-        non_flow_area_mask_path: Union[str, Path],
-        test_gt_csv_paths: Optional[list[Union[str, Path]]] = None,
+        non_flow_area_mask_path: Optional[Union[str, Path]] = None,
+        gt_fish_id_yaml: Optional[Union[Path, str]] = None,
+        measurements_csv_dir: Union[str, Path] = "",
+        measurements_csv_paths: list[Union[str, Path]] = [],
+        gt_csv_paths: list[Union[str, Path]] = [],
+        test_csv_dir: Union[str, Path] = "",
+        test_gt_fish_id_yaml: Optional[Union[Path, str]] = None,
+        test_csv_paths: Optional[list[Union[str, Path]]] = [],
+        test_gt_csv_paths: Optional[list[Union[str, Path]]] = [],
+        load_old_measurements: bool = False,
+        load_old_test_files: bool = False,
         min_track_length: int = 10,
         force_feature_recalc: bool = False,
         force_test_feature_recalc: bool = False,
@@ -100,30 +106,38 @@ class FeatureGenerator(object):
         trajectory_min_overlap_ratio: float = 0.3,
         trajectory_max_iou_track_distance: float = 0.6,
     ):
-        self.test_all_measurements_gt_pairs_secondary = None
-        self.all_measurements_gt_pairs_secondary = None
-        self.all_measurements_gt_pairs = None
-        self.test_all_measurements_gt_pairs = None
+        if gt_fish_id_yaml and gt_csv_paths:
+            warnings.warn("gt_csv_paths, measurements_csv_paths will be ignored if gt_fish_id_yaml is provided")
+        if test_gt_fish_id_yaml and test_gt_csv_paths:
+            warnings.warn("test_gt_csv_paths will be ignored if test_gt_fish_id_yaml is provided")
+            
+        gt_csv_paths = [Path(p) for p in gt_csv_paths]
+        test_gt_csv_paths = [Path(p) for p in test_gt_csv_paths]
+        if gt_fish_id_yaml:
+            self.gt_fish_ids, self.measurements_csv_paths = self._parse_gt_fish_id_yaml(gt_fish_id_yaml, measurements_csv_dir)
+        else:
+            self.measurements_csv_paths = [Path(p) for p in measurements_csv_paths]
+            self.gt_fish_ids = None
+        if test_gt_fish_id_yaml:
+            self.test_gt_fish_ids, self.test_csv_paths = self._parse_gt_fish_id_yaml(test_gt_fish_id_yaml, test_csv_dir)
+        else:
+            self.test_csv_paths = [Path(p) for p in test_csv_paths]
+            self.test_gt_fish_ids = None
+        
         self.measurements_dfs = None
         self.test_dfs = None
         self.min_overlapping_ratio = min_overlapping_ratio
         self.min_track_length = min_track_length
         self.force_feature_recalc = force_feature_recalc
         self.force_test_feature_recalc = force_test_feature_recalc
-        self.measurements_csv_paths = [Path(p) for p in measurements_csv_paths]
-        self.test_csv_paths = [Path(p) for p in test_csv_paths]
         self.trajectory_min_iou_thresh = trajectory_min_iou_thresh
         self.trajectory_min_overlap_ratio = trajectory_min_overlap_ratio
         self.trajectory_max_iou_track_distance = trajectory_max_iou_track_distance
-        gt_csv_paths = [Path(p) for p in gt_csv_paths]
-        if test_gt_csv_paths:
-            self.test_gt_csv_paths = [Path(p) for p in test_gt_csv_paths]
-        else:
-            self.test_gt_csv_paths = None
+
         self.masks = {
             "rake_mask": self._read_mask(rake_mask_path),
             "flow_area_mask": self._read_mask(flow_area_mask_path),
-            "non_flow_area_mask": self._read_mask(non_flow_area_mask_path),
+            "non_flow_area_mask": self._read_mask(non_flow_area_mask_path) if non_flow_area_mask_path else None,
         }
         if load_old_measurements:
             self.measurements_dfs, self.gt_dfs, self.test_cached_csv_paths = self._load_old_measurements_df(
@@ -168,10 +182,9 @@ class FeatureGenerator(object):
             self._read_csvs(labels_csv_paths, gt_csv_paths, force_feature_recalc)
         ):
             if not gt_df.empty:
-                gt_df["id"] = gt_df["id"].apply(lambda x: f"{idx}-{x}")
                 gt_dfs.append(gt_df)
             labels_df["video_id"] = idx
-            labels_df["id"] = labels_df.apply(lambda x: f"{x['video_id']}-{x['id']}", axis=1)
+            labels_df["video_name"] = labels_csv_paths[idx].stem
             labels_dfs.append(labels_df)
             cache_paths.append(cache_path)
         return labels_dfs, gt_dfs, cache_paths
@@ -186,35 +199,47 @@ class FeatureGenerator(object):
         gt_dfs = self.read_csvs_from_paths(gt_csv_paths)
         cache_paths = [self._create_cache_path(path) for path in labels_csv_paths]
         return labels_dfs, gt_dfs, cache_paths
+    
+    def _parse_gt_fish_id_yaml(
+            self, 
+            gt_fish_id_yaml: Union[Path, str],
+            csv_dir: Union[Path, str],
+        ) -> tuple[list[list[int]], list[Path]]:
+        gt_fish_id_yaml = Path(gt_fish_id_yaml)
+        csv_dir = Path(csv_dir)
+        
+        with open(gt_fish_id_yaml, 'r') as f:
+            fish_id_file = yaml.load(f, Loader=yaml.SafeLoader)
+            
+        fish_ids = []
+        tracking_files = []
+        for video in fish_id_file:
+            fish_ids.append(video['fish_track_IDs'])
+            tracking_files.append(csv_dir / f"teams_{video['file'].replace('_raw_output.mp4', '.csv')}")
+        
+        return fish_ids, tracking_files
 
     def calc_feature_dfs(self):
-        if self.force_test_feature_recalc:
-            if self.test_dfs:
-                test_df_list = []
-                print("Calculating/reading features for test data")
-                for test_df, cache_path in tqdm(zip(self.test_dfs, self.test_cached_csv_paths)):
-                    calculated_test_df = self.calculate_features_on_tracks(cache_path, test_df)
-                    test_df_list.append(calculated_test_df)
-                self.test_dfs = test_df_list
+        # if self.force_test_feature_recalc:
+        #     print("Calculating/reading features for test data")
+        #     self.test_dfs = self.calculate_features_on_tracks("test") if self.test_dfs else []
 
-        if self.force_feature_recalc:
-            measurements_df_list = []
-            print("Calculating/reading features for training data")
-            for measurements_df, cache_path in tqdm(zip(self.measurements_dfs, self.cached_csv_paths)):
-                calculated_measurements_df = self.calculate_features_on_tracks(cache_path, measurements_df)
-                measurements_df_list.append(calculated_measurements_df)
-            self.measurements_dfs = measurements_df_list
-
-        self.measurements_dfs, self.all_measurements_gt_pairs, self.all_measurements_gt_pairs_secondary = (
-            self._map_measurements2gt_trajectory(self.measurements_dfs, self.gt_dfs)
-        )
-        if len(self.test_gt_dfs) != 0:
-            self.test_dfs, self.test_all_measurements_gt_pairs, self.test_all_measurements_gt_pairs_secondary = (
-                self._map_measurements2gt_trajectory(self.test_dfs, self.test_gt_dfs)
-            )
+        # if self.force_feature_recalc:
+        #     print("Calculating/reading features for training data")
+        #     self.measurements_dfs = self.calculate_features_on_tracks("train")
+            
+        if self.gt_fish_ids:
+            self.measurements_dfs = self._ground_truth_labels_from_yaml(self.measurements_dfs, self.gt_fish_ids)
+        elif len(self.gt_dfs) != 0:
+            self.measurements_dfs = self._map_measurements2gt_trajectory(self.measurements_dfs, self.gt_dfs)
         else:
-            for df in self.test_dfs:
-                df["gt_label"] = None
+            warnings.warn("No ground truth data provided. Skipping ground truth mapping for .")
+        if self.test_gt_fish_ids:
+            self.test_dfs = self._ground_truth_labels_from_yaml(self.test_dfs, self.test_gt_fish_ids)
+        elif len(self.test_gt_dfs) != 0:
+            self.test_dfs = self._map_measurements2gt_trajectory(self.test_dfs, self.test_gt_dfs)
+        else:
+            warnings.warn("No ground truth data provided. Skipping ground truth mapping.")
 
     def _read_csvs(
         self,
@@ -255,23 +280,38 @@ class FeatureGenerator(object):
     def read_csvs_from_paths(self, csv_paths: list[Path]) -> list[pd.DataFrame]:
         return [pd.read_csv(path, delimiter=",") for path in tqdm(csv_paths)]
 
-    def calculate_features_on_tracks(self, cache_path, labels_df):
-        labels_df = calculate_features(labels_df, self.masks)
-        labels_df = self.filter_features(labels_df)
-        if not labels_df.empty:
-            save_df = labels_df.copy()
-            save_df["image_tile"] = save_df["image_tile"].apply(lambda x: x.tolist())
-            try:
-                save_df["raw_image_tile"] = save_df["raw_image_tile"].apply(lambda x: x.tolist())
-            except KeyError:
-                pass
-            try:
-                save_df.to_csv(cache_path, index=False)
-            except OSError as e:
-                print(f"Error writing to file {cache_path}: {e}. Not saving features to csv.")
-            return labels_df
+    def calculate_features_on_tracks(self, split: str = "train"):
+        if split == "train":
+            labels_dfs = self.measurements_dfs
+            cache_paths = self.cached_csv_paths
+            csv_paths = self.measurements_csv_paths
+        elif split == "test":
+            labels_dfs = self.test_dfs
+            cache_paths = self.test_cached_csv_paths
+            csv_paths = self.test_csv_paths
         else:
-            return pd.DataFrame()
+            raise ValueError(f"Unknown split: {split}")
+        
+        df_list = []
+        for labels_df, cache_path, csv_path in zip(labels_dfs, cache_paths, csv_paths):
+            labels_df = calculate_features(labels_df, self.masks)
+            labels_df = self.filter_features(labels_df)
+            if not labels_df.empty:
+                save_df = labels_df.copy()
+                save_df["image_tile"] = save_df["image_tile"].apply(lambda x: x.tolist())
+                try:
+                    save_df["raw_image_tile"] = save_df["raw_image_tile"].apply(lambda x: x.tolist())
+                except KeyError:
+                    pass
+                try:
+                    save_df.to_csv(cache_path, index=False)
+                except OSError as e:
+                    print(f"Error writing to file {cache_path}: {e}. Not saving features to csv.")
+                df_list.append(labels_df)
+            else:
+                df_list.append(pd.DataFrame())
+        
+        return df_list
 
     @staticmethod
     def _read_mask(mask_path: Union[str, Path]) -> np.ndarray:
@@ -279,6 +319,16 @@ class FeatureGenerator(object):
         assert mask is not None, f"Could not read mask from {mask_path}"
         mask = mask[49:1001, 92:1831]  # Drop the border
         return cv.resize(mask, (480, 270)) > 0
+    
+    def _ground_truth_labels_from_yaml(self, df_list, gt_fish_ids):
+        for df_idx, (df, df_fish_ids) in enumerate(zip(df_list, gt_fish_ids)):
+            df["gt_label"] = "noise"
+            df["gt_trajectory_id"] = None
+            df.loc[df["id"].isin(df_fish_ids), "gt_label"] = "fish"
+            
+            df_list[df_idx] = df
+        
+        return df_list
 
     def _map_measurements2gt_trajectory(
         self, labels_dfs_in: list[pd.DataFrame], gt_dfs_in: list[pd.DataFrame]
@@ -314,10 +364,12 @@ class FeatureGenerator(object):
             )
 
             labels_dfs[df_idx]["gt_label"] = "noise"
-            labels_dfs[df_idx].loc[
-                labels_df["id"].isin(np.hstack((labels_gt_pairs[:, 0], labels_gt_pairs_secondary[:, 0]))),
-                "gt_label",
-            ] = "fish"
+            labels_dfs[df_idx]["gt_trajectory_id"] = None
+            for labels_gt_pair in labels_gt_pairs + labels_gt_pairs_secondary:
+                labels_dfs[df_idx].loc[labels_dfs[df_idx]["id"] == labels_gt_pair[0], "gt_label"] = "fish"
+                labels_dfs[df_idx].loc[labels_dfs[df_idx]["id"] == labels_gt_pair[0], "gt_trajectory_id"] = labels_gt_pair[
+                    1
+                ]
 
             all_labels_gt_pairs.extend(labels_gt_pairs)
             all_labels_gt_pairs_secondary.extend(labels_gt_pairs_secondary)
