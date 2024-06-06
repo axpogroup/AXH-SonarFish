@@ -222,13 +222,8 @@ class FeatureGenerator(object):
         return fish_ids, tracking_files
 
     def calc_feature_dfs(self):
-        # if self.force_test_feature_recalc:
-        #     print("Calculating/reading features for test data")
-        #     self.test_dfs = self.calculate_features_on_tracks("test") if self.test_dfs else []
-
-        # if self.force_feature_recalc:
-        #     print("Calculating/reading features for training data")
-        #     self.measurements_dfs = self.calculate_features_on_tracks("train")
+        self.test_dfs = self.calculate_features_on_tracks("test") if self.test_dfs else []
+        self.measurements_dfs = self.calculate_features_on_tracks("train")
 
         if self.gt_fish_ids:
             self.measurements_dfs = self._ground_truth_labels_from_yaml(self.measurements_dfs, self.gt_fish_ids)
@@ -283,6 +278,7 @@ class FeatureGenerator(object):
         return [pd.read_csv(path, delimiter=",") for path in tqdm(csv_paths)]
 
     def calculate_features_on_tracks(self, split: str = "train"):
+        print(f"Calculating features for {split} data")
         if split == "train":
             labels_dfs = self.measurements_dfs
             cache_paths = self.cached_csv_paths
