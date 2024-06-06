@@ -1,6 +1,5 @@
 import itertools
 import json
-import yaml
 import os
 import pickle
 import warnings
@@ -14,6 +13,7 @@ import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import yaml
 from matplotlib.lines import Line2D
 from motmetrics.distances import boxiou
 from pandas import DataFrame
@@ -110,11 +110,13 @@ class FeatureGenerator(object):
             warnings.warn("gt_csv_paths, measurements_csv_paths will be ignored if gt_fish_id_yaml is provided")
         if test_gt_fish_id_yaml and test_gt_csv_paths:
             warnings.warn("test_gt_csv_paths will be ignored if test_gt_fish_id_yaml is provided")
-            
+
         gt_csv_paths = [Path(p) for p in gt_csv_paths]
         test_gt_csv_paths = [Path(p) for p in test_gt_csv_paths]
         if gt_fish_id_yaml:
-            self.gt_fish_ids, self.measurements_csv_paths = self._parse_gt_fish_id_yaml(gt_fish_id_yaml, measurements_csv_dir)
+            self.gt_fish_ids, self.measurements_csv_paths = self._parse_gt_fish_id_yaml(
+                gt_fish_id_yaml, measurements_csv_dir
+            )
         else:
             self.measurements_csv_paths = [Path(p) for p in measurements_csv_paths]
             self.gt_fish_ids = None
@@ -123,7 +125,7 @@ class FeatureGenerator(object):
         else:
             self.test_csv_paths = [Path(p) for p in test_csv_paths]
             self.test_gt_fish_ids = None
-        
+
         self.measurements_dfs = None
         self.test_dfs = None
         self.min_overlapping_ratio = min_overlapping_ratio
@@ -199,24 +201,24 @@ class FeatureGenerator(object):
         gt_dfs = self.read_csvs_from_paths(gt_csv_paths)
         cache_paths = [self._create_cache_path(path) for path in labels_csv_paths]
         return labels_dfs, gt_dfs, cache_paths
-    
+
     def _parse_gt_fish_id_yaml(
-            self, 
-            gt_fish_id_yaml: Union[Path, str],
-            csv_dir: Union[Path, str],
-        ) -> tuple[list[list[int]], list[Path]]:
+        self,
+        gt_fish_id_yaml: Union[Path, str],
+        csv_dir: Union[Path, str],
+    ) -> tuple[list[list[int]], list[Path]]:
         gt_fish_id_yaml = Path(gt_fish_id_yaml)
         csv_dir = Path(csv_dir)
-        
-        with open(gt_fish_id_yaml, 'r') as f:
+
+        with open(gt_fish_id_yaml, "r") as f:
             fish_id_file = yaml.load(f, Loader=yaml.SafeLoader)
-            
+
         fish_ids = []
         tracking_files = []
         for video in fish_id_file:
-            fish_ids.append(video['fish_track_IDs'])
+            fish_ids.append(video["fish_track_IDs"])
             tracking_files.append(csv_dir / f"teams_{video['file'].replace('_raw_output.mp4', '.csv')}")
-        
+
         return fish_ids, tracking_files
 
     def calc_feature_dfs(self):
@@ -227,7 +229,7 @@ class FeatureGenerator(object):
         # if self.force_feature_recalc:
         #     print("Calculating/reading features for training data")
         #     self.measurements_dfs = self.calculate_features_on_tracks("train")
-            
+
         if self.gt_fish_ids:
             self.measurements_dfs = self._ground_truth_labels_from_yaml(self.measurements_dfs, self.gt_fish_ids)
         elif len(self.gt_dfs) != 0:
@@ -291,7 +293,7 @@ class FeatureGenerator(object):
             csv_paths = self.test_csv_paths
         else:
             raise ValueError(f"Unknown split: {split}")
-        
+
         df_list = []
         for labels_df, cache_path, csv_path in zip(labels_dfs, cache_paths, csv_paths):
             labels_df = calculate_features(labels_df, self.masks)
@@ -310,7 +312,7 @@ class FeatureGenerator(object):
                 df_list.append(labels_df)
             else:
                 df_list.append(pd.DataFrame())
-        
+
         return df_list
 
     @staticmethod
@@ -319,15 +321,15 @@ class FeatureGenerator(object):
         assert mask is not None, f"Could not read mask from {mask_path}"
         mask = mask[49:1001, 92:1831]  # Drop the border
         return cv.resize(mask, (480, 270)) > 0
-    
+
     def _ground_truth_labels_from_yaml(self, df_list, gt_fish_ids):
         for df_idx, (df, df_fish_ids) in enumerate(zip(df_list, gt_fish_ids)):
             df["gt_label"] = "noise"
             df["gt_trajectory_id"] = None
             df.loc[df["id"].isin(df_fish_ids), "gt_label"] = "fish"
-            
+
             df_list[df_idx] = df
-        
+
         return df_list
 
     def _map_measurements2gt_trajectory(
@@ -367,9 +369,9 @@ class FeatureGenerator(object):
             labels_dfs[df_idx]["gt_trajectory_id"] = None
             for labels_gt_pair in labels_gt_pairs + labels_gt_pairs_secondary:
                 labels_dfs[df_idx].loc[labels_dfs[df_idx]["id"] == labels_gt_pair[0], "gt_label"] = "fish"
-                labels_dfs[df_idx].loc[labels_dfs[df_idx]["id"] == labels_gt_pair[0], "gt_trajectory_id"] = labels_gt_pair[
-                    1
-                ]
+                labels_dfs[df_idx].loc[labels_dfs[df_idx]["id"] == labels_gt_pair[0], "gt_trajectory_id"] = (
+                    labels_gt_pair[1]
+                )
 
             all_labels_gt_pairs.extend(labels_gt_pairs)
             all_labels_gt_pairs_secondary.extend(labels_gt_pairs_secondary)
