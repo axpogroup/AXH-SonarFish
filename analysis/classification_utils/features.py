@@ -1,7 +1,6 @@
 import itertools
 import json
 import os
-import pickle
 import warnings
 from copy import deepcopy
 from multiprocessing import Pool, cpu_count
@@ -424,20 +423,19 @@ class FeatureGenerator(object):
     @property
     def stacked_test_dfs(self):
         return pd.concat(self.test_dfs)
-    
+
 
 class TrackPlotter(object):
-    
+
     def __init__(
-        self, 
-        measurements_dfs: list[pd.DataFrame], 
+        self,
+        measurements_dfs: list[pd.DataFrame],
         masks: dict[str, np.ndarray],
-        gt_dfs: list[pd.DataFrame] = [], 
+        gt_dfs: list[pd.DataFrame] = [],
     ):
         self.measurements_dfs = measurements_dfs
         self.gt_dfs = gt_dfs
         self.masks = masks
-        
 
     def plot_track_pairings(
         self,
@@ -452,16 +450,12 @@ class TrackPlotter(object):
     ) -> None:
         if plot_test_data:
             if column_with_label not in self.test_dfs[0].columns:
-                raise ValueError(
-                    "The selected column is not available."
-                )
+                raise ValueError("The selected column is not available.")
             ground_truth_dfs = self.test_gt_dfs
             dfs = self.test_dfs
         else:
             if column_with_label not in self.measurements_dfs[0].columns:
-                raise ValueError(
-                    "The selected column is not available."
-                )
+                raise ValueError("The selected column is not available.")
             ground_truth_dfs = self.gt_dfs
             dfs = self.measurements_dfs
 
@@ -484,18 +478,18 @@ class TrackPlotter(object):
                 ax.imshow(self.masks[mask_to_show], cmap="gray", alpha=0.2)
             plt.gca().invert_yaxis()
 
-            filename_prepend = labels_df['video_name'].iloc[0] if plot_results_individually else "all"
+            filename_prepend = labels_df["video_name"].iloc[0] if plot_results_individually else "all"
             filename_prepend += "_test" if plot_test_data else "_train"
 
             if gt_df is None:
                 for measurements_track_id in labels_df.id.unique():
                     self.plot_tracks_and_annotations(
-                        ax, 
-                        colormap, 
-                        measurements_track_id, 
-                        labels_df, 
+                        ax,
+                        colormap,
+                        measurements_track_id,
+                        labels_df,
                         column_with_label,
-                        metric_to_show, 
+                        metric_to_show,
                         show_track_id,
                     )
                 self.create_plot_components(
@@ -548,12 +542,9 @@ class TrackPlotter(object):
         plt.gca().invert_yaxis()
         plt.gca().invert_yaxis()
         for measurements_track_id in stacked_labels_dfs.id.unique():
-            if (measurements_track_id not in all_measurements_gt_pairs.keys()) and (
-                measurements_track_id not in all_measurements_gt_pairs_secondary.keys()
-            ):
-                self.plot_tracks_and_annotations(
-                    ax, colormap, measurements_track_id, stacked_labels_dfs, metric_to_show, show_track_id
-                )
+            self.plot_tracks_and_annotations(
+                ax, colormap, measurements_track_id, stacked_labels_dfs, metric_to_show, show_track_id
+            )
         self.create_plot_components(
             ax,
             colormap,
@@ -743,7 +734,7 @@ class TrackPlotter(object):
 
 
 class TrackClassifier(object):
-    
+
     def __init__(
         self,
         measurements_dfs: list[pd.DataFrame],
@@ -751,14 +742,14 @@ class TrackClassifier(object):
     ):
         self.measurements_dfs = measurements_dfs.copy()
         self.test_dfs = test_dfs.copy()
-        
+
         for df in self.measurements_dfs:
             df["classification_v2"] = None
-            df['id'] = df.apply(lambda x: f"{x['video_id']}-{x['id']}", axis=1)
-            
+            df["id"] = df.apply(lambda x: f"{x['video_id']}-{x['id']}", axis=1)
+
         for df in self.test_dfs:
             df["classification_v2"] = None
-            df['id'] = df.apply(lambda x: f"{x['video_id']}-{x['id']}", axis=1)
+            df["id"] = df.apply(lambda x: f"{x['video_id']}-{x['id']}", axis=1)
 
     def do_clustering(self, features: list[str], clustering_method: Callable, n_clusters: int):
         X = pd.concat([df[features] for df in self.measurements_dfs])
@@ -773,7 +764,7 @@ class TrackClassifier(object):
         for idx, df in enumerate(self.test_dfs):
             X_test = scaler.transform(df[features])
             self.test_dfs[idx]["classification_v2"] = clustering.predict(X_test)
-            
+
         return self.measurements_dfs, self.test_dfs
 
     def do_binary_classification(
@@ -1126,15 +1117,15 @@ class TrackClassifier(object):
             save_df = df.copy()
             save_df.drop(columns=["image_tile", "raw_image_tile", "binary_image"], inplace=True, errors="ignore")
             save_df.to_csv(save_path, index=False)
-            
+
     @property
     def stacked_dfs(self):
         return pd.concat(self.measurements_dfs)
-    
+
     @property
     def stacked_test_dfs(self):
         return pd.concat(self.test_dfs)
-            
+
 
 class NoFeatureModel(object):
 
@@ -1152,4 +1143,3 @@ class NoFeatureScaler(object):
 
     def transform(self, X):
         return X
-
