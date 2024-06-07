@@ -82,6 +82,13 @@ def load_csv_with_tiles(path: Path) -> pd.DataFrame:
     return csv_with_tiles_df
 
 
+def _read_mask(mask_path: Union[str, Path]) -> np.ndarray:
+    mask = cv.imread(Path(mask_path).as_posix(), cv.IMREAD_GRAYSCALE)
+    assert mask is not None, f"Could not read mask from {mask_path}"
+    mask = mask[49:1001, 92:1831]  # Drop the border
+    return cv.resize(mask, (480, 270)) > 0
+
+
 class FeatureGenerator(object):
     def __init__(
         self,
@@ -137,9 +144,9 @@ class FeatureGenerator(object):
         self.trajectory_max_iou_track_distance = trajectory_max_iou_track_distance
 
         self.masks = {
-            "rake_mask": self._read_mask(rake_mask_path),
-            "flow_area_mask": self._read_mask(flow_area_mask_path),
-            "non_flow_area_mask": self._read_mask(non_flow_area_mask_path) if non_flow_area_mask_path else None,
+            "rake_mask": _read_mask(rake_mask_path),
+            "flow_area_mask": _read_mask(flow_area_mask_path),
+            "non_flow_area_mask": _read_mask(non_flow_area_mask_path) if non_flow_area_mask_path else None,
         }
         if load_old_measurements:
             self.measurements_dfs, self.gt_dfs, self.test_cached_csv_paths = self._load_old_measurements_df(
@@ -311,18 +318,11 @@ class FeatureGenerator(object):
 
         return df_list
 
-    @staticmethod
-    def _read_mask(mask_path: Union[str, Path]) -> np.ndarray:
-        mask = cv.imread(Path(mask_path).as_posix(), cv.IMREAD_GRAYSCALE)
-        assert mask is not None, f"Could not read mask from {mask_path}"
-        mask = mask[49:1001, 92:1831]  # Drop the border
-        return cv.resize(mask, (480, 270)) > 0
-
     def _ground_truth_labels_from_yaml(self, df_list, gt_fish_ids):
         for df_idx, (df, df_fish_ids) in enumerate(zip(df_list, gt_fish_ids)):
-            df["gt_label"] = "noise"
+            df["gt_label"] = 0
             df["gt_trajectory_id"] = None
-            df.loc[df["id"].isin(df_fish_ids), "gt_label"] = "fish"
+            df.loc[df["id"].isin(df_fish_ids), "gt_label"] = 1
 
             df_list[df_idx] = df
 
@@ -361,10 +361,10 @@ class FeatureGenerator(object):
                 track_distances_copy, model_detections, ground_truth, self.trajectory_max_iou_track_distance
             )
 
-            labels_dfs[df_idx]["gt_label"] = "noise"
+            labels_dfs[df_idx]["gt_label"] = 0
             labels_dfs[df_idx]["gt_trajectory_id"] = None
             for labels_gt_pair in labels_gt_pairs + labels_gt_pairs_secondary:
-                labels_dfs[df_idx].loc[labels_dfs[df_idx]["id"] == labels_gt_pair[0], "gt_label"] = "fish"
+                labels_dfs[df_idx].loc[labels_dfs[df_idx]["id"] == labels_gt_pair[0], "gt_label"] = 1
                 labels_dfs[df_idx].loc[labels_dfs[df_idx]["id"] == labels_gt_pair[0], "gt_trajectory_id"] = (
                     labels_gt_pair[1]
                 )
@@ -413,6 +413,32 @@ class FeatureGenerator(object):
 
         return measurements_gt_pairs, (dist_matrix_row_indices, dist_matrix_col_indices)
 
+    @property
+    def feature_names(self):
+        return self.measurements_dfs[0].columns.tolist()[9:]
+
+    @property
+    def stacked_dfs(self):
+        return pd.concat(self.measurements_dfs)
+
+    @property
+    def stacked_test_dfs(self):
+        return pd.concat(self.test_dfs)
+    
+
+class TrackPlotter(object):
+    
+    def __init__(
+        self, 
+        measurements_dfs: list[pd.DataFrame], 
+        masks: dict[str, np.ndarray],
+        gt_dfs: list[pd.DataFrame] = [], 
+    ):
+        self.measurements_dfs = measurements_dfs
+        self.gt_dfs = gt_dfs
+        self.masks = masks
+        
+
     def plot_track_pairings(
         self,
         metric_to_show: Optional[str] = None,
@@ -422,34 +448,29 @@ class FeatureGenerator(object):
         save_dir: Optional[Union[str, Path]] = None,
         n_labels: Optional[int] = None,
         plot_results_individually: bool = False,
+        column_with_label: str = "classification_v2",
     ) -> None:
         if plot_test_data:
-            if "classification_v2" not in self.test_dfs[0].columns:
+            if column_with_label not in self.test_dfs[0].columns:
                 raise ValueError(
-                    "No clustering has been performed yet. Please perform clustering with the do_clustering method."
+                    "The selected column is not available."
                 )
             ground_truth_dfs = self.test_gt_dfs
             dfs = self.test_dfs
-            dfs_file_names = self.test_csv_paths
-            all_measurements_gt_pairs = self.test_all_measurements_gt_pairs
-            all_measurements_gt_pairs_secondary = self.test_all_measurements_gt_pairs_secondary
         else:
-            if "classification_v2" not in self.measurements_dfs[0].columns:
+            if column_with_label not in self.measurements_dfs[0].columns:
                 raise ValueError(
-                    "No clustering has been performed yet. Please perform clustering with the do_clustering method."
+                    "The selected column is not available."
                 )
             ground_truth_dfs = self.gt_dfs
             dfs = self.measurements_dfs
-            dfs_file_names = self.measurements_csv_paths
-            all_measurements_gt_pairs = self.all_measurements_gt_pairs
-            all_measurements_gt_pairs_secondary = self.all_measurements_gt_pairs_secondary
 
         if not plot_results_individually:
             dfs = [pd.concat(dfs)]
-            ground_truth_dfs = [pd.concat(ground_truth_dfs)]
+            ground_truth_dfs = [pd.concat(ground_truth_dfs)] if ground_truth_dfs else [None] * len(dfs)
 
         if not n_labels:
-            n_labels = dfs[0]["classification_v2"].nunique()
+            n_labels = dfs[0][column_with_label].nunique()
         show_legend = True if n_labels <= 6 else False
         colormap = cm.get_cmap("viridis", n_labels + 1)  # +1 for the ground truth color
 
@@ -463,13 +484,19 @@ class FeatureGenerator(object):
                 ax.imshow(self.masks[mask_to_show], cmap="gray", alpha=0.2)
             plt.gca().invert_yaxis()
 
-            filename_prepend = dfs_file_names[i].stem if plot_results_individually else "all"
+            filename_prepend = labels_df['video_name'].iloc[0] if plot_results_individually else "all"
             filename_prepend += "_test" if plot_test_data else "_train"
 
             if gt_df is None:
                 for measurements_track_id in labels_df.id.unique():
                     self.plot_tracks_and_annotations(
-                        ax, colormap, measurements_track_id, labels_df, metric_to_show, show_track_id
+                        ax, 
+                        colormap, 
+                        measurements_track_id, 
+                        labels_df, 
+                        column_with_label,
+                        metric_to_show, 
+                        show_track_id,
                     )
                 self.create_plot_components(
                     ax,
@@ -482,8 +509,6 @@ class FeatureGenerator(object):
                 )
             else:
                 self.plot_assigned_tracks(
-                    all_measurements_gt_pairs,
-                    all_measurements_gt_pairs_secondary,
                     ax,
                     colormap,
                     gt_df,
@@ -496,8 +521,6 @@ class FeatureGenerator(object):
                 )
 
                 self.plot_unassigned_tracks(
-                    all_measurements_gt_pairs,
-                    all_measurements_gt_pairs_secondary,
                     colormap,
                     mask_to_show,
                     metric_to_show,
@@ -510,8 +533,6 @@ class FeatureGenerator(object):
 
     def plot_unassigned_tracks(
         self,
-        all_measurements_gt_pairs,
-        all_measurements_gt_pairs_secondary,
         colormap,
         mask_to_show,
         metric_to_show,
@@ -545,8 +566,6 @@ class FeatureGenerator(object):
 
     def plot_assigned_tracks(
         self,
-        all_measurements_gt_pairs,
-        all_measurements_gt_pairs_secondary,
         ax,
         colormap,
         ground_truth,
@@ -557,14 +576,7 @@ class FeatureGenerator(object):
         stacked_labels_dfs,
         save_path: Optional[Path] = None,
     ):
-        for measurements_track_id, gt_track_id in all_measurements_gt_pairs.items():
-            self.plot_tracks_and_annotations(
-                ax, colormap, measurements_track_id, stacked_labels_dfs, metric_to_show, show_track_id
-            )
-            if not ground_truth.empty:
-                gt_track_df = ground_truth[ground_truth.id == gt_track_id]
-                ax.plot(gt_track_df.x, gt_track_df.y, alpha=0.5, color=colormap(0), linestyle="dashed")
-        for measurements_track_id, gt_track_id in all_measurements_gt_pairs_secondary.items():
+        for measurements_track_id in self.stacked_dfs.id.unique():
             self.plot_tracks_and_annotations(
                 ax, colormap, measurements_track_id, stacked_labels_dfs, metric_to_show, show_track_id
             )
@@ -606,6 +618,7 @@ class FeatureGenerator(object):
         colormap,
         measurements_track_id,
         model_detections,
+        column_to_plot,
         metric_to_show: Optional[str],
         show_track_id: bool = False,
     ) -> None:
@@ -614,7 +627,7 @@ class FeatureGenerator(object):
             ax.plot(
                 track_df.x,
                 track_df.y,
-                color=colormap(int(track_df.classification_v2.iloc[0]) + 1),
+                color=colormap(int(track_df[column_to_plot].iloc[0]) + 1),
             )
             metric_annotation = str(track_df[metric_to_show].iloc[0])[:6] if metric_to_show else ""
             if show_track_id:
@@ -728,6 +741,25 @@ class FeatureGenerator(object):
         assert track_df["video_id"].nunique() == 1, "The track is not unique to a video"
         return track_df
 
+
+class TrackClassifier(object):
+    
+    def __init__(
+        self,
+        measurements_dfs: list[pd.DataFrame],
+        test_dfs: list[pd.DataFrame],
+    ):
+        self.measurements_dfs = measurements_dfs.copy()
+        self.test_dfs = test_dfs.copy()
+        
+        for df in self.measurements_dfs:
+            df["classification_v2"] = None
+            df['id'] = df.apply(lambda x: f"{x['video_id']}-{x['id']}", axis=1)
+            
+        for df in self.test_dfs:
+            df["classification_v2"] = None
+            df['id'] = df.apply(lambda x: f"{x['video_id']}-{x['id']}", axis=1)
+
     def do_clustering(self, features: list[str], clustering_method: Callable, n_clusters: int):
         X = pd.concat([df[features] for df in self.measurements_dfs])
         scaler = preprocessing.StandardScaler().fit(X)
@@ -741,6 +773,8 @@ class FeatureGenerator(object):
         for idx, df in enumerate(self.test_dfs):
             X_test = scaler.transform(df[features])
             self.test_dfs[idx]["classification_v2"] = clustering.predict(X_test)
+            
+        return self.measurements_dfs, self.test_dfs
 
     def do_binary_classification(
         self,
@@ -767,14 +801,6 @@ class FeatureGenerator(object):
                     class_overrides_flow_area,
                     model,
                 )
-                self.save_model_and_scaler_pickles(
-                    models=models,
-                    scalers=scalers,
-                )
-                self.dump_manual_noise_thresholds_with_models_and_scalers_to_json(
-                    manual_noise_thresholds,
-                    manual_noise_thresholds_flow_area,
-                )
                 self.merge_classification_v2s_to_measurements(df)
             elif len(models) == 1 and len(scalers) == 1:
                 if "non_flow" in models and "non_flow" in scalers:
@@ -793,7 +819,6 @@ class FeatureGenerator(object):
                 scalers,
             )
         else:
-            # TODO rain model for all trajectories if features_flow_area is None
             raise NotImplementedError("Not supported anymore")
 
         if self.test_dfs:
@@ -854,24 +879,6 @@ class FeatureGenerator(object):
         models = {"flow": model_flow, "non_flow": model_non_flow}
         scalers = {"flow": scaler_flow, "non_flow": scaler}
         return df, models, scalers
-
-    def save_model_and_scaler_pickles(self, models: dict, scalers: dict):
-        saved_models = []
-        saved_scalers = []
-        for key, model in models.items():
-            if not isinstance(model, NoFeatureModel):
-                model_pkl_file = f"{key}_classifier_model.pkl"
-                with open(model_pkl_file, "wb") as file:
-                    saved_models.append(model_pkl_file)
-                    pickle.dump(model, file)
-        for key, scaler in scalers.items():
-            if not isinstance(scaler, NoFeatureScaler):
-                scaler_pkl_file = f"{key}_scaler.pkl"
-                with open(scaler_pkl_file, "wb") as file:
-                    saved_scalers.append(scaler_pkl_file)
-                    pickle.dump(scaler, file)
-        self.saved_models = saved_models
-        self.saved_scalers = saved_scalers
 
     def score_test_data(
         self,
@@ -1022,9 +1029,9 @@ class FeatureGenerator(object):
         for feat, thresh in feature_thresholding_values.items():
             if feat.endswith("_min"):
                 feat = feat.replace("_min", "")
-                self.stacked_dfs.loc[self.stacked_dfs[feat] < thresh, "classification_v2"] = "noise"
+                self.stacked_dfs.loc[self.stacked_dfs[feat] < thresh, "classification_v2"] = 0
             elif feat.endswith("_max"):
-                self.stacked_dfs.loc[self.stacked_dfs[feat] > thresh, "classification_v2"] = "noise"
+                self.stacked_dfs.loc[self.stacked_dfs[feat] > thresh, "classification_v2"] = 0
             else:
                 print(f"Invalid feature threshold name: {feat}. Must end with '_min' or '_max'")
 
@@ -1037,7 +1044,6 @@ class FeatureGenerator(object):
         distinguish_flow_areas: bool = False,
         normalize_confusion_matrix: str = None,
     ) -> tuple[np.array, float, float, float, list[float]]:
-        # TODO: group by video_id and id
         if evaluate_test_data:
             df = self.stacked_test_dfs.groupby(["id"]).first().reset_index()
         else:
@@ -1120,31 +1126,15 @@ class FeatureGenerator(object):
             save_df = df.copy()
             save_df.drop(columns=["image_tile", "raw_image_tile", "binary_image"], inplace=True, errors="ignore")
             save_df.to_csv(save_path, index=False)
-
-    def dump_manual_noise_thresholds_with_models_and_scalers_to_json(
-        self, manual_noise_thresholds, manual_noise_thresholds_flow_area
-    ):
-        json_to_save = {
-            "manual_noise_thresholds": manual_noise_thresholds,
-            "manual_noise_thresholds_flow_area": manual_noise_thresholds_flow_area,
-            "saved_models": self.saved_models,
-            "saved_scalers": self.saved_scalers,
-        }
-        with open("classification_parameters.json", "w") as file:
-            json.dump(json_to_save, file)
-
-    @property
-    def feature_names(self):
-        return self.measurements_dfs[0].columns.tolist()[9:]
-
+            
     @property
     def stacked_dfs(self):
         return pd.concat(self.measurements_dfs)
-
+    
     @property
     def stacked_test_dfs(self):
         return pd.concat(self.test_dfs)
-
+            
 
 class NoFeatureModel(object):
 
@@ -1162,3 +1152,4 @@ class NoFeatureScaler(object):
 
     def transform(self, X):
         return X
+
