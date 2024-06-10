@@ -53,12 +53,15 @@ def trace_window_metrics(detection: pd.DataFrame, masks: dict[str, np.array]) ->
             "v_yr_avg": np.mean(detection["v_yr"]),
             "v_xr_median": np.median(detection["v_xr"]),
             "v_yr_median": np.median(detection["v_yr"]),
-            "v_avg": np.mean(calculate_velocity(detection, smoothing_window=29)),
-            "v_10th_percentile": np.percentile(calculate_velocity(detection, smoothing_window=29), 10),
-            "v_30th_percentile": np.percentile(calculate_velocity(detection, smoothing_window=29), 30),
-            "v_50th_percentile": np.percentile(calculate_velocity(detection, smoothing_window=29), 50),
-            "v_70th_percentile": np.percentile(calculate_velocity(detection, smoothing_window=29), 70),
-            "v_90th_percentile": np.percentile(calculate_velocity(detection, smoothing_window=29), 90),
+            "v_smoothed_avg": np.mean(calculate_velocity(detection, smoothing_window=25)),
+            "v_smoothed_std": np.std(calculate_velocity(detection, smoothing_window=25)),
+            "v_10th_percentile": np.percentile(calculate_velocity(detection, smoothing_window=25), 10),
+            "v_30th_percentile": np.percentile(calculate_velocity(detection, smoothing_window=25), 30),
+            "v_50th_percentile": np.percentile(calculate_velocity(detection, smoothing_window=25), 50),
+            "v_70th_percentile": np.percentile(calculate_velocity(detection, smoothing_window=25), 70),
+            "v_90th_percentile": np.percentile(calculate_velocity(detection, smoothing_window=25), 90),
+            "v_95th_percentile": np.percentile(calculate_velocity(detection, smoothing_window=25), 95),
+            "v_99th_percentile": np.percentile(calculate_velocity(detection, smoothing_window=25), 99),
             "v_parallel_river_avg": np.nanmean(detection["v_parallel_river"]),
             "v_orthogonal_river_avg": np.nanmean(detection["v_orthogonal_river"]),
             "v_orthogonal_abs_sum": np.sum(np.abs(detection["v_orthogonal_river"])),
@@ -73,15 +76,15 @@ def trace_window_metrics(detection: pd.DataFrame, masks: dict[str, np.array]) ->
             "average_smoothed_curvature_15": calculate_curvature(
                 detection, operator="mean", window_length=15, polyorder=2
             ),
-            "average_smoothed_curvature_30": calculate_curvature(
-                detection, operator="mean", window_length=30, polyorder=2
+            "average_smoothed_curvature_25": calculate_curvature(
+                detection, operator="mean", window_length=25, polyorder=2
             ),
             "median_curvature": calculate_curvature(detection, operator="median"),
             "median_smoothed_curvature_15": calculate_curvature(
                 detection, operator="median", window_length=15, polyorder=2
             ),
-            "median_smoothed_curvature_30": calculate_curvature(
-                detection, operator="median", window_length=30, polyorder=2
+            "median_smoothed_curvature_25": calculate_curvature(
+                detection, operator="median", window_length=25, polyorder=2
             ),
             "average_overlap_ratio": calculate_average_overlap_ratio(detection),
             "average_bbox_size": calculate_average_bbox_size(detection),
@@ -112,9 +115,12 @@ def calculate_average_bbox_size(group: pd.DataFrame) -> float:
 def calculate_velocity(detection: pd.DataFrame, smoothing_window: int = 5) -> np.array:
     v_x = np.diff(detection["x"])
     v_y = np.diff(detection["y"])
-    smoothed_v_x = savgol_filter(v_x, window_length=smoothing_window, polyorder=2)
-    smoothed_v_y = savgol_filter(v_y, window_length=smoothing_window, polyorder=2)
-    return np.sqrt(smoothed_v_x**2 + smoothed_v_y**2)
+    try:
+        smoothed_v_x = savgol_filter(v_x, window_length=smoothing_window, polyorder=2)
+        smoothed_v_y = savgol_filter(v_y, window_length=smoothing_window, polyorder=2)
+        return np.sqrt(smoothed_v_x**2 + smoothed_v_y**2)
+    except ValueError:
+        return np.nan
 
 
 def velocity_relative_to_river_velocity(
