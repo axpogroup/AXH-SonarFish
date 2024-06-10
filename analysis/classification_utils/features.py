@@ -731,13 +731,15 @@ class TrackPlotter(object):
         track_df = self.stacked_dfs[self.stacked_dfs.id == track_id]
         assert track_df["video_id"].nunique() == 1, "The track is not unique to a video"
         return track_df
-    
+
     def overwrite_classification_v2(self, classification_v2_df: pd.DataFrame):
         for idx, df in enumerate(self.measurements_dfs):
             for column in classification_v2_df.columns:
                 if column in df.columns:
                     df.drop(columns=[column], inplace=True)
-            self.measurements_dfs[idx] = df.merge(right=classification_v2_df, left_on='id', right_index=True, how="left")
+            self.measurements_dfs[idx] = df.merge(
+                right=classification_v2_df, left_on="id", right_index=True, how="left"
+            )
             for column in classification_v2_df.columns:
                 self.measurements_dfs[idx][column] = self.measurements_dfs[idx][column].fillna(0)
 
