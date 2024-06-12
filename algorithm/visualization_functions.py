@@ -14,6 +14,7 @@ FIRST_ROW = [
     "difference",
 ]
 SECOND_ROW = ["difference_thresholded", "median_filter", "binary", "dilated"]
+TRUTH_LABEL_NO = -1
 
 
 def get_visual_output(
@@ -144,13 +145,15 @@ def _draw_labels(
     fullres=False,
     association_dist=False,
 ):
-    labels_map = {0: "noise", 1: "fish", 2: "truth"}
+    labels_map = {0: "noise", 1: "fish", 2: "floating debris", -1: "truth"}
     for ID, obj in label_history.items():
         if is_detection_outdated(obj, detector):
             continue
         label = labels_map.get(obj.label)
         if label == "fish" or label == "truth":
             color = (57, 255, 20)
+        elif label == "floating debris":
+            color = (0, 255, 255)
         else:
             color = (57, 30, 255)
         draw_basic_bounding_box_and_path(association_dist, color, detector, fullres, img, obj, paths, label=label)

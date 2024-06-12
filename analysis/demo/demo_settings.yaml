@@ -1,16 +1,15 @@
 # Input / Output
-file_name: "start_2023-10-29T17-45-57.425+00-00.mp4"
+file_name: "start_2023-05-08T18-00-05.025+00-00.mp4"
 input_directory:  "data/raw/videos/"
 mask_directory: "analysis/demo/masks"
 output_directory: "data/model_output/"
-ground_truth_directory: "data/raw/labels/"
+ground_truth_directory: "data/labels/"
+labels_file_suffix: "_classification_min_track_length_30"
 mask_file: "stroppel_non_object_space.png" # one of ["sonar_controls.png", "stroppel_non_object_space.png", "herrendoebeli_non_object_space.png"]
 
 # Azure ML
 experiment_name: "how_much_is_the_fish"
 track_azure_ml: False
-
-
 
 tag: "label"
 record_output_video: True # Only works for full resolution output
