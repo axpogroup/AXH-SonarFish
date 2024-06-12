@@ -9,7 +9,8 @@ from algorithm.run_algorithm import main_algorithm
 
 if __name__ == "__main__":
     argParser = argparse.ArgumentParser(description="Run the fish detection algorithm with a settings .yaml file.")
-    argParser.add_argument("-yf", "--yaml_file", help="path to the YAML settings file", required=True)
+    argParser.add_argument("-ct", "--config_track", help="path to the YAML settings file", required=True)
+    argParser.add_argument("-cj", "--config_job", help="path to the YAML with AzureML job settings", required=True)
     args = argParser.parse_args()
 
     with open(args.yaml_file) as f:

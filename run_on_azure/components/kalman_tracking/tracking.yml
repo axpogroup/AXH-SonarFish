@@ -1,0 +1,47 @@
+# <component>
+$schema: https://azuremlschemas.azureedge.net/latest/commandComponent.schema.json
+type: command
+
+name: object_tracking
+display_name: Track Objects with Kalman Filter
+inputs:
+  data:
+    type: uri_folder
+  tracking_config:
+    type: string
+    default: "kalman_tracking_settings.yaml"
+    optional: true
+  labels_dir:
+    type: uri_folder
+    optional: true
+  save_output_video:
+    type: boolean
+    default: false
+    optional: true
+  logging_level:
+    type: string
+    default: "INFO"
+    optional: true
+outputs:
+  detections:
+    type: uri_folder
+environment: azureml:fishy_environment:6
+code: src
+command: |
+  success_count=0 
+  total_count=0 
+  for file in ${{inputs.data}}/*; do 
+    total_count=$((total_count+1)) 
+    for attempt in {1..2}; do 
+      python kalman_tracking_azure.py \
+      --job_inputs_path "$file" \
+      --job_output_path ${{outputs.detections}} \
+      $[[--tracking_config_path ${{inputs.tracking_config}}]] \
+      $[[--labels_dir ${{inputs.labels_dir}}]] \
+      $[[--save_output_video ${{inputs.save_output_video}}]] \
+      $[[--log_level ${{inputs.logging_level}}]] && { success_count=$((success_count+1)); break; } 
+      echo "Warning: Attempt $attempt failed. Retrying..." 
+    done 
+  done 
+  echo "Number of successful executions: $success_count out of $total_count"
+# </component>

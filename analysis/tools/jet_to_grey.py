@@ -42,7 +42,7 @@ def jet_to_gray(fm, img):
 if __name__ == "__main__":
     recording_file = "recordings/22-10-20_start_18_29_snippet.mp4"
     many_settings_file = "recordings/12-03_verschied_Einstellungen.m4v"
-    swarm_file = "recordings/Schwarm_einzel_schwer.mp4"
+    swarm_file = "./data/raw/videos/lavey_jet.mp4"
     cap = cv.VideoCapture(swarm_file)
     frame_by_frame = False
     previous_img = False

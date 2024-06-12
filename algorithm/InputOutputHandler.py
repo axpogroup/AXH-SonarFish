@@ -16,9 +16,12 @@ class InputOutputHandler:
         self.fps_out = 10
         self.video_writer = None
         self.settings_dict = settings_dict
+        input_file_path = Path(self.settings_dict["input_directory"]) / self.settings_dict["file_name"]
+        assert input_file_path.exists(), f"Error: Input file {input_file_path} does not exist."
         self.video_cap = cv.VideoCapture(
             str(Path(self.settings_dict["input_directory"]) / self.settings_dict["file_name"])
         )
+        assert self.video_cap.isOpened(), "Error: Video Capturer could not be opened."
         self.input_filename = Path(self.settings_dict["file_name"])
         self.output_dir_name = self.settings_dict["output_directory"]
         self.output_csv_name = None
@@ -31,6 +34,7 @@ class InputOutputHandler:
         self.start_ticks = 1
         self.index_in = -1
         self.index_out = -1
+        self.down_sample_factor = self.fps_in / self.fps_out
         self.frame_retrieval_time = None
         self.last_output_time = None
         self.current_raw_frame = None
@@ -216,9 +220,9 @@ class InputOutputHandler:
         if self.frame_no % 20 == 0:
             if total_time_per_frame == 0:
                 total_time_per_frame = 1
-            down_sample_factor = self.fps_in / self.fps_out
             print(
-                f"Processed {'{:.1f}'.format(self.frame_no * down_sample_factor / self.frames_total * 100)} % of video."
+                f"Processed {'{:.1f}'.format(self.frame_no * self.down_sample_factor / self.frames_total * 100)} \
+                    % of video."
                 f"Runtimes [ms]: getFrame: {self.frame_retrieval_time} | Enhance: {runtimes['enhance']} | "
                 f"DetectTrack: {runtimes['detection_tracking']} | "
                 f"Total: {total_time_per_frame} | FPS: {'{:.1f}'.format(self.frame_no/(2*total_runtime/1000))}"
