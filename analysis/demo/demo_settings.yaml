@@ -14,7 +14,7 @@ track_azure_ml: False
 tag: "label"
 record_output_video: True # Only works for full resolution output
 record_processing_frame: "raw" # one of ['raw', 'raw_downsampled', 'gray', 'gray_boosted', 'long_mean', 'short_mean', 'difference', 'absolute_difference', 'difference_thresholded', 'difference_thresholded_abs', 'median_filter', 'binary', 'dilated']
-draw_detections_on_saved_video: True
+draw_detections_on_saved_video: False
 store_raw_image_patch: False
 store_median_image_patch: False
 show_detections: False
