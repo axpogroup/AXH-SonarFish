@@ -12,7 +12,7 @@ from algorithm.scripts.preprocess_raw_videos import main as preprocess_main
 
 @pytest.fixture(scope="session")
 def labels_directory():
-    return "data/raw/labels"
+    return "data/labels"
 
 
 @pytest.fixture(scope="session")
