@@ -1,6 +1,7 @@
 import json
 import os
 from pathlib import Path
+from typing import Optional
 
 import cv2 as cv
 import numpy as np
@@ -214,21 +215,24 @@ class InputOutputHandler:
         self,
         processed_frame,
         object_history: dict[int, KalmanTrackedBlob],
-        runtimes,
+        runtimes: Optional[dict[str, float]],
         detector,
         label_history=None,
     ):
         total_runtime, total_time_per_frame = self.calculate_total_time()
-        if self.frame_no % 20 == 0:
+        if self.frame_no % 20 == 0 and detector.conf.get("verbosity", 2) > 1:
             if total_time_per_frame == 0:
                 total_time_per_frame = 1
             print(
                 f"Processed {'{:.1f}'.format(self.frame_no * self.down_sample_factor / self.frames_total * 100)} \
                     % of video."
-                f"Runtimes [ms]: getFrame: {self.frame_retrieval_time} | Enhance: {runtimes['enhance']} | "
-                f"DetectTrack: {runtimes['detection_tracking']} | "
-                f"Total: {total_time_per_frame} | FPS: {'{:.1f}'.format(self.frame_no/(2*total_runtime/1000))}"
             )
+            if runtimes:
+                print(
+                    f"Runtimes [ms]: getFrame: {self.frame_retrieval_time} | Enhance: {runtimes['enhance']} | "
+                    f"DetectTrack: {runtimes['detection_tracking']} | "
+                    f"Total: {total_time_per_frame} | FPS: {'{:.1f}'.format(self.frame_no/(2*total_runtime/1000))}"
+                )
         if self.settings_dict["display_output_video"] or self.settings_dict["record_output_video"]:
             disp = visualization_functions.get_visual_output(
                 object_history=object_history,
