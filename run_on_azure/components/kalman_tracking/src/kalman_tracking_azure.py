@@ -7,8 +7,8 @@ import cv2 as cv
 import mlflow
 import yaml
 
-from algorithm.run_algorithm import main_algorithm
 from algorithm.generate_video_with_detections import main_draw_annotations
+from algorithm.run_algorithm import main_algorithm
 
 
 def init():
