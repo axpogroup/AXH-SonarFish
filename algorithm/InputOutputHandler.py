@@ -1,12 +1,12 @@
+import datetime as dt
 import json
 import os
+import subprocess
 from pathlib import Path
 
 import cv2 as cv
 import numpy as np
 import pandas as pd
-import datetime as dt
-import subprocess
 
 from algorithm import visualization_functions
 from algorithm.DetectedObject import KalmanTrackedBlob
@@ -22,10 +22,12 @@ class InputOutputHandler:
         assert input_file_path.exists(), f"Error: Input file {input_file_path} does not exist."
         self.video_cap = cv.VideoCapture(str(input_file_path))
         assert self.video_cap.isOpened(), "Error: Video Capturer could not be opened."
-        
+
         self.input_filename = Path(self.settings_dict["file_name"])
-        try: 
-            self.start_timestamp = dt.datetime.strptime(str(self.input_filename), self.settings_dict["file_timestamp_format"])
+        try:
+            self.start_timestamp = dt.datetime.strptime(
+                str(self.input_filename), self.settings_dict["file_timestamp_format"]
+            )
         except ValueError:
             raise ValueError("Error: The input filename does not match the expected timestamp format.")
 
@@ -245,10 +247,10 @@ class InputOutputHandler:
                 dual_output=self.settings_dict.get("display_mode_dual", False),
                 save_frame=self.settings_dict["record_processing_frame"],
             )
-            
+
             # Put timestamp on frame
             timestamp = self.start_timestamp + dt.timedelta(seconds=self.index_in / self.fps_in)
-            text_location = (int((0.74*disp.shape[1])), int((0.907*disp.shape[0])))
+            text_location = (int((0.74 * disp.shape[1])), int((0.907 * disp.shape[0])))
             cv.putText(
                 disp,
                 timestamp.strftime("%Y-%m-%d %H:%M:%S"),
@@ -296,7 +298,7 @@ class InputOutputHandler:
         self.output_video_path = os.path.join(self.output_dir_name, output_video_name)
 
         # initialize the FourCC and a video writer object
-        fourcc = cv.VideoWriter_fourcc(*'avc1')
+        fourcc = cv.VideoWriter_fourcc(*"avc1")
         self.video_writer = cv.VideoWriter(
             self.output_video_path,
             fourcc,
@@ -307,13 +309,18 @@ class InputOutputHandler:
     def compress_output_video(self):
         command = [
             "ffmpeg",
-            "-y", # Overwrite output file if it exists
-            "-i", self.output_video_path,
-            "-vf", "format=yuv420p",
-            "-c:v", "libx264",
-            "-crf", str(35), # Constant Rate Factor (0-51, 0 is lossless)
-            "-preset", "medium",
-            self.output_video_path.replace(".mp4", "_compressed.mp4")
+            "-y",  # Overwrite output file if it exists
+            "-i",
+            self.output_video_path,
+            "-vf",
+            "format=yuv420p",
+            "-c:v",
+            "libx264",
+            "-crf",
+            str(35),  # Constant Rate Factor (0-51, 0 is lossless)
+            "-preset",
+            "medium",
+            self.output_video_path.replace(".mp4", "_compressed.mp4"),
         ]
         print("Compressing output video ...")
         subprocess.run(command)
