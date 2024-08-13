@@ -68,3 +68,6 @@ deviation_from_river_velocity: 0.5
 # Visualization
 no_more_show_after_x_frames: 1
 video_colormap: "red"
+
+# Logs
+verbosity: 2 # 2: print processing updates, 1: print only important updates
