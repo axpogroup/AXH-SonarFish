@@ -1,13 +1,14 @@
 import argparse
 import sys
-import yaml
 from pathlib import Path
 
+import yaml
 from dotenv import load_dotenv
 from tqdm import tqdm
 
 sys.path.append(".")
-from run_algorithm import read_labels_into_dataframe, extract_labels_history
+from run_algorithm import extract_labels_history, read_labels_into_dataframe
+
 from algorithm.InputOutputHandler import InputOutputHandler
 
 load_dotenv()
