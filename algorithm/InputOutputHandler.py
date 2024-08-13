@@ -5,6 +5,8 @@ from pathlib import Path
 import cv2 as cv
 import numpy as np
 import pandas as pd
+import datetime as dt
+import subprocess
 
 from algorithm import visualization_functions
 from algorithm.DetectedObject import KalmanTrackedBlob
@@ -18,12 +20,20 @@ class InputOutputHandler:
         self.settings_dict = settings_dict
         input_file_path = Path(self.settings_dict["input_directory"]) / self.settings_dict["file_name"]
         assert input_file_path.exists(), f"Error: Input file {input_file_path} does not exist."
-        self.video_cap = cv.VideoCapture(
-            str(Path(self.settings_dict["input_directory"]) / self.settings_dict["file_name"])
-        )
+        self.video_cap = cv.VideoCapture(str(input_file_path))
         assert self.video_cap.isOpened(), "Error: Video Capturer could not be opened."
+        
         self.input_filename = Path(self.settings_dict["file_name"])
+        try: 
+            self.start_timestamp = dt.datetime.strptime(str(self.input_filename), self.settings_dict["file_timestamp_format"])
+        except ValueError:
+            raise ValueError("Error: The input filename does not match the expected timestamp format.")
+
         self.output_dir_name = self.settings_dict["output_directory"]
+        if self.settings_dict["output_frames_for_compression"]:
+            self.output_temp_dir_name = os.path.join(self.output_dir_name, "temp_frames_" + self.input_filename.stem)
+            os.makedirs(self.output_temp_dir_name, exist_ok=True)
+
         self.output_csv_name = None
         self.output_csv_name = os.path.join(self.output_dir_name, (self.input_filename.stem + ".csv"))
         self.playback_paused = False
@@ -229,7 +239,7 @@ class InputOutputHandler:
                 f"DetectTrack: {runtimes['detection_tracking']} | "
                 f"Total: {total_time_per_frame} | FPS: {'{:.1f}'.format(self.frame_no/(2*total_runtime/1000))}"
             )
-        if self.settings_dict["display_output_video"] or self.settings_dict["record_output_video"]:
+        if self.settings_dict["display_output_video"] or self.settings_dict["record_output_video"] or self.settings_dict["output_frames_for_compression"]:
             disp = visualization_functions.get_visual_output(
                 object_history=object_history,
                 label_history=label_history,
@@ -246,6 +256,23 @@ class InputOutputHandler:
                         frame_height=disp.shape[0],
                     )
                 self.video_writer.write(disp)
+
+            if self.settings_dict["output_frames_for_compression"]:
+                # Put timestamp on frame
+                timestamp = self.start_timestamp + dt.timedelta(seconds=self.index_in / self.fps_in)
+                text_location = (int((0.74*disp.shape[1])), int((0.907*disp.shape[0])))
+                cv.putText(
+                    disp,
+                    timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+                    text_location,
+                    cv.FONT_HERSHEY_SIMPLEX,
+                    1,
+                    (255, 255, 255),
+                    2,
+                )
+
+                frame_path = os.path.join(self.output_temp_dir_name, f"frame_{self.frame_no:07d}.png")
+                cv.imwrite(frame_path, disp)
 
             if self.settings_dict["display_output_video"]:
                 self.show_image(disp, detector)
@@ -275,13 +302,34 @@ class InputOutputHandler:
         output_video_name = f"{self.input_filename.stem}_{self.settings_dict['record_processing_frame']}_output.mp4"
 
         # initialize the FourCC and a video writer object
-        fourcc = cv.VideoWriter_fourcc("m", "p", "4", "v")
+        fourcc = cv.VideoWriter_fourcc(*'avc1')
         self.video_writer = cv.VideoWriter(
             os.path.join(self.output_dir_name, output_video_name),
             fourcc,
             fps,
             (frame_width, frame_height),
         )
+
+    def encode_and_remove_temp_frames(self):
+        output_video_name = f"{self.input_filename.stem}_{self.settings_dict['record_processing_frame']}_output_compressed_2.mp4"
+        command = [
+            "ffmpeg",
+            "-y",
+            "-framerate", str(self.fps_in),
+            "-i", os.path.join(self.output_temp_dir_name, "frame_%07d.png"),
+            "-vf", "format=yuv420p",
+            "-c:v", "libx264",
+            "-crf", str(35),
+            "-preset", "medium",
+            os.path.join(self.output_dir_name, output_video_name)
+        ]
+        print("Encoding frames to video ...")
+        subprocess.run(command)
+
+        # Remove temporary frames
+        for file in os.listdir(self.output_temp_dir_name):
+            os.remove(os.path.join(self.output_temp_dir_name, file))
+        os.rmdir(self.output_temp_dir_name)
 
     def shutdown(self):
         self.video_cap.release()
