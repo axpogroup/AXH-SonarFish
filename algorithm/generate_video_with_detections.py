@@ -19,8 +19,8 @@ class DummyFishDetector:
         self.conf = conf
         self.conf["show_detections"] = False
         self.conf["downsample"] = 25
+        self.conf["verbosity"] = 1
         self.frame_number = 0
-        self.verbosity = 1
 
 
 def main_draw_annotations(settings_dict: dict):
