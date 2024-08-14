@@ -123,7 +123,7 @@ def _draw_detections_and_labels(
     **kwargs,
 ):
     disp = processed_frame
-    if detector.conf["show_detections"]:
+    if detector.conf["show_detections"] or detector.conf["draw_detections_on_saved_video"]:
         disp = _draw_detector_output(
             object_history,
             detector,

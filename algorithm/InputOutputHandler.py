@@ -24,13 +24,17 @@ class InputOutputHandler:
         assert self.video_cap.isOpened(), "Error: Video Capturer could not be opened."
 
         self.input_filename = Path(self.settings_dict["file_name"])
-        try:
+        # Handle Stroppel special case
+        if self.settings_dict["file_timestamp_format"] == "start_%Y-%m-%dT%H-%M-%S.%f%z.mp4":
+            # Get rid of the timezone part of the filename
+            self.start_timestamp = dt.datetime.strptime(
+                str(self.input_filename.stem[:-6]), "start_%Y-%m-%dT%H-%M-%S.%f"
+            )
+        else:
             self.start_timestamp = dt.datetime.strptime(
                 str(self.input_filename), self.settings_dict["file_timestamp_format"]
             )
-        except ValueError:
-            raise ValueError("Error: The input filename does not match the expected timestamp format.")
-
+            
         self.output_dir_name = self.settings_dict["output_directory"]
         self.output_csv_name = None
         self.output_csv_name = os.path.join(self.output_dir_name, (self.input_filename.stem + ".csv"))
