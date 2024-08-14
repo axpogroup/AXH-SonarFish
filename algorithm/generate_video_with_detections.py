@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 from tqdm import tqdm
 
 sys.path.append(".")
-from run_algorithm import extract_labels_history, read_labels_into_dataframe
+from algorithm.run_algorithm import extract_labels_history, read_labels_into_dataframe
 
 from algorithm.InputOutputHandler import InputOutputHandler
 
