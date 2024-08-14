@@ -97,19 +97,15 @@ def get_visual_output(
         disp = np.concatenate((first_row_images, second_row_images, third_row_images))
 
     else:
-        img = _retrieve_frame(save_frame, processed_frame)
-        if _draw_detections_and_labels:
-            disp = _draw_detections_and_labels(
-                detector=detector,
-                object_history=object_history,
-                label_history=label_history,
-                processed_frame=_retrieve_frame("raw", processed_frame),
-                color=color,
-                paths=True,
-                fullres=True,
-            )
-        else:
-            disp = img
+        disp = _draw_detections_and_labels(
+            detector=detector,
+            object_history=object_history,
+            label_history=label_history,
+            processed_frame=_retrieve_frame("raw", processed_frame),
+            color=color,
+            paths=True,
+            fullres=True,
+        )
 
     return disp
 
@@ -315,5 +311,5 @@ def draw_associations(associations, detections, object_history, img, color):
     return img
 
 
-def is_detection_outdated(obj, detector):
+def is_detection_outdated(obj, detector: FishDetector):
     return detector.frame_number - obj.frames_observed[-1] > detector.conf["no_more_show_after_x_frames"]

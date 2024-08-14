@@ -21,10 +21,10 @@ record_processing_frame: "raw" # one of ['raw', 'raw_downsampled', 'gray', 'gray
 draw_detections_on_saved_video: True
 store_raw_image_patch: False
 store_median_image_patch: True
-show_detections: False
+show_detections: True
 annotate_detections: True
 features_to_annotate: [] # ["bbox_size_to_stddev_ratio", "velocity"]
-display_output_video: False
+display_output_video: True
 display_mode_extensive: False
 display_mode_dual: False
 display_trackbars: True
@@ -75,3 +75,6 @@ deviation_from_river_velocity: 0.5
 # Visualization
 no_more_show_after_x_frames: 1
 video_colormap: "red"
+
+# Logs
+verbosity: 2 # 2: print processing updates, 1: print only important updates

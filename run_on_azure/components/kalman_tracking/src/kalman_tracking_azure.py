@@ -7,6 +7,7 @@ import cv2 as cv
 import mlflow
 import yaml
 
+from algorithm.generate_video_with_detections import main_draw_annotations
 from algorithm.run_algorithm import main_algorithm
 
 
@@ -30,9 +31,9 @@ def init():
     DATA_PATH = args.job_inputs_path
     LABELS_DIR = args.labels_dir
     SAVE_OUTPUT_VIDEO = args.save_output_video
-    print("OpenCV build information: ")
-    print(cv.getBuildInformation())
-    print("Pass through init done")
+    logging.debug("OpenCV build information: ")
+    logging.debug(cv.getBuildInformation())
+    logging.debug("Pass through init done")
 
 
 def run(mini_batch):
@@ -77,7 +78,10 @@ def run(mini_batch):
             settings["file_name"] = file_name
             settings["ground_truth_directory"] = LABELS_DIR or "."
             settings["record_output_video"] = SAVE_OUTPUT_VIDEO
-            main_algorithm(settings)
+            if SAVE_OUTPUT_VIDEO and LABELS_DIR:
+                main_draw_annotations(settings)
+            else:
+                main_algorithm(settings)
 
 
 def str2bool(v):
