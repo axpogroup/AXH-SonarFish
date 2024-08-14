@@ -123,7 +123,7 @@ def _draw_detections_and_labels(
     **kwargs,
 ):
     disp = processed_frame
-    if detector and detector.conf["show_detections"]:
+    if detector.conf["show_detections"]:
         disp = _draw_detector_output(
             object_history,
             detector,
@@ -315,5 +315,5 @@ def draw_associations(associations, detections, object_history, img, color):
     return img
 
 
-def is_detection_outdated(obj, detector: Optional[FishDetector] = None):
+def is_detection_outdated(obj, detector: FishDetector):
     return detector.frame_number - obj.frames_observed[-1] > detector.conf["no_more_show_after_x_frames"]

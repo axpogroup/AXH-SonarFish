@@ -4,7 +4,7 @@
 file_name: "Passe3_Mar11_12-37-58.mp4"
 input_directory:  "data/raw/videos/"
 mask_directory: "analysis/demo/masks"
-output_directory: "data/model_output_asdf/"
+output_directory: "data/model_output_classified/"
 ground_truth_directory: "data/model_output/"
 labels_file_suffix: "_classification_v2"
 mask_file: "sonar_controls.png" # one of ["sonar_controls.png", "stroppel_non_object_space.png", "herrendoebeli_non_object_space.png"]
