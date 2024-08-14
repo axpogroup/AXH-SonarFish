@@ -1,6 +1,7 @@
 import json
 import os
 from pathlib import Path
+from typing import Optional
 
 import cv2 as cv
 import numpy as np
@@ -16,9 +17,12 @@ class InputOutputHandler:
         self.fps_out = 10
         self.video_writer = None
         self.settings_dict = settings_dict
+        input_file_path = Path(self.settings_dict["input_directory"]) / self.settings_dict["file_name"]
+        assert input_file_path.exists(), f"Error: Input file {input_file_path} does not exist."
         self.video_cap = cv.VideoCapture(
             str(Path(self.settings_dict["input_directory"]) / self.settings_dict["file_name"])
         )
+        assert self.video_cap.isOpened(), "Error: Video Capturer could not be opened."
         self.input_filename = Path(self.settings_dict["file_name"])
         self.output_dir_name = self.settings_dict["output_directory"]
         self.output_csv_name = None
@@ -31,9 +35,11 @@ class InputOutputHandler:
         self.start_ticks = 1
         self.index_in = -1
         self.index_out = -1
+        self.down_sample_factor = self.fps_in / self.fps_out
         self.frame_retrieval_time = None
         self.last_output_time = None
         self.current_raw_frame = None
+        self.created_trackbars = False
 
     def get_new_frame(self):
         start = cv.getTickCount()
@@ -127,7 +133,7 @@ class InputOutputHandler:
             detector.conf["brightness"] = value
 
         def change_diff_thresh(value):
-            detector.conf["difference_threshold_scaler"] = value / 10
+            detector.conf["difference_threshold_scaler"] = value / 100
 
         def change_median_filter_kernel(value):
             detector.conf["median_filter_kernel_mm"] = value
@@ -158,9 +164,9 @@ class InputOutputHandler:
             change_long_mean_frames,
         )
         cv.createTrackbar(
-            "diff_thresh*10",
+            "diff_thresh*100",
             "frame",
-            int(detector.conf["difference_threshold_scaler"] * 10),
+            int(detector.conf["difference_threshold_scaler"] * 100),
             127,
             change_diff_thresh,
         )
@@ -178,11 +184,12 @@ class InputOutputHandler:
             1200,
             change_dilatation_kernel,
         )
+        self.created_trackbars = True
 
     def show_image(self, img, detector):
         cv.imshow("frame", img)
 
-        if "display_trackbars" in self.settings_dict.keys() and self.settings_dict["display_trackbars"]:
+        if self.settings_dict.get("display_trackbars", False) and not self.created_trackbars:
             self.trackbars(detector)
 
         # Wait briefly for user input unless the video is paused
@@ -208,29 +215,32 @@ class InputOutputHandler:
         self,
         processed_frame,
         object_history: dict[int, KalmanTrackedBlob],
-        runtimes,
+        runtimes: Optional[dict[str, float]],
         detector,
         label_history=None,
     ):
         total_runtime, total_time_per_frame = self.calculate_total_time()
-        if self.frame_no % 20 == 0:
+        if self.frame_no % 20 == 0 and detector.conf.get("verbosity", 2) > 1:
             if total_time_per_frame == 0:
                 total_time_per_frame = 1
-            down_sample_factor = self.fps_in / self.fps_out
             print(
-                f"Processed {'{:.1f}'.format(self.frame_no * down_sample_factor / self.frames_total * 100)} % of video."
-                f"Runtimes [ms]: getFrame: {self.frame_retrieval_time} | Enhance: {runtimes['enhance']} | "
-                f"DetectTrack: {runtimes['detection_tracking']} | "
-                f"Total: {total_time_per_frame} | FPS: {'{:.1f}'.format(self.frame_no/(2*total_runtime/1000))}"
+                f"Processed {'{:.1f}'.format(self.frame_no * self.down_sample_factor / self.frames_total * 100)} \
+                    % of video."
             )
+            if runtimes:
+                print(
+                    f"Runtimes [ms]: getFrame: {self.frame_retrieval_time} | Enhance: {runtimes['enhance']} | "
+                    f"DetectTrack: {runtimes['detection_tracking']} | "
+                    f"Total: {total_time_per_frame} | FPS: {'{:.1f}'.format(self.frame_no/(2*total_runtime/1000))}"
+                )
         if self.settings_dict["display_output_video"] or self.settings_dict["record_output_video"]:
-            extensive = self.settings_dict["display_mode_extensive"]
             disp = visualization_functions.get_visual_output(
                 object_history=object_history,
                 label_history=label_history,
                 detector=detector,
                 processed_frame=processed_frame,
-                extensive=extensive,
+                extensive=self.settings_dict.get("display_mode_extensive", False),
+                dual_output=self.settings_dict.get("display_mode_dual", False),
                 save_frame=self.settings_dict["record_processing_frame"],
             )
             if self.settings_dict["record_output_video"]:
