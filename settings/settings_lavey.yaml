@@ -22,7 +22,7 @@ store_median_image_patch: True
 show_detections: True
 annotate_detections: True
 features_to_annotate: [] # ["bbox_size_to_stddev_ratio", "velocity"]
-display_output_video: False
+display_output_video: True
 display_mode_extensive: False
 display_mode_dual: False
 display_trackbars: True
