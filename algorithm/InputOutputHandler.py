@@ -34,7 +34,7 @@ class InputOutputHandler:
             self.start_timestamp = dt.datetime.strptime(
                 str(self.input_filename), self.settings_dict["file_timestamp_format"]
             )
-            
+
         self.output_dir_name = self.settings_dict["output_directory"]
         self.output_csv_name = None
         self.output_csv_name = os.path.join(self.output_dir_name, (self.input_filename.stem + ".csv"))
