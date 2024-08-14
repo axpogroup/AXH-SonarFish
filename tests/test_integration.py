@@ -103,5 +103,8 @@ class TestIntegration:
         assert list(detections_csv.columns)[:6] == relevant_csv_columns
         assert len(detections_csv) > 0
 
+        output_files = os.listdir(model_output_directory)
+        assert len(output_files) == 4 # video, video_compressed, csv, .gitkeep
+
         metrics = compute_metrics(detection_settings)
         assert len(metrics) > 0

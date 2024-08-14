@@ -38,7 +38,7 @@ class InputOutputHandler:
 
         self.output_dir_name = self.settings_dict["output_directory"]
         self.output_csv_name = None
-        self.output_csv_name = os.path.join(self.output_dir_name, (self.input_filename.stem + ".csv"))
+        self.output_csv_name = Path(self.output_dir_name) / (self.input_filename.stem + ".csv")
         self.playback_paused = False
         self.usr_input = None
         self.frame_no = 0
@@ -303,12 +303,12 @@ class InputOutputHandler:
             fps = fps // 2
 
         output_video_name = f"{self.input_filename.stem}_{self.settings_dict['record_processing_frame']}_output.mp4"
-        self.output_video_path = os.path.join(self.output_dir_name, output_video_name)
+        self.output_video_path = Path(self.output_dir_name) / output_video_name
 
         # initialize the FourCC and a video writer object
         fourcc = cv.VideoWriter_fourcc(*"avc1")
         self.video_writer = cv.VideoWriter(
-            self.output_video_path,
+            str(self.output_video_path),
             fourcc,
             fps,
             (frame_width, frame_height),
@@ -319,7 +319,7 @@ class InputOutputHandler:
             "ffmpeg",
             "-y",  # Overwrite output file if it exists
             "-i",
-            self.output_video_path,
+            str(self.output_video_path),
             "-vf",
             "format=yuv420p",
             "-c:v",
@@ -328,7 +328,7 @@ class InputOutputHandler:
             str(35),  # Constant Rate Factor (0-51, 0 is lossless)
             "-preset",
             "medium",
-            self.output_video_path.replace(".mp4", "_compressed.mp4"),
+            str(self.output_video_path).replace(".mp4", "_compressed.mp4"),
         ]
         print("Compressing output video ...")
         subprocess.run(command)
