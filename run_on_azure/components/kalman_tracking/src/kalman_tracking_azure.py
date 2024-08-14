@@ -79,6 +79,7 @@ def run(mini_batch):
             settings["ground_truth_directory"] = LABELS_DIR or "."
             settings["record_output_video"] = SAVE_OUTPUT_VIDEO
             if SAVE_OUTPUT_VIDEO and LABELS_DIR:
+                print("Not re-running algorithm, only drawing annotations.")
                 main_draw_annotations(settings)
             else:
                 main_algorithm(settings)
