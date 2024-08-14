@@ -1,5 +1,6 @@
 import argparse
 import os
+import sys
 from pathlib import Path
 from typing import Optional
 
@@ -10,18 +11,21 @@ import yaml
 from azureml.core import Workspace
 from dotenv import load_dotenv
 
+sys.path.append(".")
 from algorithm.DetectedObject import BoundingBox, KalmanTrackedBlob
 from algorithm.FishDetector import FishDetector
 from algorithm.InputOutputHandler import InputOutputHandler
 from algorithm.validation import mot16_metrics
+from algorithm.visualization_functions import TRUTH_LABEL_NO
 
 load_dotenv()
-TRUTH_LABEL_NO = 2
 
 
-def read_labels_into_dataframe(labels_path: Path, filename: str) -> Optional[pd.DataFrame]:
-    labels_path = Path(labels_path) / Path(filename + "_ground_truth.csv")
-    if not labels_path.exists():
+def read_labels_into_dataframe(labels_path: Path, labels_filename: str) -> Optional[pd.DataFrame]:
+    labels_path = Path(labels_path) / labels_filename
+    if labels_path.exists():
+        print(f"Found labels file: {labels_path}")
+    else:
         print("No labels file found.")
         return None
     return pd.read_csv(labels_path)
@@ -31,17 +35,19 @@ def extract_labels_history(
     label_history: dict[int, BoundingBox],
     labels: Optional[pd.DataFrame],
     current_frame: int,
+    down_sample_factor: int = 1,
     feature_to_load: Optional[str] = None,
 ) -> Optional[dict[int, BoundingBox]]:
     if labels is None:
         return None
+    # current_frame_df = labels[labels["frame"] == int(current_frame * down_sample_factor)]
     current_frame_df = labels[labels["frame"] == current_frame]
     for _, row in current_frame_df.iterrows():
         truth_detected = BoundingBox(
             identifier=row["id"],
             frame_number=row["frame"],
             contour=np.array(row[["x", "y", "w", "h"]]),
-            label=int(row.get("assigned_label", TRUTH_LABEL_NO)),
+            label=int(row.get("assigned_label") or row.get("classification_v2", TRUTH_LABEL_NO)),
             precalculated_feature=row.get(feature_to_load, None),
         )
         if row["id"] not in label_history:
@@ -64,13 +70,16 @@ def compute_metrics(settings_dict):
 def main_algorithm(settings_dict: dict):
     labels_df = read_labels_into_dataframe(
         labels_path=Path(settings_dict.get("ground_truth_directory", "")),
-        filename=Path(settings_dict["file_name"]).stem,
+        labels_filename=Path(settings_dict["file_name"]).stem
+        + settings_dict.get("labels_file_suffix", "_ground_truth")
+        + ".csv",
     )
 
     input_output_handler = InputOutputHandler(settings_dict)
     detector = FishDetector(settings_dict)
     object_history: dict[int, KalmanTrackedBlob] = {}
     label_history = {}
+    print("Starting main algorithm.")
     while input_output_handler.get_new_frame():
         detections, processed_frame_dict, runtimes = detector.detect_objects(input_output_handler.current_raw_frame)
         object_history = detector.associate_detections(
@@ -80,6 +89,7 @@ def main_algorithm(settings_dict: dict):
             label_history,
             labels_df,
             input_output_handler.frame_no,
+            down_sample_factor=input_output_handler.down_sample_factor,
             feature_to_load=settings_dict.get("feature_to_load"),
         )
         input_output_handler.handle_output(
@@ -93,6 +103,8 @@ def main_algorithm(settings_dict: dict):
         df_detections = input_output_handler.get_detections_pd(object_history)
         df_detections = detector.classify_detections(df_detections)
         df_detections.to_csv(input_output_handler.output_csv_name, index=False)
+
+    return input_output_handler.output_csv_name
 
 
 if __name__ == "__main__":
@@ -108,13 +120,14 @@ if __name__ == "__main__":
             print("replacing input file.")
             settings["file_name"] = args.input_file
 
-    workspace = Workspace(
-        resource_group=os.getenv("RESOURCE_GROUP"),
-        workspace_name=os.getenv("WORKSPACE_NAME"),
-        subscription_id=os.getenv("SUBSCRIPTION_ID"),
-    )
     main_algorithm(settings)
+
     if settings.get("track_azure_ml", False):
+        workspace = Workspace(
+            resource_group=os.getenv("RESOURCE_GROUP"),
+            workspace_name=os.getenv("WORKSPACE_NAME"),
+            subscription_id=os.getenv("SUBSCRIPTION_ID"),
+        )
         mlflow.set_tracking_uri(workspace.get_mlflow_tracking_uri())
         experiment_name = settings["experiment_name"]
         mlflow.set_experiment(experiment_name)

@@ -1,0 +1,30 @@
+# <component>
+$schema: https://azuremlschemas.azureedge.net/latest/commandComponent.schema.json
+type: command
+
+name: track_classification
+display_name: Classify the Tracked Objects
+inputs:
+  train_val_data:
+    type: uri_folder
+  train_val_gt_data:
+    type: uri_folder
+  files_to_classify:
+    type: uri_folder
+  log_level:
+    type: string
+    default: "INFO"
+    optional: true
+outputs:
+  classified_detections_dir:
+    type: uri_folder
+environment: azureml:fishy_environment:6
+code: src
+command: >-
+  python run_classifier.py
+  --train_val_data_dir ${{inputs.train_val_data}}
+  --train_val_gt_data_dir ${{inputs.train_val_gt_data}}
+  --test_data_dir ${{inputs.files_to_classify}}
+  --job_output_dir ${{outputs.classified_detections_dir}}
+  $[[--log_level ${{inputs.log_level}} ]]
+# </component>

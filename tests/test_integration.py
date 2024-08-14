@@ -12,7 +12,7 @@ from algorithm.scripts.preprocess_raw_videos import main as preprocess_main
 
 @pytest.fixture(scope="session")
 def labels_directory():
-    return "data/raw/labels"
+    return "data/labels"
 
 
 @pytest.fixture(scope="session")
@@ -56,18 +56,14 @@ def relevant_csv_columns():
 def clear_directory(directory):
     files = os.listdir(directory)
     for file in files:
-        if file != ".gitkeep" and not (directory.endswith("raw/labels") and file == "trimmed_video.mp4"):
+        if file != ".gitkeep":
             os.remove(f"{directory}/{file}")
 
 
 def assert_directory_empty(directory: str):
-    allowed_files = [".gitkeep", "trimmed_video.mp4"]
     files = os.listdir(directory)
-    disallowed_files = [file for file in files if file not in allowed_files]
-    if disallowed_files:
-        raise Exception(
-            f"The {directory} directory should be empty before running the test, but it has {disallowed_files=}"
-        )
+    if not (len(files) == 1 and files[0] == ".gitkeep"):
+        raise Exception(f"The {directory} directory should be empty before running the test, but it has {files=}")
 
 
 class TestIntegration:
@@ -98,7 +94,7 @@ class TestIntegration:
         assert len(labels_csv) > 0
         assert list(labels_csv.columns)[:6] == relevant_csv_columns
 
-        with open("../analysis/demo/demo_settings.yaml") as f:
+        with open("../settings/demo_settings.yaml") as f:
             detection_settings = yaml.load(f, Loader=yaml.SafeLoader)
         detection_settings["file_name"] = "trimmed_video.mp4"
         detection_settings["mask_directory"] = "../analysis/demo/masks"

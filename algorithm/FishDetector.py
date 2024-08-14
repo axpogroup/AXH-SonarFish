@@ -35,6 +35,7 @@ class FishDetector:
             (Path(self.conf["mask_directory"]) / mask_file).as_posix(),
             cv.IMREAD_GRAYSCALE,
         )
+        assert self.mask is not None, f"Mask file not found: {mask_file}"
 
     def detect_objects(self, raw_frame) -> tuple[Dict[int, DetectedBlob], dict, dict]:
         start = cv.getTickCount()
@@ -131,7 +132,7 @@ class FishDetector:
                 self.kf_metric_matching_thresh,
                 budget=self.conf["kalman_trace_history_matching_budget"],
             )
-            if "filter_blob_elimination_metric" in self.conf:
+            if self.conf.get("filter_blob_elimination_metric"):
                 elimination_metric = DistanceMetric(
                     self.conf["filter_blob_elimination_metric"],
                     self.max_association_distance_px,
