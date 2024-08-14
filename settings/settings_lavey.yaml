@@ -21,7 +21,7 @@ record_processing_frame: "raw" # one of ['raw', 'raw_downsampled', 'gray', 'gray
 draw_detections_on_saved_video: True
 store_raw_image_patch: False
 store_median_image_patch: True
-show_detections: True
+show_detections: False
 annotate_detections: True
 features_to_annotate: [] # ["bbox_size_to_stddev_ratio", "velocity"]
 display_output_video: False
