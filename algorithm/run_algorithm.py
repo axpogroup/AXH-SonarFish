@@ -145,6 +145,7 @@ def main_algorithm(settings_dict: dict):
         burn_in_detector = burn_in_algorithm_on_previous_video(settings_dict, burn_in_file_name=previous_video)
         detector = FishDetector(settings_dict, init_detector=burn_in_detector)
     else:
+        print("Starting algorithm without burn-in on previous video.")
         detector = FishDetector(settings_dict)
 
     output_csv_name = run_tracking_algorithm(settings_dict, detector)
