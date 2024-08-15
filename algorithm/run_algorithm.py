@@ -34,17 +34,21 @@ def read_labels_into_dataframe(labels_path: Path, labels_filename: str) -> Optio
 
 def find_valid_previous_video(settings_dict, gap_seconds: int):
     print("Finding a valid previous video...")
-    current_timestamp = InputOutputHandler.extract_timestamp_from_filename(settings_dict["file_name"], settings_dict["file_timestamp_format"])
+    current_timestamp = InputOutputHandler.extract_timestamp_from_filename(
+        settings_dict["file_name"], settings_dict["file_timestamp_format"]
+    )
     if current_timestamp is None:
         print("Could not extract timestamp from current video.")
         return None
 
-    video_files = sorted(Path(settings["input_directory"]).glob("*.mp4"))
+    video_files = sorted(Path(settings_dict["input_directory"]).glob("*.mp4"))
     closest_video = None
 
     min_time_difference = None
     for video_file in video_files:
-        video_timestamp = InputOutputHandler.extract_timestamp_from_filename(video_file.name, settings_dict["file_timestamp_format"])
+        video_timestamp = InputOutputHandler.extract_timestamp_from_filename(
+            video_file.name, settings_dict["file_timestamp_format"]
+        )
         if video_timestamp is None:
             continue
         time_difference = current_timestamp - video_timestamp
@@ -57,7 +61,9 @@ def find_valid_previous_video(settings_dict, gap_seconds: int):
     # Check the duration of the closest video to make sure there is no gap
     if closest_video:
         duration = InputOutputHandler.get_video_duration(closest_video)
-        end_timestamp = InputOutputHandler.extract_timestamp_from_filename(closest_video.name, settings_dict["file_timestamp_format"]) + dt.timedelta(seconds=duration)
+        end_timestamp = InputOutputHandler.extract_timestamp_from_filename(
+            closest_video.name, settings_dict["file_timestamp_format"]
+        ) + dt.timedelta(seconds=duration)
         if abs(current_timestamp - end_timestamp) <= dt.timedelta(seconds=gap_seconds):
             print(
                 print(
