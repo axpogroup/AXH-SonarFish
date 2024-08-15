@@ -62,6 +62,12 @@ class InputOutputHandler:
                     if success:
                         break
                     tries += 1
+                if not success:
+                    print("Can't receive frame (stream end?). Exiting ...")
+                    self.shutdown()
+                    self.frame_retrieval_time = get_elapsed_ms(start)
+                    return False
+
                 tries = 0
                 total_frames = int(self.video_cap.get(cv.CAP_PROP_FRAME_COUNT))
                 start_frame = max(0, total_frames - start_at_frames_from_end)
