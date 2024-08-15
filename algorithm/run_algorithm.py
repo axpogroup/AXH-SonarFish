@@ -77,18 +77,14 @@ def burn_in_algorithm_on_previous_video(settings_dict: dict, burn_in_file_name: 
     print("Starting algorithm burn-in.")
     input_output_handler = InputOutputHandler(burn_in_settings)
     burn_in_detector = FishDetector(burn_in_settings)
-    burn_in_object_history: dict[int, KalmanTrackedBlob] = {}
     input_output_handler.get_new_frame(start_at_frames_from_end=burn_in_settings.get("long_mean_frames", 0) + 1)
     while input_output_handler.get_new_frame():
-        detections, processed_frame_dict, runtimes = burn_in_detector.detect_objects(
+        _, processed_frame_dict, runtimes = burn_in_detector.detect_objects(
             input_output_handler.current_raw_frame
-        )
-        object_history = burn_in_detector.associate_detections(
-            detections=detections, object_history=burn_in_object_history, processed_frame_dict=processed_frame_dict
         )
         input_output_handler.handle_output(
             processed_frame=processed_frame_dict,
-            object_history=object_history,
+            object_history={},
             label_history={},
             runtimes=runtimes,
             detector=burn_in_detector,
