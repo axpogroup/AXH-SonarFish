@@ -75,8 +75,39 @@ def main_algorithm(settings_dict: dict):
         + ".csv",
     )
 
+    print("Starting algorithm burn-in.")
+    burn_in_settings = settings_dict.copy()
+    burn_in_settings["file_name"] = "Passe3_Mar11_12-27-56.mp4"
+    burn_in_settings["record_output_video"] = False
+    input_output_handler = InputOutputHandler(burn_in_settings)
+    burn_in_detector = FishDetector(burn_in_settings)
+    burn_in_object_history: dict[int, KalmanTrackedBlob] = {}
+    burn_in_label_history = {}
+    input_output_handler.get_new_frame(start_at_frames_from_end=burn_in_settings.get("long_mean_frames", 0) + 1)
+    while input_output_handler.get_new_frame():
+        detections, processed_frame_dict, runtimes = burn_in_detector.detect_objects(
+            input_output_handler.current_raw_frame
+        )
+        object_history = burn_in_detector.associate_detections(
+            detections=detections, object_history=burn_in_object_history, processed_frame_dict=processed_frame_dict
+        )
+        label_history = extract_labels_history(
+            burn_in_label_history,
+            labels_df,
+            input_output_handler.frame_no,
+            down_sample_factor=input_output_handler.down_sample_factor,
+            feature_to_load=settings_dict.get("feature_to_load"),
+        )
+        input_output_handler.handle_output(
+            processed_frame=processed_frame_dict,
+            object_history=object_history,
+            label_history=label_history,
+            runtimes=runtimes,
+            detector=burn_in_detector,
+        )
+
+    detector = FishDetector(settings_dict, init_detector=burn_in_detector)
     input_output_handler = InputOutputHandler(settings_dict)
-    detector = FishDetector(settings_dict)
     object_history: dict[int, KalmanTrackedBlob] = {}
     label_history = {}
     print("Starting main algorithm.")
