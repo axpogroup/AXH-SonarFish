@@ -90,19 +90,21 @@ class TestIntegration:
         assert len(intermediate_labels) == 2
         assert len(intermediate_videos) == 3
 
-        labels_csv = pd.read_csv(f"{labels_directory}/trimmed_video_ground_truth.csv")
+        labels_csv = pd.read_csv(f"{labels_directory}/start_2023-05-08T18-00-05.025+00-00_ground_truth.csv")
         assert len(labels_csv) > 0
         assert list(labels_csv.columns)[:6] == relevant_csv_columns
 
         with open("../settings/demo_settings.yaml") as f:
             detection_settings = yaml.load(f, Loader=yaml.SafeLoader)
-        detection_settings["file_name"] = "trimmed_video.mp4"
         detection_settings["mask_directory"] = "../analysis/demo/masks"
         detection_settings["display_output_video"] = False
         run_algorithm_main(detection_settings)
-        detections_csv = pd.read_csv(f"{model_output_directory}/trimmed_video.csv")
+        detections_csv = pd.read_csv(f"{model_output_directory}/start_2023-05-08T18-00-05.025+00-00.csv")
         assert list(detections_csv.columns)[:6] == relevant_csv_columns
         assert len(detections_csv) > 0
+
+        output_files = os.listdir(model_output_directory)
+        assert len(output_files) == 4  # video, video_compressed, csv, .gitkeep
 
         metrics = compute_metrics(detection_settings)
         assert len(metrics) > 0

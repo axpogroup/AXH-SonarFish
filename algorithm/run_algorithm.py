@@ -104,6 +104,9 @@ def main_algorithm(settings_dict: dict):
         df_detections = detector.classify_detections(df_detections)
         df_detections.to_csv(input_output_handler.output_csv_name, index=False)
 
+    if settings_dict.get("compress_output_video", False):
+        input_output_handler.compress_output_video()
+
     return input_output_handler.output_csv_name
 
 
