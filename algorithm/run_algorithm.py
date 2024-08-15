@@ -79,9 +79,7 @@ def burn_in_algorithm_on_previous_video(settings_dict: dict, burn_in_file_name: 
     burn_in_detector = FishDetector(burn_in_settings)
     input_output_handler.get_new_frame(start_at_frames_from_end=burn_in_settings.get("long_mean_frames", 0) + 1)
     while input_output_handler.get_new_frame():
-        _, processed_frame_dict, runtimes = burn_in_detector.detect_objects(
-            input_output_handler.current_raw_frame
-        )
+        _, processed_frame_dict, runtimes = burn_in_detector.detect_objects(input_output_handler.current_raw_frame)
         input_output_handler.handle_output(
             processed_frame=processed_frame_dict,
             object_history={},
