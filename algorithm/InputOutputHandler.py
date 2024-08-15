@@ -23,16 +23,8 @@ class InputOutputHandler:
         self.settings_dict = settings_dict
         self.input_filename = Path(self.settings_dict["file_name"])
         self.set_video_cap()
-        # Handle Stroppel special case
-        if self.settings_dict["file_timestamp_format"] == "start_%Y-%m-%dT%H-%M-%S.%f%z.mp4":
-            # Get rid of the timezone part of the filename
-            self.start_timestamp = dt.datetime.strptime(
-                str(self.input_filename.stem[:-6]), "start_%Y-%m-%dT%H-%M-%S.%f"
-            )
-        else:
-            self.start_timestamp = dt.datetime.strptime(
-                str(self.input_filename), self.settings_dict["file_timestamp_format"]
-            )
+        
+        self.start_timestamp = self.extract_timestamp_from_filename(self.input_filename, self.settings_dict["file_timestamp_format"])
 
         self.output_dir_name = self.settings_dict["output_directory"]
         self.output_csv_name = Path(self.output_dir_name) / (self.input_filename.stem + ".csv")
@@ -362,3 +354,23 @@ class InputOutputHandler:
         if self.settings_dict.get("record_output_video"):
             self.video_writer.release()
         cv.destroyAllWindows()
+
+    @staticmethod
+    def extract_timestamp_from_filename(filename: str, file_timestamp_format: str) -> Optional[dt.datetime]:
+        try:
+            if file_timestamp_format == "start_%Y-%m-%dT%H-%M-%S.%f%z.mp4":
+                return dt.datetime.strptime(str(Path(filename).stem[:-6]), "start_%Y-%m-%dT%H-%M-%S.%f")
+            else:
+                return dt.datetime.strptime(str(Path(filename)), file_timestamp_format)
+        except Exception as e:
+            print(f"{e}")
+            return None
+
+    @staticmethod
+    def get_video_duration(filepath: Path):
+        video = cv.VideoCapture(str(filepath))
+        frames = video.get(cv.CAP_PROP_FRAME_COUNT)
+        fps = video.get(cv.CAP_PROP_FPS)
+        duration = frames / fps
+        video.release()
+        return duration
