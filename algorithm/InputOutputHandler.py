@@ -1,5 +1,6 @@
+import datetime as dt
 import json
-import os
+import subprocess
 from pathlib import Path
 from typing import Optional
 
@@ -23,8 +24,19 @@ class InputOutputHandler:
         self.settings_dict = settings_dict
         self.input_filename = Path(self.settings_dict["file_name"])
         self.set_video_cap(overwrite_file_name)
-        self.output_dir_name = Path(self.settings_dict["output_directory"])
-        self.output_csv_name = self.output_dir_name / (self.input_filename.stem + ".csv")
+        # Handle Stroppel special case
+        if self.settings_dict["file_timestamp_format"] == "start_%Y-%m-%dT%H-%M-%S.%f%z.mp4":
+            # Get rid of the timezone part of the filename
+            self.start_timestamp = dt.datetime.strptime(
+                str(self.input_filename.stem[:-6]), "start_%Y-%m-%dT%H-%M-%S.%f"
+            )
+        else:
+            self.start_timestamp = dt.datetime.strptime(
+                str(self.input_filename), self.settings_dict["file_timestamp_format"]
+            )
+
+        self.output_dir_name = self.settings_dict["output_directory"]
+        self.output_csv_name = Path(self.output_dir_name) / (self.input_filename.stem + ".csv")
         self.playback_paused = False
         self.usr_input = None
         self.frame_no = 0
@@ -258,6 +270,20 @@ class InputOutputHandler:
                 dual_output=self.settings_dict.get("display_mode_dual", False),
                 save_frame=self.settings_dict["record_processing_frame"],
             )
+
+            # Put timestamp on frame
+            timestamp = self.start_timestamp + dt.timedelta(seconds=self.index_in / self.fps_in)
+            text_location = (int((0.74 * disp.shape[1])), int((0.907 * disp.shape[0])))
+            cv.putText(
+                disp,
+                timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+                text_location,
+                cv.FONT_HERSHEY_SIMPLEX,
+                1,
+                (255, 255, 255),
+                2,
+            )
+
             if self.settings_dict["record_output_video"]:
                 if not self.video_writer:
                     self.initialize_output_recording(
@@ -292,15 +318,35 @@ class InputOutputHandler:
             fps = fps // 2
 
         output_video_name = f"{self.input_filename.stem}_{self.settings_dict['record_processing_frame']}_output.mp4"
+        self.output_video_path = Path(self.output_dir_name) / output_video_name
 
         # initialize the FourCC and a video writer object
         fourcc = cv.VideoWriter_fourcc("m", "p", "4", "v")
         self.video_writer = cv.VideoWriter(
-            os.path.join(self.output_dir_name, output_video_name),
+            str(self.output_video_path),
             fourcc,
             fps,
             (frame_width, frame_height),
         )
+
+    def compress_output_video(self):
+        command = [
+            "ffmpeg",
+            "-y",  # Overwrite output file if it exists
+            "-i",
+            str(self.output_video_path),
+            "-vf",
+            "format=yuv420p",
+            "-c:v",
+            "libx264",
+            "-crf",
+            str(35),  # Constant Rate Factor (0-51, 0 is lossless)
+            "-preset",
+            "medium",
+            str(self.output_video_path).replace(".mp4", "_compressed.mp4"),
+        ]
+        print("Compressing output video ...")
+        subprocess.run(command)
 
     def shutdown(self):
         self.video_cap.release()
