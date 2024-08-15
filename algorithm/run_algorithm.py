@@ -67,16 +67,39 @@ def compute_metrics(settings_dict):
         return mot16_metrics_dict
 
 
-def main_algorithm(settings_dict: dict):
+def burn_in_algorithm_on_previous_video(settings_dict: dict, burn_in_file_name: str):
+    burn_in_settings = settings_dict.copy()
+    burn_in_settings["file_name"] = burn_in_file_name
+    burn_in_settings["record_output_video"] = False
+    burn_in_settings["display_output_video"] = False
+    burn_in_settings["verbosity"] = 0
+
+    print("Starting algorithm burn-in.")
+    input_output_handler = InputOutputHandler(burn_in_settings)
+    burn_in_detector = FishDetector(burn_in_settings)
+    input_output_handler.get_new_frame(start_at_frames_from_end=burn_in_settings.get("long_mean_frames", 0) + 1)
+    while input_output_handler.get_new_frame():
+        _, processed_frame_dict, runtimes = burn_in_detector.detect_objects(input_output_handler.current_raw_frame)
+        input_output_handler.handle_output(
+            processed_frame=processed_frame_dict,
+            object_history={},
+            label_history={},
+            runtimes=runtimes,
+            detector=burn_in_detector,
+        )
+
+    return burn_in_detector
+
+
+def run_tracking_algorithm(settings_dict: dict, detector: FishDetector):
     labels_df = read_labels_into_dataframe(
         labels_path=Path(settings_dict.get("ground_truth_directory", "")),
         labels_filename=Path(settings_dict["file_name"]).stem
         + settings_dict.get("labels_file_suffix", "_ground_truth")
         + ".csv",
     )
-
     input_output_handler = InputOutputHandler(settings_dict)
-    detector = FishDetector(settings_dict)
+
     object_history: dict[int, KalmanTrackedBlob] = {}
     label_history = {}
     print("Starting main algorithm.")
@@ -108,6 +131,24 @@ def main_algorithm(settings_dict: dict):
         input_output_handler.compress_output_video()
 
     return input_output_handler.output_csv_name
+
+
+def main_algorithm(settings_dict: dict):
+    previous_video = "start_2023-10-13T19-04-11.037+00-00.mp4"
+    if previous_video:
+        try:
+            burn_in_detector = burn_in_algorithm_on_previous_video(settings_dict, burn_in_file_name=previous_video)
+            detector = FishDetector(settings_dict, init_detector=burn_in_detector)
+        except AssertionError:
+            print("Burn-in algorithm failed. Starting algorithm without burn-in on previous video.")
+            detector = FishDetector(settings_dict)
+    else:
+        print("Starting algorithm without burn-in on previous video.")
+        detector = FishDetector(settings_dict)
+
+    output_csv_name = run_tracking_algorithm(settings_dict, detector)
+
+    return output_csv_name
 
 
 if __name__ == "__main__":

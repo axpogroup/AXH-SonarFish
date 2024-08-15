@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Optional
 
 import cv2 as cv
 import matplotlib.cm as cm
@@ -15,22 +15,24 @@ from algorithm.utils import get_elapsed_ms, resize_img
 
 
 class FishDetector:
-    def __init__(self, settings_dict):
+    def __init__(self, settings_dict, init_detector: Optional["FishDetector"] = None):
         self.object_filter = None
         self.conf = settings_dict
         self.frame_number = 0
         self.latest_obj_index = 0
 
         # Enhancement
-        self.framebuffer = None
-        self.mean_buffer = None
-        self.mean_buffer_counter = None
+        if init_detector:
+            self.framebuffer = init_detector.framebuffer
+            self.mean_buffer = init_detector.mean_buffer
+            self.mean_buffer_counter = init_detector.mean_buffer_counter
+        else:
+            self.framebuffer = None
+            self.mean_buffer = None
+            self.mean_buffer_counter = None
         self.short_mean_float = None
         self.long_mean_float = None
-        if self.conf.get("mask_file"):
-            mask_file = self.conf["mask_file"]
-        else:
-            mask_file = "sonar_controls.png"
+        mask_file = self.conf["mask_file"] if self.conf.get("mask_file") else "sonar_controls.png"
         self.mask = cv.imread(
             (Path(self.conf["mask_directory"]) / mask_file).as_posix(),
             cv.IMREAD_GRAYSCALE,
