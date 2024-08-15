@@ -1,11 +1,12 @@
 # Input / Output
-file_name: "start_2023-05-08T18-00-05.025+00-00.mp4"
+file_name: "start_2023-10-13T19-14-11.588+00-00.mp4"
 input_directory:  "data/raw/videos/"
 mask_directory: "analysis/demo/masks"
 output_directory: "data/model_output/"
 ground_truth_directory: "data/labels/"
 labels_file_suffix: "_classification_min_track_length_30"
 mask_file: "stroppel_non_object_space.png" # one of ["sonar_controls.png", "stroppel_non_object_space.png", "herrendoebeli_non_object_space.png"]
+file_timestamp_format: "start_%Y-%m-%dT%H-%M-%S.%f%z.mp4"
 
 # Azure ML
 experiment_name: "how_much_is_the_fish"
@@ -17,8 +18,8 @@ record_processing_frame: "raw" # one of ['raw', 'raw_downsampled', 'gray', 'gray
 draw_detections_on_saved_video: True
 store_raw_image_patch: False
 store_median_image_patch: False
-show_detections: False
-display_output_video: False
+show_detections: True
+display_output_video: True
 display_mode_extensive: False
 display_trackbars: False
 feature_to_load: "max_blob_count"
@@ -68,3 +69,4 @@ deviation_from_river_velocity: 0.5
 # Visualization
 no_more_show_after_x_frames: 1
 video_colormap: "red"
+compress_output_video: True
