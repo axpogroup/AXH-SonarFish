@@ -142,8 +142,12 @@ def run_tracking_algorithm(settings_dict: dict, detector: FishDetector):
 def main_algorithm(settings_dict: dict):
     previous_video = "start_2023-10-13T19-04-11.037+00-00.mp4"
     if previous_video:
-        burn_in_detector = burn_in_algorithm_on_previous_video(settings_dict, burn_in_file_name=previous_video)
-        detector = FishDetector(settings_dict, init_detector=burn_in_detector)
+        try:
+            burn_in_detector = burn_in_algorithm_on_previous_video(settings_dict, burn_in_file_name=previous_video)
+            detector = FishDetector(settings_dict, init_detector=burn_in_detector)
+        except AssertionError:
+            print("Burn-in algorithm failed. Starting algorithm without burn-in on previous video.")
+            detector = FishDetector(settings_dict)
     else:
         print("Starting algorithm without burn-in on previous video.")
         detector = FishDetector(settings_dict)
