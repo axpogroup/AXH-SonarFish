@@ -1,9 +1,11 @@
 import argparse
+import datetime as dt
 import os
 import sys
 from pathlib import Path
 from typing import Optional
 
+import cv2
 import mlflow
 import numpy as np
 import pandas as pd
@@ -29,6 +31,69 @@ def read_labels_into_dataframe(labels_path: Path, labels_filename: str) -> Optio
         print("No labels file found.")
         return None
     return pd.read_csv(labels_path)
+
+
+def find_valid_previous_video(settings_dict, gap_seconds: int):
+    def extract_timestamp(filename: str):
+        try:
+            if settings_dict["file_timestamp_format"] == "start_%Y-%m-%dT%H-%M-%S.%f%z.mp4":
+                return dt.datetime.strptime(str(Path(filename).stem[:-6]), "start_%Y-%m-%dT%H-%M-%S.%f")
+            else:
+                return dt.datetime.strptime(str(Path(filename)), settings_dict["file_timestamp_format"])
+        except Exception as e:
+            print(f"{e}")
+            return None
+
+    def get_video_duration(filepath: Path):
+        video = cv2.VideoCapture(str(filepath))
+        frames = video.get(cv2.CAP_PROP_FRAME_COUNT)
+        fps = video.get(cv2.CAP_PROP_FPS)
+        duration = frames / fps
+        video.release()
+        return duration
+
+    print("Finding a valid previous video...")
+    current_timestamp = extract_timestamp(settings_dict["file_name"])
+    if current_timestamp is None:
+        print("Could not extract timestamp from current video.")
+        return None
+
+    video_files = sorted(Path(settings["input_directory"]).glob("*.mp4"))
+    closest_video = None
+
+    min_time_difference = None
+    for video_file in video_files:
+        video_timestamp = extract_timestamp(video_file.name)
+        if video_timestamp is None:
+            continue
+        time_difference = current_timestamp - video_timestamp
+        if time_difference.total_seconds() <= 0:
+            continue
+        elif min_time_difference is None or abs(time_difference) < abs(min_time_difference):
+            closest_video = video_file
+            min_time_difference = time_difference
+
+    # Check the duration of the closest video to make sure there is no gap
+    if closest_video:
+        duration = get_video_duration(closest_video)
+        end_timestamp = extract_timestamp(closest_video.name) + dt.timedelta(seconds=duration)
+        if abs(current_timestamp - end_timestamp) <= dt.timedelta(seconds=gap_seconds):
+            print(
+                print(
+                    f"Closest video found: {closest_video.name}, "
+                    f"time gap between recordings: {(current_timestamp - end_timestamp).total_seconds()} seconds."
+                )
+            )
+            return closest_video.name
+        else:
+            print(
+                f"Closest video {closest_video.name} ends {(current_timestamp - end_timestamp)} "
+                f"before the current video, which is outside the tolerance ({gap_seconds} seconds)."
+            )
+            return None
+    else:
+        print("No previous video found.")
+        return None
 
 
 def extract_labels_history(
@@ -77,22 +142,9 @@ def burn_in_algorithm_on_previous_video(settings_dict: dict, burn_in_file_name: 
     print("Starting algorithm burn-in.")
     input_output_handler = InputOutputHandler(burn_in_settings)
     burn_in_detector = FishDetector(burn_in_settings)
-    burn_in_object_history: dict[int, KalmanTrackedBlob] = {}
     input_output_handler.get_new_frame(start_at_frames_from_end=burn_in_settings.get("long_mean_frames", 0) + 1)
     while input_output_handler.get_new_frame():
-        detections, processed_frame_dict, runtimes = burn_in_detector.detect_objects(
-            input_output_handler.current_raw_frame
-        )
-        object_history = burn_in_detector.associate_detections(
-            detections=detections, object_history=burn_in_object_history, processed_frame_dict=processed_frame_dict
-        )
-        input_output_handler.handle_output(
-            processed_frame=processed_frame_dict,
-            object_history=object_history,
-            label_history={},
-            runtimes=runtimes,
-            detector=burn_in_detector,
-        )
+        _, _, _ = burn_in_detector.detect_objects(input_output_handler.current_raw_frame)
 
     return burn_in_detector
 
@@ -133,14 +185,15 @@ def run_tracking_algorithm(settings_dict: dict, detector: FishDetector):
         df_detections = detector.classify_detections(df_detections)
         df_detections.to_csv(input_output_handler.output_csv_name, index=False)
 
-    if settings_dict.get("compress_output_video", False):
+    if settings_dict.get("record_output_video", False) and settings_dict.get("compress_output_video", False):
         input_output_handler.compress_output_video()
 
     return input_output_handler.output_csv_name
 
 
 def main_algorithm(settings_dict: dict):
-    previous_video = "start_2023-10-13T19-04-11.037+00-00.mp4"
+    previous_video = find_valid_previous_video(settings_dict, gap_seconds=5)
+
     if previous_video:
         try:
             burn_in_detector = burn_in_algorithm_on_previous_video(settings_dict, burn_in_file_name=previous_video)
