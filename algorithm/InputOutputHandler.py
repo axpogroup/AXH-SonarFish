@@ -23,8 +23,10 @@ class InputOutputHandler:
         self.settings_dict = settings_dict
         self.input_filename = Path(self.settings_dict["file_name"])
         self.set_video_cap()
-        
-        self.start_timestamp = self.extract_timestamp_from_filename(self.input_filename, self.settings_dict["file_timestamp_format"])
+
+        self.start_timestamp = self.extract_timestamp_from_filename(
+            self.input_filename, self.settings_dict["file_timestamp_format"]
+        )
 
         self.output_dir_name = self.settings_dict["output_directory"]
         self.output_csv_name = Path(self.output_dir_name) / (self.input_filename.stem + ".csv")
