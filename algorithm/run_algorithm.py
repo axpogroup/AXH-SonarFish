@@ -174,6 +174,7 @@ def run_tracking_algorithm(settings_dict: dict, detector: FishDetector):
 
     if settings_dict.get("record_output_video", False) and settings_dict.get("compress_output_video", False):
         input_output_handler.compress_output_video()
+        input_output_handler.delete_temp_output_dir()
 
     return input_output_handler.output_csv_name
 

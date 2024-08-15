@@ -29,6 +29,8 @@ class InputOutputHandler:
         )
 
         self.output_dir_name = self.settings_dict["output_directory"]
+        self.temp_output_dir_name = Path.cwd() / "temp"
+        self.temp_output_dir_name.mkdir(exist_ok=True)
         self.output_csv_name = Path(self.output_dir_name) / (self.input_filename.stem + ".csv")
         self.playback_paused = False
         self.usr_input = None
@@ -321,7 +323,10 @@ class InputOutputHandler:
             fps = fps // 2
 
         output_video_name = f"{self.input_filename.stem}_{self.settings_dict['record_processing_frame']}_output.mp4"
-        self.output_video_path = Path(self.output_dir_name) / output_video_name
+        if self.settings_dict.get("compress_output_video", False):
+            self.output_video_path = Path(self.temp_output_dir_name) / output_video_name
+        else:
+            self.output_video_path = Path(self.output_dir_name) / output_video_name
 
         # initialize the FourCC and a video writer object
         fourcc = cv.VideoWriter_fourcc("m", "p", "4", "v")
@@ -333,6 +338,7 @@ class InputOutputHandler:
         )
 
     def compress_output_video(self):
+        compressed_output_video_path = Path(self.output_dir_name) / self.output_video_path.name
         command = [
             "ffmpeg",
             "-y",  # Overwrite output file if it exists
@@ -346,10 +352,17 @@ class InputOutputHandler:
             str(35),  # Constant Rate Factor (0-51, 0 is lossless)
             "-preset",
             "medium",
-            str(self.output_video_path).replace(".mp4", "_compressed.mp4"),
+            str(compressed_output_video_path),
         ]
         print("Compressing output video ...")
         subprocess.run(command)
+
+    def delete_temp_output_dir(self):
+        if self.temp_output_dir_name.exists():
+            print("Deleting temporary output directory ...")
+            for file in self.temp_output_dir_name.iterdir():
+                file.unlink()
+            self.temp_output_dir_name.rmdir()
 
     def shutdown(self):
         self.video_cap.release()
