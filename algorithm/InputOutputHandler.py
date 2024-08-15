@@ -305,7 +305,7 @@ class InputOutputHandler:
         self.output_video_path = Path(self.output_dir_name) / output_video_name
 
         # initialize the FourCC and a video writer object
-        fourcc = cv.VideoWriter_fourcc(*"avc1")
+        fourcc = cv.VideoWriter_fourcc("m", "p", "4", "v")
         self.video_writer = cv.VideoWriter(
             str(self.output_video_path),
             fourcc,
