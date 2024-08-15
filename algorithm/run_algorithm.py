@@ -77,7 +77,7 @@ def main_algorithm(settings_dict: dict):
 
     print("Starting algorithm burn-in.")
     burn_in_settings = settings_dict.copy()
-    burn_in_settings["file_name"] = "Passe3_Mar11_12-27-56.mp4"
+    burn_in_settings["file_name"] = "start_2023-10-13T19-04-11.037+00-00.mp4"
     burn_in_settings["record_output_video"] = False
     input_output_handler = InputOutputHandler(burn_in_settings)
     burn_in_detector = FishDetector(burn_in_settings)
