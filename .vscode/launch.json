@@ -13,7 +13,7 @@
             "cwd": "${workspaceFolder}",
             "justMyCode": false,
             "args": [
-                "-yf", "settings/settings_lavey.yaml",
+                "-yf", "settings/settings_stroppel.yaml",
                 // "--train_val_data_dir", "./data/train_data/",
                 // "--train_val_gt_data_dir", "./data/labels/",
                 // "--test_data_dir", "./data/test_data/",

@@ -17,13 +17,12 @@ class InputOutputHandler:
     def __init__(
         self,
         settings_dict: dict,
-        overwrite_file_name: Optional[str] = None,
     ):
         self.fps_out = 10
         self.video_writer = None
         self.settings_dict = settings_dict
         self.input_filename = Path(self.settings_dict["file_name"])
-        self.set_video_cap(overwrite_file_name)
+        self.set_video_cap()
         # Handle Stroppel special case
         if self.settings_dict["file_timestamp_format"] == "start_%Y-%m-%dT%H-%M-%S.%f%z.mp4":
             # Get rid of the timezone part of the filename
@@ -57,6 +56,13 @@ class InputOutputHandler:
 
         if self.video_cap.isOpened():
             if start_at_frames_from_end > 0:
+                # before we can set the index, we need to grab a frame successfully
+                while tries < 5:
+                    success = self.video_cap.grab()
+                    if success:
+                        break
+                    tries += 1
+                tries = 0
                 total_frames = int(self.video_cap.get(cv.CAP_PROP_FRAME_COUNT))
                 start_frame = max(0, total_frames - start_at_frames_from_end)
                 self.video_cap.set(cv.CAP_PROP_POS_FRAMES, start_frame)
@@ -87,11 +93,8 @@ class InputOutputHandler:
             self.frame_retrieval_time = get_elapsed_ms(start)
             return False
 
-    def set_video_cap(self, overwrite_file_name: Optional[str] = None):
-        if overwrite_file_name:
-            input_file_path = Path(self.settings_dict["input_directory"]) / overwrite_file_name
-        else:
-            input_file_path = Path(self.settings_dict["input_directory"]) / self.settings_dict["file_name"]
+    def set_video_cap(self):
+        input_file_path = Path(self.settings_dict["input_directory"]) / self.settings_dict["file_name"]
         assert input_file_path.exists(), f"Error: Input file {input_file_path} does not exist."
 
         self.video_cap = cv.VideoCapture(str(input_file_path))
