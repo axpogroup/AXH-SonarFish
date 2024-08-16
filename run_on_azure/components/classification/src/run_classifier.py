@@ -79,7 +79,7 @@ def main(args):
         n_labels=3,
         plot_results_individually=True,
     )
-    print("Saving classified tracks to csv...")
+    print("Saving classified tracks to csv files...")
     gen.save_classified_tracks_to_csv(save_dir=args.job_output_dir)
 
 
