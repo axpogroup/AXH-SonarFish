@@ -26,10 +26,12 @@ class FishDetector:
             self.framebuffer = init_detector.framebuffer
             self.mean_buffer = init_detector.mean_buffer
             self.mean_buffer_counter = init_detector.mean_buffer_counter
+            self.burn_in_video_name = init_detector.conf["file_name"]
         else:
             self.framebuffer = None
             self.mean_buffer = None
             self.mean_buffer_counter = None
+            self.burn_in_video_name = None
         self.short_mean_float = None
         self.long_mean_float = None
         mask_file = self.conf["mask_file"] if self.conf.get("mask_file") else "sonar_controls.png"

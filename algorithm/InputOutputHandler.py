@@ -10,6 +10,7 @@ import pandas as pd
 
 from algorithm import visualization_functions
 from algorithm.DetectedObject import KalmanTrackedBlob
+from algorithm.FishDetector import FishDetector
 from algorithm.utils import get_elapsed_ms
 
 
@@ -102,7 +103,7 @@ class InputOutputHandler:
         assert self.video_cap.isOpened(), "Error: Video Capturer could not be opened."
 
     @staticmethod
-    def get_detections_pd(object_history: dict[int, KalmanTrackedBlob]) -> pd.DataFrame:
+    def get_detections_pd(object_history: dict[int, KalmanTrackedBlob], detector: FishDetector) -> pd.DataFrame:
         rows = []
         for _, obj in object_history.items():
             if obj.detection_is_tracked:
@@ -142,6 +143,7 @@ class InputOutputHandler:
             ],
         )
         detections_df["image_tile"] = detections_df["image_tile"].apply(lambda x: json.dumps(x.tolist()))
+        detections_df["burn_in_video"] = detector.burn_in_video_name
         # detections_df["raw_image_tile"] = detections_df["raw_image_tile"].apply(lambda x: json.dumps(x.tolist()))
         return detections_df
 
@@ -352,7 +354,7 @@ class InputOutputHandler:
             "medium",
             str(compressed_output_video_path),
         ]
-        print("Compressing output video ...")
+        print(f"Compressing output video to {compressed_output_video_path} ...")
         subprocess.run(command)
 
     def delete_temp_output_dir(self):
