@@ -26,7 +26,7 @@ def read_labels_into_dataframe(labels_path: Path, labels_filename: str) -> Optio
     if labels_path.exists():
         print(f"Found labels file: {labels_path}")
     else:
-        print("No labels file found.")
+        print(f"No labels file found at: {labels_path}")
         return None
     return pd.read_csv(labels_path)
 
@@ -127,14 +127,14 @@ def run_tracking_algorithm(settings_dict: dict, detector: FishDetector):
         df_detections = detector.classify_detections(df_detections)
         df_detections.to_csv(input_output_handler.output_csv_name, index=False)
 
-    if settings_dict.get("compress_output_video", False):
+    if settings_dict.get("compress_output_video", False) and settings_dict.get("record_output_video", False):
         input_output_handler.compress_output_video()
 
     return input_output_handler.output_csv_name
 
 
 def main_algorithm(settings_dict: dict):
-    previous_video = "start_2023-10-13T19-04-11.037+00-00.mp4"
+    previous_video = "start_2023-11-01T17-50-01.061+00-00.mp4"
     if previous_video:
         try:
             burn_in_detector = burn_in_algorithm_on_previous_video(settings_dict, burn_in_file_name=previous_video)

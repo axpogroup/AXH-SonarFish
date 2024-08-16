@@ -4,11 +4,12 @@ input_directory:  "."
 mask_directory: "./masks/"
 output_directory: "."
 ground_truth_directory: "."
-labels_file_suffix: "_ground_truth"
+labels_file_suffix: "_classification_min_track_length_30"
 mask_file: "sonar_controls.png" # one of ["sonar_controls.png", "stroppel_non_object_space.png", "herrendoebeli_non_object_space.png", "lavey_non_object_space.png"]
+file_timestamp_format: "start_%Y-%m-%dT%H-%M-%S.%f%z.mp4"
 
 # Azure ML
-experiment_name: "how_much_is_the_fish_at_lavey"
+experiment_name: "how_much_is_the_fish"
 track_azure_ml: False
 
 tag: "label"
@@ -22,11 +23,9 @@ annotate_detections: True
 features_to_annotate: [] # ["bbox_size_to_stddev_ratio", "velocity"]
 display_output_video: False
 display_mode_extensive: False
-display_mode_dual: True
+display_mode_dual: False
 display_trackbars: False
 feature_to_load: "max_blob_count"
-
-# TODO: check saving video with dual output mode, then run on Passe videos
 
 # Size
 input_pixels_per_mm: 0.0838
@@ -73,3 +72,8 @@ deviation_from_river_velocity: 0.5
 # Visualization
 no_more_show_after_x_frames: 1
 video_colormap: "red"
+compress_output_video: True
+video_annotation_only: True
+
+# Logging
+verbosity: 1

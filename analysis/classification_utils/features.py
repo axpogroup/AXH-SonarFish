@@ -1070,6 +1070,7 @@ class FeatureGenerator(object):
             save_df = df.copy()
             save_df.drop(columns=["image_tile", "raw_image_tile", "binary_image"], inplace=True, errors="ignore")
             save_df.to_csv(save_path, index=False)
+            print(f"Saved classified tracks to {save_path}")
 
     def dump_manual_noise_thresholds_with_models_and_scalers_to_json(
         self, manual_noise_thresholds, manual_noise_thresholds_flow_area
