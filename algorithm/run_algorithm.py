@@ -126,7 +126,7 @@ def burn_in_algorithm_on_previous_video(settings_dict: dict, burn_in_file_name: 
     burn_in_settings["display_output_video"] = False
     burn_in_settings["verbosity"] = 0
 
-    print("Starting algorithm burn-in.")
+    print(f"Starting algorithm burn-in on video: {burn_in_file_name}")
     input_output_handler = InputOutputHandler(burn_in_settings)
     burn_in_detector = FishDetector(burn_in_settings)
     input_output_handler.get_new_frame(start_at_frames_from_end=burn_in_settings.get("long_mean_frames", 0) + 1)
@@ -168,7 +168,7 @@ def run_tracking_algorithm(settings_dict: dict, detector: FishDetector):
             detector=detector,
         )
     if input_output_handler.output_csv_name is not None:
-        df_detections = input_output_handler.get_detections_pd(object_history)
+        df_detections = input_output_handler.get_detections_pd(object_history, detector=detector)
         df_detections = detector.classify_detections(df_detections)
         df_detections.to_csv(input_output_handler.output_csv_name, index=False)
 
