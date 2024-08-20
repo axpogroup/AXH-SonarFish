@@ -98,7 +98,7 @@ class TestIntegration:
         assert len(labels_csv) > 0
         assert list(labels_csv.columns)[:6] == relevant_csv_columns
 
-        with open("../analysis/demo/demo_settings.yaml") as f:
+        with open("../settings/demo_settings.yaml") as f:
             detection_settings = yaml.load(f, Loader=yaml.SafeLoader)
         detection_settings["mask_directory"] = "../analysis/demo/masks"
         detection_settings["display_output_video"] = False
@@ -108,7 +108,7 @@ class TestIntegration:
         assert len(detections_csv) > 0
 
         output_files = os.listdir(model_output_directory)
-        assert len(output_files) == 4  # video, video_compressed, csv, .gitkeep
+        assert len(output_files) == 3  # video_compressed, csv, .gitkeep
 
         metrics = compute_metrics(detection_settings)
         assert len(metrics) > 0

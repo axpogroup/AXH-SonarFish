@@ -1,6 +1,5 @@
 # Input / Output
-file_name: "start_2023-10-13T19-14-11.588+00-00.mp4"
-file_timestamp_format: "start_%Y-%m-%dT%H-%M-%S.%f%z.mp4" # Your format might not be supported by the datetime.strptime function. E.g. "start_%Y-%m-%dT%H-%M-%S.%f%z.mp4" is the stroppel format and the timezone information (%z) is stripped before parsing. 
+file_name: "start_2023-05-08T18-00-05.025+00-00.mp4"
 input_directory:  "data/raw/videos/"
 mask_directory: "analysis/demo/masks"
 output_directory: "data/model_output/"
@@ -22,8 +21,8 @@ store_raw_image_patch: False
 store_median_image_patch: False
 show_detections: True
 display_output_video: True
-display_mode_extensive: False
-display_trackbars: False
+display_mode_extensive: True
+display_trackbars: True
 feature_to_load: "max_blob_count"
 
 # Size
@@ -72,5 +71,5 @@ deviation_from_river_velocity: 0.5
 no_more_show_after_x_frames: 1
 video_colormap: "red"
 
-# Logs
-verbosity: 2 # 2: print processing updates, 1: print only important updates
+# Logging
+verbosity: 2

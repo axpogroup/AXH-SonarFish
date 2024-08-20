@@ -1,4 +1,5 @@
 import argparse
+import datetime as dt
 import os
 import sys
 from pathlib import Path
@@ -26,9 +27,60 @@ def read_labels_into_dataframe(labels_path: Path, labels_filename: str) -> Optio
     if labels_path.exists():
         print(f"Found labels file: {labels_path}")
     else:
-        print("No labels file found.")
+        print(f"No labels file found at: {labels_path}")
         return None
     return pd.read_csv(labels_path)
+
+
+def find_valid_previous_video(settings_dict, gap_seconds: int):
+    print("Finding a valid previous video...")
+    current_timestamp = InputOutputHandler.extract_timestamp_from_filename(
+        settings_dict["file_name"], settings_dict["file_timestamp_format"]
+    )
+    if current_timestamp is None:
+        print("Could not extract timestamp from current video.")
+        return None
+
+    video_files = sorted(Path(settings_dict["input_directory"]).glob("*.mp4"))
+    closest_video = None
+
+    min_time_difference = None
+    for video_file in video_files:
+        video_timestamp = InputOutputHandler.extract_timestamp_from_filename(
+            video_file.name, settings_dict["file_timestamp_format"]
+        )
+        if video_timestamp is None:
+            continue
+        time_difference = current_timestamp - video_timestamp
+        if time_difference.total_seconds() <= 0:
+            continue
+        elif min_time_difference is None or abs(time_difference) < abs(min_time_difference):
+            closest_video = video_file
+            min_time_difference = time_difference
+
+    # Check the duration of the closest video to make sure there is no gap
+    if closest_video:
+        duration = InputOutputHandler.get_video_duration(closest_video)
+        end_timestamp = InputOutputHandler.extract_timestamp_from_filename(
+            closest_video.name, settings_dict["file_timestamp_format"]
+        ) + dt.timedelta(seconds=duration)
+        if abs(current_timestamp - end_timestamp) <= dt.timedelta(seconds=gap_seconds):
+            print(
+                print(
+                    f"Closest video found: {closest_video.name}, "
+                    f"time gap between recordings: {(current_timestamp - end_timestamp).total_seconds()} seconds."
+                )
+            )
+            return closest_video.name
+        else:
+            print(
+                f"Closest video {closest_video.name} ends {(current_timestamp - end_timestamp)} "
+                f"before the current video, which is outside the tolerance ({gap_seconds} seconds)."
+            )
+            return None
+    else:
+        print("No previous video found.")
+        return None
 
 
 def extract_labels_history(
@@ -67,16 +119,32 @@ def compute_metrics(settings_dict):
         return mot16_metrics_dict
 
 
-def main_algorithm(settings_dict: dict):
+def burn_in_algorithm_on_previous_video(settings_dict: dict, burn_in_file_name: str):
+    burn_in_settings = settings_dict.copy()
+    burn_in_settings["file_name"] = burn_in_file_name
+    burn_in_settings["record_output_video"] = False
+    burn_in_settings["display_output_video"] = False
+    burn_in_settings["verbosity"] = 0
+
+    print(f"Starting algorithm burn-in on video: {burn_in_file_name}")
+    input_output_handler = InputOutputHandler(burn_in_settings)
+    burn_in_detector = FishDetector(burn_in_settings)
+    input_output_handler.get_new_frame(start_at_frames_from_end=burn_in_settings.get("long_mean_frames", 0) + 1)
+    while input_output_handler.get_new_frame():
+        _, _, _ = burn_in_detector.detect_objects(input_output_handler.current_raw_frame)
+
+    return burn_in_detector
+
+
+def run_tracking_algorithm(settings_dict: dict, detector: FishDetector):
     labels_df = read_labels_into_dataframe(
         labels_path=Path(settings_dict.get("ground_truth_directory", "")),
         labels_filename=Path(settings_dict["file_name"]).stem
         + settings_dict.get("labels_file_suffix", "_ground_truth")
         + ".csv",
     )
-
     input_output_handler = InputOutputHandler(settings_dict)
-    detector = FishDetector(settings_dict)
+
     object_history: dict[int, KalmanTrackedBlob] = {}
     label_history = {}
     print("Starting main algorithm.")
@@ -100,14 +168,34 @@ def main_algorithm(settings_dict: dict):
             detector=detector,
         )
     if input_output_handler.output_csv_name is not None:
-        df_detections = input_output_handler.get_detections_pd(object_history)
+        df_detections = input_output_handler.get_detections_pd(object_history, detector=detector)
         df_detections = detector.classify_detections(df_detections)
         df_detections.to_csv(input_output_handler.output_csv_name, index=False)
 
-    if settings_dict.get("compress_output_video", False):
+    if settings_dict.get("record_output_video", False) and settings_dict.get("compress_output_video", False):
         input_output_handler.compress_output_video()
+        input_output_handler.delete_temp_output_dir()
 
     return input_output_handler.output_csv_name
+
+
+def main_algorithm(settings_dict: dict):
+    previous_video = find_valid_previous_video(settings_dict, gap_seconds=5)
+
+    if previous_video:
+        try:
+            burn_in_detector = burn_in_algorithm_on_previous_video(settings_dict, burn_in_file_name=previous_video)
+            detector = FishDetector(settings_dict, init_detector=burn_in_detector)
+        except AssertionError:
+            print("Burn-in algorithm failed. Starting algorithm without burn-in on previous video. Should not happen.")
+            detector = FishDetector(settings_dict)
+    else:
+        print("Starting algorithm without burn-in on previous video.")
+        detector = FishDetector(settings_dict)
+
+    output_csv_name = run_tracking_algorithm(settings_dict, detector)
+
+    return output_csv_name
 
 
 if __name__ == "__main__":
@@ -123,13 +211,14 @@ if __name__ == "__main__":
             print("replacing input file.")
             settings["file_name"] = args.input_file
 
-    workspace = Workspace(
-        resource_group=os.getenv("RESOURCE_GROUP"),
-        workspace_name=os.getenv("WORKSPACE_NAME"),
-        subscription_id=os.getenv("SUBSCRIPTION_ID"),
-    )
     main_algorithm(settings)
+
     if settings.get("track_azure_ml", False):
+        workspace = Workspace(
+            resource_group=os.getenv("RESOURCE_GROUP"),
+            workspace_name=os.getenv("WORKSPACE_NAME"),
+            subscription_id=os.getenv("SUBSCRIPTION_ID"),
+        )
         mlflow.set_tracking_uri(workspace.get_mlflow_tracking_uri())
         experiment_name = settings["experiment_name"]
         mlflow.set_experiment(experiment_name)
