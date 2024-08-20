@@ -5,6 +5,10 @@ import numpy as np
 
 
 class BoundingBox:
+    """
+    Represents a bounding box around a detected object.
+    """
+
     def __init__(
         self,
         identifier: int,

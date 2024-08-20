@@ -73,7 +73,6 @@ deviation_from_river_velocity: 0.5
 # Visualization
 no_more_show_after_x_frames: 1
 video_colormap: "red"
-compress_output_video: True
 video_annotation_only: True
 
 # Logging

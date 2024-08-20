@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 from typing import Optional
 
+
 import mlflow
 import numpy as np
 import pandas as pd
@@ -19,6 +20,8 @@ from algorithm.InputOutputHandler import InputOutputHandler
 from algorithm.validation import mot16_metrics
 from algorithm.visualization_functions import TRUTH_LABEL_NO
 
+from algorithm.settings import settings
+
 load_dotenv()
 
 
@@ -32,22 +35,22 @@ def read_labels_into_dataframe(labels_path: Path, labels_filename: str) -> Optio
     return pd.read_csv(labels_path)
 
 
-def find_valid_previous_video(settings_dict, gap_seconds: int):
+def find_valid_previous_video(gap_seconds: int):
     print("Finding a valid previous video...")
     current_timestamp = InputOutputHandler.extract_timestamp_from_filename(
-        settings_dict["file_name"], settings_dict["file_timestamp_format"]
+        settings.file_name, settings.file_timestamp_format
     )
     if current_timestamp is None:
         print("Could not extract timestamp from current video.")
         return None
 
-    video_files = sorted(Path(settings_dict["input_directory"]).glob("*.mp4"))
+    video_files = sorted(Path(settings.input_directory).glob("*.mp4"))
     closest_video = None
 
     min_time_difference = None
     for video_file in video_files:
         video_timestamp = InputOutputHandler.extract_timestamp_from_filename(
-            video_file.name, settings_dict["file_timestamp_format"]
+            video_file.name, settings.file_timestamp_format
         )
         if video_timestamp is None:
             continue
@@ -62,7 +65,7 @@ def find_valid_previous_video(settings_dict, gap_seconds: int):
     if closest_video:
         duration = InputOutputHandler.get_video_duration(closest_video)
         end_timestamp = InputOutputHandler.extract_timestamp_from_filename(
-            closest_video.name, settings_dict["file_timestamp_format"]
+            closest_video.name, settings.file_timestamp_format
         ) + dt.timedelta(seconds=duration)
         if abs(current_timestamp - end_timestamp) <= dt.timedelta(seconds=gap_seconds):
             print(
@@ -111,9 +114,9 @@ def extract_labels_history(
 
 def compute_metrics(settings_dict):
     if settings_dict.get("ground_truth_directory"):
-        file_name_prefix = Path(settings_dict["file_name"]).stem
-        ground_truth_source = Path(settings_dict["ground_truth_directory"]) / f"{file_name_prefix}_ground_truth.csv"
-        test_source = Path(settings_dict["output_directory"]) / Path(file_name_prefix + ".csv")
+        file_name_prefix = Path(settings.file_name).stem
+        ground_truth_source = Path(settings.ground_truth_directory) / f"{file_name_prefix}_ground_truth.csv"
+        test_source = Path(settings.output_directory) / Path(file_name_prefix + ".csv")
         ground_truth_source, test_source = mot16_metrics.prepare_data_for_mot_metrics(ground_truth_source, test_source)
         mot16_metrics_dict = mot16_metrics.mot_metrics_enhanced_calculator(ground_truth_source, test_source)
         return mot16_metrics_dict
@@ -139,7 +142,7 @@ def burn_in_algorithm_on_previous_video(settings_dict: dict, burn_in_file_name: 
 def run_tracking_algorithm(settings_dict: dict, detector: FishDetector):
     labels_df = read_labels_into_dataframe(
         labels_path=Path(settings_dict.get("ground_truth_directory", "")),
-        labels_filename=Path(settings_dict["file_name"]).stem
+        labels_filename=Path(settings.file_name).stem
         + settings_dict.get("labels_file_suffix", "_ground_truth")
         + ".csv",
     )
@@ -180,7 +183,15 @@ def run_tracking_algorithm(settings_dict: dict, detector: FishDetector):
 
 
 def main_algorithm(settings_dict: dict):
-    previous_video = find_valid_previous_video(settings_dict, gap_seconds=5)
+    # Debug: Print settings to verify content
+    print("Settings at the start of main_algorithm:", settings_dict)
+
+    # Ensure settings_dict is a dictionary
+    if not isinstance(settings_dict, dict):
+        settings_dict = settings_dict.__dict__
+
+
+    previous_video = find_valid_previous_video (gap_seconds=5)
 
     if previous_video:
         try:
@@ -199,17 +210,6 @@ def main_algorithm(settings_dict: dict):
 
 
 if __name__ == "__main__":
-    argParser = argparse.ArgumentParser(description="Run the fish detection algorithm with a settings .yaml file.")
-    argParser.add_argument("-yf", "--yaml_file", help="path to the YAML settings file", required=True)
-    argParser.add_argument("-if", "--input_file", help="path to the input video file")
-
-    args = argParser.parse_args()
-
-    with open(args.yaml_file) as f:
-        settings = yaml.load(f, Loader=yaml.SafeLoader)
-        if args.input_file is not None:
-            print("replacing input file.")
-            settings["file_name"] = args.input_file
 
     main_algorithm(settings)
 

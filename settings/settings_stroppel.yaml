@@ -22,7 +22,7 @@ store_median_image_patch: False
 show_detections: True
 display_output_video: True
 display_mode_extensive: True
-display_trackbars: True
+display_trackbars: False
 feature_to_load: "max_blob_count"
 
 # Size
@@ -30,8 +30,8 @@ input_pixels_per_mm: 0.0838
 
 # Enhancement
 downsample: 25
-contrast: 2
-brightness: 30
+contrast: 2 #4 #8
+brightness: 30 #60 #120
 long_mean_frames: 400
 short_mean_frames: 10
 difference_threshold_scaler: 0.30
