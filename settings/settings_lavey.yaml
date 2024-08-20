@@ -1,16 +1,17 @@
 # Input / Output
-file_name: "start_2023-10-13T19-14-11.588+00-00.mp4"
-file_timestamp_format: "start_%Y-%m-%dT%H-%M-%S.%f%z.mp4" # Your format might not be supported by the datetime.strptime function. E.g. "start_%Y-%m-%dT%H-%M-%S.%f%z.mp4" is the stroppel format and the timezone information (%z) is stripped before parsing. 
+# file_name: "Passe3_Apr08_07-00-00.mp4"
+file_name: "Passe3_Apr01_02-07-45_small.mp4"
+# file_timestamp_format: "%y-%m-%d_start_%H-%M-%S.mp4"
+file_timestamp_format: "Passe3_%b%d_%H-%M-%S_small.mp4" # Your format might not be supported by the datetime.strptime function. E.g. "start_%Y-%m-%dT%H-%M-%S.%f%z.mp4" is the stroppel format and the timezone information (%z) is stripped before parsing. 
 input_directory:  "data/raw/videos/"
 mask_directory: "analysis/demo/masks"
-output_directory: "data/model_output/"
-ground_truth_directory: "data/labels/"
-labels_file_suffix: "_classification_min_track_length_30"
-mask_file: "stroppel_non_object_space.png" # one of ["sonar_controls.png", "stroppel_non_object_space.png", "herrendoebeli_non_object_space.png"]
-file_timestamp_format: "start_%Y-%m-%dT%H-%M-%S.%f%z.mp4"
+output_directory: "data/model_output_classified/"
+ground_truth_directory: "data/model_output/"
+labels_file_suffix: "_classification_v2"
+mask_file: "sonar_controls.png" # one of ["sonar_controls.png", "stroppel_non_object_space.png", "herrendoebeli_non_object_space.png"]
 
 # Azure ML
-experiment_name: "how_much_is_the_fish"
+experiment_name: "how_much_is_the_fish_at_lavey"
 track_azure_ml: False
 
 tag: "label"
@@ -19,11 +20,14 @@ compress_output_video: True
 record_processing_frame: "raw" # one of ['raw', 'raw_downsampled', 'gray', 'gray_boosted', 'long_mean', 'short_mean', 'difference', 'absolute_difference', 'difference_thresholded', 'difference_thresholded_abs', 'median_filter', 'binary', 'dilated']
 draw_detections_on_saved_video: True
 store_raw_image_patch: False
-store_median_image_patch: False
+store_median_image_patch: True
 show_detections: True
+annotate_detections: True
+features_to_annotate: [] # ["bbox_size_to_stddev_ratio", "velocity"]
 display_output_video: True
 display_mode_extensive: False
-display_trackbars: False
+display_mode_dual: False
+display_trackbars: True
 feature_to_load: "max_blob_count"
 
 # Size
@@ -31,40 +35,40 @@ input_pixels_per_mm: 0.0838
 
 # Enhancement
 downsample: 25
-contrast: 2
+contrast: 1.5
 brightness: 30
-long_mean_frames: 400
-short_mean_frames: 10
-difference_threshold_scaler: 0.30
-dilation_kernel_mm: 500
-median_filter_kernel_mm: 200
+long_mean_frames: 200
+short_mean_frames: 5
+difference_threshold_scaler: 0.25
+dilation_kernel_mm: 50
+median_filter_kernel_mm: 75
 erosion_kernel_mm: 100
 
 
 # Tracking
 tracking_method: "kalman" # one of ['nearest_neighbor', 'kalman']
-max_association_dist_mm: 500
-phase_out_after_x_frames: 30
-kalman_std_obj_initialization_factor: 0.1
+max_association_dist_mm: 70
+phase_out_after_x_frames: 20
+kalman_std_obj_initialization_factor: 0.2
 kalman_std_obj_initialization_trace: [1, 1, 0.1, 1, 0.5, 0.5, 0.0001, 0.5] # [x, y, w, h, vx, vy, va, vh]
-kalman_std_process_noise_factor: 0.2
+kalman_std_process_noise_factor: 2
 kalman_std_process_noise_trace: [1, 1, 0.1, 1, 0.05, 0.05, 0.0001, 0.05] # [x, y, w, h, vx, vy, va, vh]
-kalman_std_mmt_noise_factor: 0.5
-kalman_std_mmt_noise_trace: [5, 1.7, 1, 0.05] # [x, y, a, h]
+kalman_std_mmt_noise_factor: 50
+kalman_std_mmt_noise_trace: [5, 5, 1, 0.05] # [x, y, a, h]
 kalman_rotate_mmt_noise_in_river_direction: False
-kalman_trace_history_matching_budget: 10
-kalman_max_iou_distance: 0.5 # basically (1 - iou_min)
-kalman_max_age: 35
-kalman_n_init: 35
+kalman_trace_history_matching_budget: 5
+kalman_max_iou_distance: 0.85 # basically (1 - iou_min)
+kalman_max_age: 20
+kalman_n_init: 20
 filter_nearest_neighbor:
 filter_blob_matching_metric: "histogram" # one of ['euclidean_distance', 'blob_area', 'histogram', 'mutual_information', 'fft']
-filter_association_thresh: 0.3
+filter_association_thresh: 0.2 # not relevant if euclidean_distance is chosen (uses max_association_dist_mm)
 filter_blob_elimination_metric: "euclidean_distance" # one of ['euclidean_distance']
-bbox_size_to_stddev_ratio_threshold: 100
+bbox_size_to_stddev_ratio_threshold: 10
 
 
 # Classification
-river_pixel_velocity: [2.35, -0.9] # At full resolution
+river_pixel_velocity: [2.35, -0.9] # At full resolution, used to limit velocity
 min_occurences_for_fish: 20 # should be at least 20 for sensible calculation of velocity
 deviation_from_river_velocity: 0.5
 

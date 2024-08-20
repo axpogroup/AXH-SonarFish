@@ -10,33 +10,28 @@ import pandas as pd
 
 from algorithm import visualization_functions
 from algorithm.DetectedObject import KalmanTrackedBlob
+from algorithm.FishDetector import FishDetector
 from algorithm.utils import get_elapsed_ms
 
 
 class InputOutputHandler:
-    def __init__(self, settings_dict):
+    def __init__(
+        self,
+        settings_dict: dict,
+    ):
         self.fps_out = 10
         self.video_writer = None
         self.settings_dict = settings_dict
-        input_file_path = Path(self.settings_dict["input_directory"]) / self.settings_dict["file_name"]
-        assert input_file_path.exists(), f"Error: Input file {input_file_path} does not exist."
-        self.video_cap = cv.VideoCapture(str(input_file_path))
-        assert self.video_cap.isOpened(), "Error: Video Capturer could not be opened."
-
         self.input_filename = Path(self.settings_dict["file_name"])
-        # Handle Stroppel special case
-        if self.settings_dict["file_timestamp_format"] == "start_%Y-%m-%dT%H-%M-%S.%f%z.mp4":
-            # Get rid of the timezone part of the filename
-            self.start_timestamp = dt.datetime.strptime(
-                str(self.input_filename.stem[:-6]), "start_%Y-%m-%dT%H-%M-%S.%f"
-            )
-        else:
-            self.start_timestamp = dt.datetime.strptime(
-                str(self.input_filename), self.settings_dict["file_timestamp_format"]
-            )
+        self.set_video_cap()
+
+        self.start_timestamp = self.extract_timestamp_from_filename(
+            self.input_filename, self.settings_dict["file_timestamp_format"]
+        )
 
         self.output_dir_name = self.settings_dict["output_directory"]
-        self.output_csv_name = None
+        self.temp_output_dir_name = Path.cwd() / "temp"
+        self.temp_output_dir_name.mkdir(exist_ok=True)
         self.output_csv_name = Path(self.output_dir_name) / (self.input_filename.stem + ".csv")
         self.playback_paused = False
         self.usr_input = None
@@ -51,10 +46,30 @@ class InputOutputHandler:
         self.last_output_time = None
         self.current_raw_frame = None
 
-    def get_new_frame(self):
+    def get_new_frame(self, start_at_frames_from_end: int = 0) -> bool:
         start = cv.getTickCount()
         tries = 0
+
         if self.video_cap.isOpened():
+            if start_at_frames_from_end > 0:
+                # before we can set the index, we need to grab a frame successfully
+                while tries < 5:
+                    success = self.video_cap.grab()
+                    if success:
+                        break
+                    tries += 1
+                if not success:
+                    print("Can't receive frame (stream end?). Exiting ...")
+                    self.shutdown()
+                    self.frame_retrieval_time = get_elapsed_ms(start)
+                    return False
+
+                tries = 0
+                total_frames = int(self.video_cap.get(cv.CAP_PROP_FRAME_COUNT))
+                start_frame = max(0, total_frames - start_at_frames_from_end)
+                self.video_cap.set(cv.CAP_PROP_POS_FRAMES, start_frame)
+                self.index_in = start_frame
+
             while tries < 5:
                 success = self.video_cap.grab()
                 if success:
@@ -80,8 +95,15 @@ class InputOutputHandler:
             self.frame_retrieval_time = get_elapsed_ms(start)
             return False
 
+    def set_video_cap(self):
+        input_file_path = Path(self.settings_dict["input_directory"]) / self.settings_dict["file_name"]
+        assert input_file_path.exists(), f"Error: Input file {input_file_path} does not exist."
+
+        self.video_cap = cv.VideoCapture(str(input_file_path))
+        assert self.video_cap.isOpened(), "Error: Video Capturer could not be opened."
+
     @staticmethod
-    def get_detections_pd(object_history: dict[int, KalmanTrackedBlob]) -> pd.DataFrame:
+    def get_detections_pd(object_history: dict[int, KalmanTrackedBlob], detector: FishDetector) -> pd.DataFrame:
         rows = []
         for _, obj in object_history.items():
             if obj.detection_is_tracked:
@@ -121,6 +143,7 @@ class InputOutputHandler:
             ],
         )
         detections_df["image_tile"] = detections_df["image_tile"].apply(lambda x: json.dumps(x.tolist()))
+        detections_df["burn_in_video"] = detector.burn_in_video_name
         # detections_df["raw_image_tile"] = detections_df["raw_image_tile"].apply(lambda x: json.dumps(x.tolist()))
         return detections_df
 
@@ -300,7 +323,10 @@ class InputOutputHandler:
             fps = fps // 2
 
         output_video_name = f"{self.input_filename.stem}_{self.settings_dict['record_processing_frame']}_output.mp4"
-        self.output_video_path = Path(self.output_dir_name) / output_video_name
+        if self.settings_dict.get("compress_output_video", False):
+            self.output_video_path = Path(self.temp_output_dir_name) / output_video_name
+        else:
+            self.output_video_path = Path(self.output_dir_name) / output_video_name
 
         # initialize the FourCC and a video writer object
         fourcc = cv.VideoWriter_fourcc("m", "p", "4", "v")
@@ -312,6 +338,7 @@ class InputOutputHandler:
         )
 
     def compress_output_video(self):
+        compressed_output_video_path = Path(self.output_dir_name) / self.output_video_path.name
         command = [
             "ffmpeg",
             "-y",  # Overwrite output file if it exists
@@ -325,13 +352,40 @@ class InputOutputHandler:
             str(35),  # Constant Rate Factor (0-51, 0 is lossless)
             "-preset",
             "medium",
-            str(self.output_video_path).replace(".mp4", "_compressed.mp4"),
+            str(compressed_output_video_path),
         ]
-        print("Compressing output video ...")
+        print(f"Compressing output video to {compressed_output_video_path} ...")
         subprocess.run(command)
+
+    def delete_temp_output_dir(self):
+        if self.temp_output_dir_name.exists():
+            print("Deleting temporary output directory ...")
+            for file in self.temp_output_dir_name.iterdir():
+                file.unlink()
+            self.temp_output_dir_name.rmdir()
 
     def shutdown(self):
         self.video_cap.release()
         if self.settings_dict.get("record_output_video"):
             self.video_writer.release()
         cv.destroyAllWindows()
+
+    @staticmethod
+    def extract_timestamp_from_filename(filename: str, file_timestamp_format: str) -> Optional[dt.datetime]:
+        try:
+            if file_timestamp_format == "start_%Y-%m-%dT%H-%M-%S.%f%z.mp4":
+                return dt.datetime.strptime(str(Path(filename).stem[:-6]), "start_%Y-%m-%dT%H-%M-%S.%f")
+            else:
+                return dt.datetime.strptime(str(Path(filename)), file_timestamp_format)
+        except Exception as e:
+            print(f"{e}")
+            return None
+
+    @staticmethod
+    def get_video_duration(filepath: Path):
+        video = cv.VideoCapture(str(filepath))
+        frames = video.get(cv.CAP_PROP_FRAME_COUNT)
+        fps = video.get(cv.CAP_PROP_FPS)
+        duration = frames / fps
+        video.release()
+        return duration

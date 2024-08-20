@@ -4,8 +4,9 @@ input_directory:  "."
 mask_directory: "./masks/"
 output_directory: "."
 ground_truth_directory: "."
-labels_file_suffix: "_classification_min_track_length_30"
+labels_file_suffix: "_ground_truth"
 mask_file: "stroppel_non_object_space.png" # one of ["sonar_controls.png", "stroppel_non_object_space.png", "herrendoebeli_non_object_space.png", "lavey_non_object_space.png"]
+file_timestamp_format: "start_%Y-%m-%dT%H-%M-%S.%f%z.mp4"
 
 # Azure ML
 experiment_name: "how_much_is_the_fish"
@@ -17,10 +18,13 @@ record_processing_frame: "raw" # one of ['raw', 'raw_downsampled', 'gray', 'gray
 draw_detections_on_saved_video: True
 store_raw_image_patch: False
 store_median_image_patch: False
+features_to_annotate: [] # ["bbox_size_to_stddev_ratio", "velocity"]
 show_detections: True
 display_output_video: False
 display_mode_extensive: False
 display_trackbars: False
+feature_to_load: "max_blob_count"
+
 
 # Size
 input_pixels_per_mm: 0.0838
@@ -67,3 +71,7 @@ deviation_from_river_velocity: 0.5
 # Visualization
 no_more_show_after_x_frames: 1
 video_colormap: "red"
+compress_output_video: False
+
+# Logging
+verbosity: 2

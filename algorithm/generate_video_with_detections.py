@@ -56,6 +56,10 @@ def main_draw_annotations(settings_dict: dict):
             )
             pbar.update(1)
 
+    if settings_dict.get("record_output_video", False) and settings_dict.get("compress_output_video", False):
+        input_output_handler.compress_output_video()
+        input_output_handler.delete_temp_output_dir()
+
     return None
 
 
