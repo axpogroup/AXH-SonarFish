@@ -81,9 +81,10 @@ def load_csv_with_tiles(path: Path) -> pd.DataFrame:
     return csv_with_tiles_df
 
 
-def _read_mask(mask_path: Union[str, Path]) -> np.ndarray:
-    mask = cv.imread(Path(mask_path).as_posix(), cv.IMREAD_GRAYSCALE)
-    assert mask is not None, f"Could not read mask from {mask_path}"
+def _read_mask(mask_path: Optional[Union[str, Path]] = None) -> np.ndarray:
+    mask = cv.imread(Path(mask_path).as_posix(), cv.IMREAD_GRAYSCALE) if mask_path else np.zeros((1080, 1920))
+    if mask is None:
+        raise ValueError(f"Could not read mask from {mask_path}")
     mask = mask[49:1001, 92:1831]  # Drop the border
     return cv.resize(mask, (480, 270)) > 0
 
@@ -92,7 +93,7 @@ class FeatureGenerator(object):
     def __init__(
         self,
         rake_mask_path: Union[str, Path],
-        flow_area_mask_path: Union[str, Path],
+        flow_area_mask_path: Optional[Union[str, Path]] = None,
         non_flow_area_mask_path: Optional[Union[str, Path]] = None,
         gt_fish_id_yaml: Optional[Union[Path, str]] = None,
         measurements_csv_dir: Union[str, Path] = "",
