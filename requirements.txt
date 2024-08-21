@@ -29,17 +29,3 @@ azure-identity==1.16.1
 
 # Snapshot testing
 pytest-snapshot==0.9.0
-
-#Dev Dependencies
-black==24.3.0
-flake8==7.0.0
-isort==5.13.2
-mypy==1.8.0
-pytest==8.0.0
-
-
-#Dev typing
-types-PyYAML==6.0.12.12
-pandas-stubs==1.5.3.230321
-
-
