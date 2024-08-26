@@ -1,10 +1,10 @@
 from typing import Optional
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 import seaborn as sns
-from sklearn.metrics import confusion_matrix
 from matplotlib.colors import LogNorm
+from sklearn.metrics import confusion_matrix
 
 
 def f_beta(beta: float, precision: float, recall: float) -> float:

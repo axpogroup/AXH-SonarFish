@@ -1,13 +1,17 @@
 from itertools import combinations
 from typing import Optional
 
-from tqdm import tqdm
-import pandas as pd
 import numpy as np
-from sklearn.model_selection import StratifiedKFold
+import pandas as pd
 from sklearn.metrics import confusion_matrix
+from sklearn.model_selection import StratifiedKFold
+from tqdm import tqdm
 
-from analysis.classification_utils.metrics import f_beta, calculate_precision, calculate_f1_score
+from analysis.classification_utils.metrics import (
+    calculate_f1_score,
+    calculate_precision,
+    f_beta,
+)
 
 
 class RandomClassifier:
@@ -91,7 +95,7 @@ def find_best_feature_combination(
     :param performance_metric: performance metric to be used
     :param max_features: maximum number of features to be used
     :param force_features: features to be included in all combinations
-    
+
     :return: best feature combination and its score
     """
     all_features = list(set(all_features) - set(force_features))
@@ -131,14 +135,14 @@ def greedy_feature_selection(
 ) -> tuple[list[str], float]:
     """
     Greedy algorithm to find the best feature combination by adding one feature at a time.
-    
+
     :param feature_df: dataframe with features
     :param classifier: classifier object
     :param all_features: list of all features to be explored
     :param performance_metric: performance metric to be used
     :param max_features: maximum number of features to be used
     :param force_features: features to be included in all combinations
-    
+
     :return: best feature combination and its score
     """
 
