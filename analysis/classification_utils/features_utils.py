@@ -8,6 +8,7 @@ from numpy import ndarray
 from scipy.signal import savgol_filter
 
 RIVER_VELOCITY = (0.33, -0.18)  # Lavey - Tourelle
+# RIVER_VELOCITY = (0., 0.)  # Lavey - Passe3
 # RIVER_VELOCITY = (2.35, -0.9)   # Stroppel
 
 
