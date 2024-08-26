@@ -303,7 +303,7 @@ class FeatureGenerator(object):
             labels_df = self.filter_features(labels_df)
             if not labels_df.empty:
                 save_df = labels_df.copy()
-                save_df["image_tile"] = save_df["image_tile"].apply(lambda x: x.tolist())
+                save_df["image_tile"] = save_df["image_tile"].apply(lambda x: x.tolist())  # to dump to csv properly
                 try:
                     save_df["raw_image_tile"] = save_df["raw_image_tile"].apply(lambda x: x.tolist())
                 except KeyError:
@@ -434,9 +434,14 @@ class TrackPlotter(object):
         masks: dict[str, np.ndarray],
         gt_dfs: list[pd.DataFrame] = [],
     ):
-        self.measurements_dfs = measurements_dfs
+        self.measurements_dfs = measurements_dfs.copy()
         self.gt_dfs = gt_dfs
         self.masks = masks
+        
+        for idx, df in enumerate(self.measurements_dfs):
+            self.measurements_dfs[idx]["id"] = df.video_id.apply(str) + "-" + df.id.apply(str)
+        for idx, df in enumerate(self.gt_dfs):
+            self.gt_dfs[idx]["id"] = df.video_id.apply(str) + "-" + df.id.apply(str)
 
     def plot_track_pairings(
         self,
@@ -448,6 +453,7 @@ class TrackPlotter(object):
         n_labels: Optional[int] = None,
         plot_results_individually: bool = False,
         column_with_label: str = "classification_v2",
+        figsize: tuple[int, int] = (10, 10),
     ) -> None:
         if plot_test_data:
             if column_with_label not in self.test_dfs[0].columns:
@@ -474,7 +480,7 @@ class TrackPlotter(object):
             save_dir.mkdir(parents=True, exist_ok=True)
 
         for i, (labels_df, gt_df) in enumerate(itertools.zip_longest(dfs, ground_truth_dfs)):
-            _, ax = plt.subplots(nrows=1, ncols=1, sharex=True, figsize=(10, 10))
+            _, ax = plt.subplots(nrows=1, ncols=1, sharex=True, figsize=figsize)
             if mask_to_show:
                 ax.imshow(self.masks[mask_to_show], cmap="gray", alpha=0.2)
             plt.gca().invert_yaxis()
@@ -754,14 +760,6 @@ class TrackClassifier(object):
     ):
         self.measurements_dfs = measurements_dfs.copy()
         self.test_dfs = test_dfs.copy()
-
-        for df in self.measurements_dfs:
-            df["classification_v2"] = None
-            df["id"] = df.apply(lambda x: f"{x['video_id']}-{x['id']}", axis=1)
-
-        for df in self.test_dfs:
-            df["classification_v2"] = None
-            df["id"] = df.apply(lambda x: f"{x['video_id']}-{x['id']}", axis=1)
 
     def do_clustering(self, features: list[str], clustering_method: Callable, n_clusters: int):
         X = pd.concat([df[features] for df in self.measurements_dfs])
