@@ -35,7 +35,7 @@ def train_and_evaluate_model(
     feature_df: pd.DataFrame,
     classifier,
     features: list[str],
-    metrics_to_show: list = ["F_1_2_score"],
+    metrics_to_show: Optional[list[str]] = None,
 ) -> dict[str, float]:
     X = feature_df[features]
     y = feature_df["gt_label"]
@@ -61,20 +61,26 @@ def train_and_evaluate_model(
     precision = calculate_precision(tp, fp)
     recall = tp / (tp + fn)
     f1_score = calculate_f1_score(precision, recall)
-    f_1_2_score = f_beta(0.5, precision, recall)
 
     metrics = {
         "Accuracy": accuracy,
         "Precision": precision,
         "Recall": recall,
         "F1_score": f1_score,
-        "F_1_2_score": f_1_2_score,
+        "F2_score": f_beta(2, precision, recall),
+        "F3_score": f_beta(3, precision, recall),
+        "F5_score": f_beta(5, precision, recall),
+        "F8_score": f_beta(8, precision, recall),
+        "F10_score": f_beta(10, precision, recall),
+        "F_1_2_score": f_beta(0.5, precision, recall),
         "confusion_matris": summed_confusion,
     }
+    if not metrics_to_show:
+        metrics_to_show = metrics.keys()
 
-    print({k: metrics[k] for k in metrics_to_show}, features)
+    print({k: metrics[k] for k in metrics_to_show})
 
-    return metrics, y_pred
+    return metrics, y_pred, classifier
 
 
 def find_best_feature_combination(
@@ -146,8 +152,8 @@ def greedy_feature_selection(
     :return: best feature combination and its score
     """
 
-    if max_features is None:
-        max_features = len(all_features)
+    if not max_features:
+        max_features = len(all_features) - 1
 
     selected_features = force_features.copy()
     remaining_features = list(set(all_features) - set(force_features))
@@ -174,3 +180,37 @@ def greedy_feature_selection(
         print(f"Current best score: {best_score} with features: {selected_features}")
 
     return selected_features, best_score
+
+
+def classifier_selection(
+    feature_df: pd.DataFrame,
+    classifiers: dict[str, object],
+    features: list[str],
+    target_metric: str = "F_1_2_score",
+) -> tuple[object, list[str], float]:
+    """
+    Function to find the best classifier and feature combination.
+
+    :param feature_df: dataframe with features
+    :param classifiers: list of classifiers
+    :param features: list of features
+    :param target_metric: performance metric to be used
+
+    :return: best classifier, best feature combination, and its score
+    """
+    best_score = -np.inf
+    best_classifier = None
+
+    for name, classifier in classifiers.items():
+        metrics, _ = train_and_evaluate_model(
+            feature_df,
+            classifier,
+            features,
+            metrics_to_show=[target_metric],
+        )
+        if metrics[target_metric] > best_score:
+            best_score = metrics[target_metric]
+            best_classifier = classifier
+        print(f"{name} - {target_metric}: {metrics[target_metric]}")
+
+    return best_classifier, best_score
