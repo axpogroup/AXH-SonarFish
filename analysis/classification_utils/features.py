@@ -434,14 +434,16 @@ class TrackPlotter(object):
         masks: dict[str, np.ndarray],
         gt_dfs: list[pd.DataFrame] = [],
     ):
-        self.measurements_dfs = measurements_dfs.copy()
+        self.measurements_dfs = [df.copy(deep=True) for df in measurements_dfs]
         self.gt_dfs = gt_dfs
         self.masks = masks
-        
-        for idx, df in enumerate(self.measurements_dfs):
-            self.measurements_dfs[idx]["id"] = df.video_id.apply(str) + "-" + df.id.apply(str)
-        for idx, df in enumerate(self.gt_dfs):
-            self.gt_dfs[idx]["id"] = df.video_id.apply(str) + "-" + df.id.apply(str)
+
+        if self.measurements_dfs[0].id.dtype == int:
+            for idx, df in enumerate(self.measurements_dfs):
+                self.measurements_dfs[idx]["id"] = df.video_id.apply(str) + "-" + df.id.apply(str)
+        if self.gt_dfs and self.gt_dfs[0].id.dtype == int:
+            for idx, df in enumerate(self.gt_dfs):
+                self.gt_dfs[idx]["id"] = df.video_id.apply(str) + "-" + df.id.apply(str)
 
     def plot_track_pairings(
         self,
@@ -744,10 +746,11 @@ class TrackPlotter(object):
             for column in classification_v2_df.columns:
                 if column in df.columns:
                     df.drop(columns=[column], inplace=True)
-            self.measurements_dfs[idx] = df.merge(
-                right=classification_v2_df, left_on="id", right_index=True, how="left"
-            )
+            # self.measurements_dfs[idx] = df.merge(
+            #     right=classification_v2_df, left_on="id", right_index=True, how="left"
+            # )
             for column in classification_v2_df.columns:
+                self.measurements_dfs[idx][column] = classification_v2_df[column]
                 self.measurements_dfs[idx][column] = self.measurements_dfs[idx][column].fillna(0)
 
 
