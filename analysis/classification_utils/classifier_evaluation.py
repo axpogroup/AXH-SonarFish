@@ -1,11 +1,18 @@
 from itertools import combinations
-from typing import Optional
+from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
 from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import StratifiedKFold
+from sklearn.preprocessing import StandardScaler
 from tqdm import tqdm
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.svm import SVC
+from sklearn.ensemble import GradientBoostingClassifier, AdaBoostClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from xgboost import XGBClassifier
 
 from analysis.classification_utils.metrics import (
     calculate_f1_score,
@@ -31,6 +38,42 @@ class RandomClassifier:
         return np.random.choice(classes, size=X.shape[0], p=probabilities)
 
 
+class ProbaClassifier:
+    """
+    Takes a base classifier and a probability threshold to classify samples.
+
+    Parameters:
+    - base_estimator: The base classifier to use.
+    - base_estimator_kwargs: Keyword arguments to pass to the base classifier.
+    - proba_threshold: The probability threshold to use for classification.
+        If fish probability is greater than this threshold, the sample is classified as fish.
+    """
+
+    def __init__(
+        self,
+        base_estimator: Union[
+            LogisticRegression,
+            RandomForestClassifier,
+            SVC,
+            GradientBoostingClassifier,
+            AdaBoostClassifier,
+            KNeighborsClassifier,
+            XGBClassifier,
+        ],
+        base_estimator_kwargs: dict = {},
+        proba_threshold: float = 0.5,
+    ):
+        self.base_estimator = base_estimator(**base_estimator_kwargs)
+        self.proba_threshold = proba_threshold
+
+    def fit(self, X, y):
+        self.base_estimator.fit(X, y)
+
+    def predict(self, X):
+        probabilities = self.base_estimator.predict_proba(X)
+        return (probabilities[:, 1] >= self.proba_threshold).astype(int)
+
+
 def train_and_evaluate_model(
     feature_df: pd.DataFrame,
     classifier,
@@ -48,6 +91,11 @@ def train_and_evaluate_model(
     for train_index, test_index in cv.split(X, y):
         X_train, X_test = X.iloc[train_index], X.iloc[test_index]
         y_train, y_test = y.iloc[train_index], y.iloc[test_index]
+
+        # Scaling the features
+        scaler = StandardScaler()
+        X_train = scaler.fit_transform(X_train)
+        X_test = scaler.transform(X_test)
 
         classifier.fit(X_train, y_train)
         predictions = classifier.predict(X_test)
@@ -78,8 +126,8 @@ def train_and_evaluate_model(
     if not metrics_to_show:
         metrics_to_show = metrics.keys()
 
-    print({k: metrics[k] for k in metrics_to_show})
-
+    for k in metrics_to_show:
+        print(f"{k}: {metrics[k]}")
     return metrics, y_pred, classifier
 
 
@@ -163,7 +211,7 @@ def greedy_feature_selection(
         best_feature = None
         for feature in remaining_features:
             current_features = selected_features + [feature]
-            metrics, _ = train_and_evaluate_model(
+            metrics, _, _ = train_and_evaluate_model(
                 feature_df, classifier, current_features, metrics_to_show=[performance_metric]
             )
             score = metrics.get(performance_metric, -np.inf)
@@ -202,15 +250,15 @@ def classifier_selection(
     best_classifier = None
 
     for name, classifier in classifiers.items():
-        metrics, _ = train_and_evaluate_model(
+        print(f"Training {name}")
+        metrics, _, trained_classifier = train_and_evaluate_model(
             feature_df,
             classifier,
             features,
-            metrics_to_show=[target_metric],
         )
         if metrics[target_metric] > best_score:
             best_score = metrics[target_metric]
-            best_classifier = classifier
+            best_classifier = trained_classifier
         print(f"{name} - {target_metric}: {metrics[target_metric]}")
 
     return best_classifier, best_score
