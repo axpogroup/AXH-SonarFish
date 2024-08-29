@@ -386,6 +386,9 @@ class InputOutputHandler:
         video = cv.VideoCapture(str(filepath))
         frames = video.get(cv.CAP_PROP_FRAME_COUNT)
         fps = video.get(cv.CAP_PROP_FPS)
-        duration = frames / fps
+        try:
+            duration = frames / fps
+        except ZeroDivisionError:
+            duration = 0
         video.release()
         return duration
