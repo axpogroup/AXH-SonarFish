@@ -138,7 +138,7 @@ def calculate_velocity(
         smoothed_v_y = savgol_filter(v_y, window_length=smoothing_window, polyorder=2)
         return smoothed_v_x, smoothed_v_y
     except ValueError:
-        return (np.nan, np.nan)
+        return (np.array([]), np.array([]))
 
 
 def absolute_velocity(detection: pd.DataFrame, smoothing_window: int = 5) -> np.array:
@@ -162,7 +162,7 @@ def v_river_projected(
 def v_relative_to_river(
     detection: pd.DataFrame,
     river_velocity: tuple[float, float],
-) -> tuple[float, float]:
+) -> tuple[np.ndarray, np.ndarray]:
     v = np.vstack((np.diff(detection["x"]), np.diff(detection["y"]))).T
     v = np.vstack(((np.nan, np.nan), v))
     v_relative_to_river = v - river_velocity
