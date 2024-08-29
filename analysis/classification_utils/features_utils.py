@@ -138,7 +138,7 @@ def calculate_velocity(
         smoothed_v_y = savgol_filter(v_y, window_length=smoothing_window, polyorder=2)
         return smoothed_v_x, smoothed_v_y
     except ValueError:
-        return (np.array([]), np.array([]))
+        return (np.array([np.nan]), np.array([np.nan]))
 
 
 def absolute_velocity(detection: pd.DataFrame, smoothing_window: int = 5) -> np.array:

@@ -21,11 +21,11 @@ def calculate_precision(tp, fp):
     return precision
 
 
-def calculate_f1_score(precision, recall, beta=1):
+def calculate_recall(tp, fn):
     with np.errstate(divide="ignore", invalid="ignore"):
-        f1_score = (1 + beta**2) * precision * recall / (beta**2 * precision + recall)
-        f1_score = np.nan_to_num(f1_score)
-    return f1_score
+        recall = np.divide(tp, (tp + fn))
+        recall = np.nan_to_num(recall)
+    return recall
 
 
 def plot_confusion_matrix(
