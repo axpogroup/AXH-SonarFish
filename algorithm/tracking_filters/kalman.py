@@ -3,6 +3,8 @@ import scipy
 from deepsort import iou_matching
 from deepsort.tracker import Track
 
+from algorithm.settings import settings
+from algorithm.settings import Settings
 from algorithm.DetectedObject import DetectedBlob, KalmanTrackedBlob
 from algorithm.flow_conditions import rot_mat_from_river_velocity
 from algorithm.matching.distance import DistanceMetric
@@ -49,16 +51,16 @@ class KalmanFilter(object):
         Kalman filter model update matrix.
     """
 
-    def __init__(self, conf: dict):
+    def __init__(self, settings: Settings):
         """Initialize Kalman filter.
 
         Args:
             obj_velocity_initalization (tuple[float, float], optional): Initialization
                 of velocity of objects in x and y direction. Defaults to (0., 0.).
         """
-        self.conf = conf
+        self.__settings = settings
         # adapt the initial velocity to the river velocity
-        self.obj_velocity_initalization = [v / 4.0 for v in self.conf["river_pixel_velocity"]]
+        self.obj_velocity_initalization = [v / 4.0 for v in self.__settings.river_pixel_velocity]
 
         ndim, dt = 4, 1.0
 
@@ -87,8 +89,8 @@ class KalmanFilter(object):
         mean = np.r_[mean_pos, mean_vel]
 
         std_trace = (
-            np.array(self.conf["kalman_std_obj_initialization_trace"])
-            * self.conf["kalman_std_obj_initialization_factor"]
+            np.array(self.__settings.kalman_std_obj_initialization_trace)
+            * self.__settings.kalman_std_obj_initialization_factor
         )
         bbox_height_scaling_selection = np.array([1, 1, 0, 1, 1, 1, 0, 1])
         std_trace = std_trace * (bbox_height_scaling_selection * measurement[3] + 1 - bbox_height_scaling_selection)
@@ -112,7 +114,7 @@ class KalmanFilter(object):
             state. Unobserved velocities are initialized to 0 mean.
         """
         std_trace = (
-            np.array(self.conf["kalman_std_process_noise_trace"]) * self.conf["kalman_std_obj_initialization_factor"]
+            np.array(self.__settings.kalman_std_process_noise_trace) * self.__settings.kalman_std_obj_initialization_factor
         )
         bbox_height_scaling_selection = np.array([1, 1, 0, 1, 1, 1, 0, 1])
         std_trace = std_trace * (bbox_height_scaling_selection * mean[3] + 1 - bbox_height_scaling_selection)
@@ -137,12 +139,12 @@ class KalmanFilter(object):
             estimate.
         """
         std_trace = (
-            np.array(self.conf["kalman_std_mmt_noise_trace"]) * self.conf["kalman_std_obj_initialization_factor"]
+            np.array(self.__settings.kalman_std_mmt_noise_trace) * self.__settings.kalman_std_obj_initialization_factor
         )
         bbox_height_scaling_selection = np.array([1, 1, 0, 1])
         std_trace = std_trace * (bbox_height_scaling_selection * mean[3] + 1 - bbox_height_scaling_selection)
         # rotate the measurement covariance matrix into the river flow direction
-        if self.conf["kalman_rotate_mmt_noise_in_river_direction"]:
+        if self.__settings.kalman_rotate_mmt_noise_in_river_direction:
             xy_std = np.dot(self.rot_mat.T, np.diag(std_trace[:2]) ** 2)
             ah_std = np.diag(std_trace[2:]) ** 2
             innovation_cov = scipy.linalg.block_diag(xy_std, ah_std)
@@ -184,8 +186,8 @@ class KalmanFilter(object):
         # limit velocity to maximum 2 * v_river to prevent jumps of tracked objects
         v = new_mean[4:6]
         v_norm = np.linalg.norm(v)
-        if v_norm > 2 * np.linalg.norm(self.conf["river_pixel_velocity"]):
-            v = v / v_norm * 2 * np.linalg.norm(self.conf["river_pixel_velocity"])
+        if v_norm > 2 * np.linalg.norm(self.__settings.river_pixel_velocity):
+            v = v / v_norm * 2 * np.linalg.norm(self.__settings.river_pixel_velocity)
             new_mean[4:6] = v
 
         new_covariance = covariance - np.linalg.multi_dot((kalman_gain, projected_cov, kalman_gain.T))
@@ -229,7 +231,7 @@ class KalmanFilter(object):
 
     @property
     def rot_mat(self):
-        return rot_mat_from_river_velocity(self.conf)
+        return rot_mat_from_river_velocity(self.__settings)
 
 
 def _sanitizing_mean(mean: np.ndarray):
@@ -291,19 +293,19 @@ class Tracker:
 
     def __init__(
         self,
+        settings,
         primary_metric: DistanceMetric,
         elimination_metric: DistanceMetric,
-        conf: dict,
     ) -> None:
         self.deleted_track_ids = []
         self.primary_metric = primary_metric
         self.elimination_metric = elimination_metric
-        self.conf = conf
-        self.max_iou_distance = self.conf["kalman_max_iou_distance"]
-        self.max_age = self.conf["kalman_max_age"]
-        self.n_init = self.conf["kalman_n_init"]
-
-        self.kf = KalmanFilter(conf)
+        self.__settings = settings
+        self.max_iou_distance = self.__settings.kalman_max_iou_distance
+        self.max_age = self.__settings.kalman_max_age
+        self.n_init = self.__settings.kalman_n_init
+        self.__settings = settings
+        self.kf = KalmanFilter(settings)
         self.tracks = []
         self._next_id = 1
 
@@ -465,11 +467,10 @@ def tracks_to_object_history(
             ellipse_axes_lengths=sqrt_of_lamdas,
             detection_is_tracked=track.is_confirmed(),
             frame=processed_frame_dict,
-            input_settings=object_filter.conf,
         )
         if obj.feature["bbox_size_to_stddev_ratio"] and obj.feature[
             "bbox_size_to_stddev_ratio"
-        ] < object_filter.conf.get("bbox_size_to_stddev_ratio_threshold"):
+        ] < settings.bbox_size_to_stddev_ratio_threshold:
             if track.track_id not in object_history.keys():
                 object_history[track.track_id] = obj
             else:

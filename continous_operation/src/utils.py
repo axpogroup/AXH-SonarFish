@@ -18,30 +18,6 @@ RED = "FF0000"
 GREEN = "00FF00"
 
 
-class DetectionHandler:
-    def __init__(self, settings_dict):
-        self.detector = FishDetector(settings_dict)
-        self.settings_dict = settings_dict
-
-    def detect_from_file(self, filename):
-        self.settings_dict["input_file"] = filename
-        input_output_handler = InputOutputHandler(self.settings_dict)
-        self.detector.frame_number = 0
-        object_history = {}
-
-        while input_output_handler.get_new_frame():
-            if float(input_output_handler.frame_no) / 2 % 1 != 0:
-                continue
-            detections, processed_frame_dict, runtimes = self.detector.detect_objects(
-                input_output_handler.current_raw_frame
-            )
-            object_history = self.detector.associate_detections(detections, object_history)
-            input_output_handler.handle_output(processed_frame_dict, object_history, runtimes, detector=self.detector)
-
-        detections = input_output_handler.get_detections_pd(object_history)
-        detections = self.detector.classify_detections(detections)
-        return detections
-
 
 def get_logger(log_directory, nametag):
     logfolder_name = nametag + "_logs_session_" + dt.datetime.now(dt.timezone.utc).isoformat(timespec="milliseconds")

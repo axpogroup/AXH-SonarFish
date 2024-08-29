@@ -12,24 +12,27 @@ from algorithm import visualization_functions
 from algorithm.DetectedObject import KalmanTrackedBlob
 from algorithm.FishDetector import FishDetector
 from algorithm.utils import get_elapsed_ms
+from algorithm.settings import Settings
+from algorithm.settings import settings
+import subprocess
 
 
 class InputOutputHandler:
     def __init__(
         self,
-        settings_dict: dict,
+        settings: Settings,
     ):
         self.fps_out = 10
         self.video_writer = None
-        self.settings_dict = settings_dict
-        self.input_filename = Path(self.settings_dict["file_name"])
+        self.__settings = settings
+        self.input_filename = Path(self.__settings.file_name)
         self.set_video_cap()
 
         self.start_timestamp = self.extract_timestamp_from_filename(
-            self.input_filename, self.settings_dict["file_timestamp_format"]
+            self.input_filename, self.__settings.file_timestamp_format
         )
 
-        self.output_dir_name = self.settings_dict["output_directory"]
+        self.output_dir_name = self.__settings.output_directory
         self.temp_output_dir_name = Path.cwd() / "temp"
         self.temp_output_dir_name.mkdir(exist_ok=True)
         self.output_csv_name = Path(self.output_dir_name) / (self.input_filename.stem + ".csv")
@@ -96,7 +99,7 @@ class InputOutputHandler:
             return False
 
     def set_video_cap(self):
-        input_file_path = Path(self.settings_dict["input_directory"]) / self.settings_dict["file_name"]
+        input_file_path = Path(self.__settings.input_directory) / self.__settings.file_name
         assert input_file_path.exists(), f"Error: Input file {input_file_path} does not exist."
 
         self.video_cap = cv.VideoCapture(str(input_file_path))
@@ -151,69 +154,69 @@ class InputOutputHandler:
         def change_current_mean_frames(value):
             if value == 0:
                 value = 1
-            detector.conf["short_mean_frames"] = value
+            self.__settings.short_mean_frames = value
 
         def change_long_mean_frames(value):
             if value < detector.current_mean_frames:
-                detector.conf["long_mean_frames"] = detector.conf["short_mean_frames"]
+                self.__settings.long_mean_frames = self.__settings.short_mean_frames
             else:
-                detector.conf["long_mean_frames"] = value
+                self.__settings.long_mean_frames = value
 
         def change_alpha(value):
-            detector.conf["contrast"] = float(value) / 10
+            self.__settings.contrast = float(value) / 10
 
         def change_beta(value):
-            detector.conf["brightness"] = value
+            self.__settings.brightness = value
 
         def change_diff_thresh(value):
-            detector.conf["difference_threshold_scaler"] = value / 10
+            self.__settings.difference_threshold_scaler = value / 10
 
         def change_median_filter_kernel(value):
-            detector.conf["median_filter_kernel_mm"] = value
+            self.__settings.median_filter_kernel_mm = value
 
         def change_dilatation_kernel(value):
-            detector.conf["dilation_kernel_mm"] = value
+            self.__settings.dilation_kernel_mm = value
 
         cv.createTrackbar(
             "contrast*10",
             "frame",
-            int(detector.conf["contrast"] * 10),
+            int(self.__settings.contrast * 10),
             30,
             change_alpha,
         )
-        cv.createTrackbar("brightness", "frame", detector.conf["brightness"], 120, change_beta)
+        cv.createTrackbar("brightness", "frame", self.__settings.brightness, 120, change_beta)
         cv.createTrackbar(
             "s_mean",
             "frame",
-            detector.conf["short_mean_frames"],
+            self.__settings.short_mean_frames,
             120,
             change_current_mean_frames,
         )
         cv.createTrackbar(
             "l_mean",
             "frame",
-            detector.conf["long_mean_frames"],
+            self.__settings.long_mean_frames,
             1200,
             change_long_mean_frames,
         )
         cv.createTrackbar(
             "diff_thresh*10",
             "frame",
-            int(detector.conf["difference_threshold_scaler"] * 10),
+            int(self.__settings.difference_threshold_scaler * 10),
             127,
             change_diff_thresh,
         )
         cv.createTrackbar(
             "median_f",
             "frame",
-            detector.conf["median_filter_kernel_mm"],
+            self.__settings.median_filter_kernel_mm,
             1200,
             change_median_filter_kernel,
         )
         cv.createTrackbar(
             "dilate",
             "frame",
-            detector.conf["dilation_kernel_mm"],
+            self.__settings.dilation_kernel_mm,
             1200,
             change_dilatation_kernel,
         )
@@ -221,7 +224,7 @@ class InputOutputHandler:
     def show_image(self, img, detector):
         cv.imshow("frame", img)
 
-        if "display_trackbars" in self.settings_dict.keys() and self.settings_dict["display_trackbars"]:
+        if self.__settings.display_trackbars:
             self.trackbars(detector)
 
         # Wait briefly for user input unless the video is paused
@@ -252,7 +255,7 @@ class InputOutputHandler:
         label_history=None,
     ):
         total_runtime, total_time_per_frame = self.calculate_total_time()
-        if self.frame_no % 20 == 0 and detector.conf.get("verbosity", 2) > 1:
+        if self.frame_no % 20 == 0 and self.__settings.verbosity > 1:
             if total_time_per_frame == 0:
                 total_time_per_frame = 1
             print(
@@ -265,15 +268,15 @@ class InputOutputHandler:
                     f"DetectTrack: {runtimes['detection_tracking']} | "
                     f"Total: {total_time_per_frame} | FPS: {'{:.1f}'.format(self.frame_no/(2*total_runtime/1000))}"
                 )
-        if self.settings_dict["display_output_video"] or self.settings_dict["record_output_video"]:
-            extensive = self.settings_dict["display_mode_extensive"]
+        if self.__settings.display_output_video or self.__settings.record_output_video:
+            extensive = self.__settings.display_mode_extensive
             disp = visualization_functions.get_visual_output(
                 object_history=object_history,
                 label_history=label_history,
                 detector=detector,
                 processed_frame=processed_frame,
                 extensive=extensive,
-                save_frame=self.settings_dict["record_processing_frame"],
+                save_frame=self.__settings.record_processing_frame,
             )
 
             # Put timestamp on frame
@@ -289,7 +292,7 @@ class InputOutputHandler:
                 2,
             )
 
-            if self.settings_dict["record_output_video"]:
+            if self.__settings.record_output_video:
                 if not self.video_writer:
                     self.initialize_output_recording(
                         frame_width=disp.shape[1],
@@ -297,7 +300,7 @@ class InputOutputHandler:
                     )
                 self.video_writer.write(disp)
 
-            if self.settings_dict["display_output_video"]:
+            if self.__settings.display_output_video:
                 self.show_image(disp, detector)
 
     def calculate_total_time(self):
@@ -319,11 +322,11 @@ class InputOutputHandler:
         frame_width = int(self.video_cap.get(cv.CAP_PROP_FRAME_WIDTH)) if frame_width is None else frame_width
         frame_height = int(self.video_cap.get(cv.CAP_PROP_FRAME_HEIGHT)) if frame_height is None else frame_height
         fps = self.fps_in
-        if self.settings_dict["record_processing_frame"] != "raw":
+        if self.__settings.record_processing_frame != "raw":
             fps = fps // 2
 
-        output_video_name = f"{self.input_filename.stem}_{self.settings_dict['record_processing_frame']}_output.mp4"
-        if self.settings_dict.get("compress_output_video", False):
+        output_video_name = f"{self.input_filename.stem}_{self.__settings.record_processing_frame}_output.mp4"
+        if self.__settings.compress_output_video:
             self.output_video_path = Path(self.temp_output_dir_name) / output_video_name
         else:
             self.output_video_path = Path(self.output_dir_name) / output_video_name
@@ -366,7 +369,7 @@ class InputOutputHandler:
 
     def shutdown(self):
         self.video_cap.release()
-        if self.settings_dict.get("record_output_video"):
+        if self.__settings.record_output_video:
             self.video_writer.release()
         cv.destroyAllWindows()
 

@@ -6,6 +6,9 @@ import numpy as np
 
 from algorithm.DetectedObject import BoundingBox, DetectedBlob, KalmanTrackedBlob
 from algorithm.FishDetector import FishDetector
+from settings import settings
+
+
 
 FIRST_ROW = [
     "gray_boosted",
@@ -15,6 +18,7 @@ FIRST_ROW = [
 ]
 SECOND_ROW = ["difference_thresholded", "median_filter", "binary", "dilated"]
 TRUTH_LABEL_NO = -1
+
 
 
 def get_visual_output(
@@ -103,7 +107,7 @@ def _draw_detections_and_labels(
     **kwargs,
 ):
     disp = processed_frame
-    if detector.conf["show_detections"] or detector.conf["draw_detections_on_saved_video"]:
+    if settings.show_detections or settings.draw_detections_on_saved_video:
         disp = _draw_detector_output(
             object_history,
             detector,
@@ -219,7 +223,7 @@ def draw_basic_bounding_box_and_path(
     association_dist, color, detector, fullres, img, obj, paths, label: Optional[str] = None
 ):
     if fullres:
-        scale = int(100 / detector.conf["downsample"])
+        scale = int(100 / settings.downsample)
     else:
         scale = 1
     x, y = obj.midpoints[-1][0], obj.midpoints[-1][1]
@@ -250,7 +254,7 @@ def draw_basic_bounding_box_and_path(
         cv.circle(
             img,
             (obj.midpoints[-1][0] * scale, obj.midpoints[-1][1] * scale),
-            int(detector.mm_to_px(detector.conf["max_association_dist_mm"]) * scale),
+            int(detector.mm_to_px(settings.max_association_dist_mm) * scale),
             (0, 0, 255),
             1 * scale,
         )
@@ -291,4 +295,4 @@ def draw_associations(associations, detections, object_history, img, color):
 
 
 def is_detection_outdated(obj, detector: Optional[FishDetector] = None):
-    return detector.frame_number - obj.frames_observed[-1] > detector.conf["no_more_show_after_x_frames"]
+    return detector.frame_number - obj.frames_observed[-1] > settings.no_more_show_after_x_frames

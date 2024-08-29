@@ -3,6 +3,8 @@ from typing import Optional
 import cv2 as cv
 import numpy as np
 
+from algorithm.settings import settings
+
 
 class BoundingBox:
     """
@@ -49,7 +51,6 @@ class DetectedBlob(BoundingBox):
         contour: np.ndarray,
         frame_number: int,
         frame: dict[str, np.ndarray],
-        input_settings: dict,
     ):
         super().__init__(
             identifier,
@@ -71,10 +72,10 @@ class DetectedBlob(BoundingBox):
             "histogram": self.histogram(frame=frame),
             "fft": self.fft(frame=frame),
             "bbox_size_to_stddev_ratio": self.bbox_size_to_stddev_ratio(
-                input_settings.get("bbox_size_to_stddev_ratio_threshold")
+                settings.bbox_size_to_stddev_ratio_threshold
             ),
         }
-        if input_settings.get("store_raw_image_patch"):
+        if settings.store_raw_image_patch:
             self.raw_image_patch = [self.get_feature_patch(frame, "raw")]
 
     def update_object(self, detection):
@@ -167,7 +168,6 @@ class KalmanTrackedBlob(DetectedBlob):
         frame_number: int,
         contour: np.ndarray,
         frame: dict[str, np.ndarray],
-        input_settings: dict,
         ellipse_angle: Optional[float] = None,
         ellipse_axes_lengths: Optional[tuple[int, int]] = None,
         detection_is_tracked: bool = False,
@@ -177,7 +177,6 @@ class KalmanTrackedBlob(DetectedBlob):
             contour=contour,
             frame_number=frame_number,
             frame=frame,
-            input_settings=input_settings,
         )
         self.detection_is_tracked = detection_is_tracked
         self.ellipse_angles = [ellipse_angle]

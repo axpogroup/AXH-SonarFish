@@ -4,7 +4,7 @@ import os
 import sys
 from pathlib import Path
 from typing import Optional
-
+from copy import deepcopy
 
 import mlflow
 import numpy as np
@@ -21,6 +21,7 @@ from algorithm.validation import mot16_metrics
 from algorithm.visualization_functions import TRUTH_LABEL_NO
 
 from algorithm.settings import settings
+from algorithm.settings import Settings
 
 load_dotenv()
 
@@ -112,8 +113,8 @@ def extract_labels_history(
     return label_history
 
 
-def compute_metrics(settings_dict):
-    if settings_dict.get("ground_truth_directory"):
+def compute_metrics(settings):
+    if settings.ground_truth_directory:
         file_name_prefix = Path(settings.file_name).stem
         ground_truth_source = Path(settings.ground_truth_directory) / f"{file_name_prefix}_ground_truth.csv"
         test_source = Path(settings.output_directory) / Path(file_name_prefix + ".csv")
@@ -122,31 +123,33 @@ def compute_metrics(settings_dict):
         return mot16_metrics_dict
 
 
-def burn_in_algorithm_on_previous_video(settings_dict: dict, burn_in_file_name: str):
-    burn_in_settings = settings_dict.copy()
-    burn_in_settings["file_name"] = burn_in_file_name
-    burn_in_settings["record_output_video"] = False
-    burn_in_settings["display_output_video"] = False
-    burn_in_settings["verbosity"] = 0
+def burn_in_algorithm_on_previous_video(settings: Settings, burn_in_file_name: str):
+    burn_in_settings = deepcopy(settings)  # avoid changing the original settings
+    burn_in_settings.file_name = burn_in_file_name
+    burn_in_settings.record_output_video = False
+    burn_in_settings.display_output_video = False
+    burn_in_settings.verbosity = 0
 
     print(f"Starting algorithm burn-in on video: {burn_in_file_name}")
     input_output_handler = InputOutputHandler(burn_in_settings)
     burn_in_detector = FishDetector(burn_in_settings)
-    input_output_handler.get_new_frame(start_at_frames_from_end=burn_in_settings.get("long_mean_frames", 0) + 1)
+    input_output_handler.get_new_frame(start_at_frames_from_end=burn_in_settings.long_mean_frames + 1)
     while input_output_handler.get_new_frame():
         _, _, _ = burn_in_detector.detect_objects(input_output_handler.current_raw_frame)
 
     return burn_in_detector
 
 
-def run_tracking_algorithm(settings_dict: dict, detector: FishDetector):
-    labels_df = read_labels_into_dataframe(
-        labels_path=Path(settings_dict.get("ground_truth_directory", "")),
-        labels_filename=Path(settings.file_name).stem
-        + settings_dict.get("labels_file_suffix", "_ground_truth")
-        + ".csv",
+def run_tracking_algorithm(settings: Settings, detector: FishDetector):
+    labels_filename = (
+        Path(settings.file_name).stem + settings.labels_file_suffix + settings.ground_truth_directory + ".csv"
     )
-    input_output_handler = InputOutputHandler(settings_dict)
+    labels_df = read_labels_into_dataframe(
+        labels_path=settings.ground_truth_directory,
+        labels_filename=labels_filename,
+    )
+
+    input_output_handler = InputOutputHandler(settings)
 
     object_history: dict[int, KalmanTrackedBlob] = {}
     label_history = {}
@@ -161,7 +164,7 @@ def run_tracking_algorithm(settings_dict: dict, detector: FishDetector):
             labels_df,
             input_output_handler.frame_no,
             down_sample_factor=input_output_handler.down_sample_factor,
-            feature_to_load=settings_dict.get("feature_to_load"),
+            feature_to_load=settings.feature_to_load,
         )
         input_output_handler.handle_output(
             processed_frame=processed_frame_dict,
@@ -175,36 +178,31 @@ def run_tracking_algorithm(settings_dict: dict, detector: FishDetector):
         df_detections = detector.classify_detections(df_detections)
         df_detections.to_csv(input_output_handler.output_csv_name, index=False)
 
-    if settings_dict.get("record_output_video", False) and settings_dict.get("compress_output_video", False):
+    if settings.record_output_video and settings.compress_output_video:
         input_output_handler.compress_output_video()
         input_output_handler.delete_temp_output_dir()
 
     return input_output_handler.output_csv_name
 
 
-def main_algorithm(settings_dict: dict):
+def main_algorithm(settings):
     # Debug: Print settings to verify content
-    print("Settings at the start of main_algorithm:", settings_dict)
+    print("Settings at the start of main_algorithm:", settings)
 
-    # Ensure settings_dict is a dictionary
-    if not isinstance(settings_dict, dict):
-        settings_dict = settings_dict.__dict__
-
-
-    previous_video = find_valid_previous_video (gap_seconds=5)
+    previous_video = find_valid_previous_video(gap_seconds=5)
 
     if previous_video:
         try:
-            burn_in_detector = burn_in_algorithm_on_previous_video(settings_dict, burn_in_file_name=previous_video)
-            detector = FishDetector(settings_dict, init_detector=burn_in_detector)
+            burn_in_detector = burn_in_algorithm_on_previous_video(settings, burn_in_file_name=previous_video)
+            detector = FishDetector(settings, init_detector=burn_in_detector)
         except AssertionError:
             print("Burn-in algorithm failed. Starting algorithm without burn-in on previous video. Should not happen.")
-            detector = FishDetector(settings_dict)
+            detector = FishDetector(settings)
     else:
         print("Starting algorithm without burn-in on previous video.")
-        detector = FishDetector(settings_dict)
+        detector = FishDetector(settings)
 
-    output_csv_name = run_tracking_algorithm(settings_dict, detector)
+    output_csv_name = run_tracking_algorithm(settings, detector)
 
     return output_csv_name
 
@@ -213,14 +211,14 @@ if __name__ == "__main__":
 
     main_algorithm(settings)
 
-    if settings.get("track_azure_ml", False):
+    if settings.track_azure_ml == False:
         workspace = Workspace(
             resource_group=os.getenv("RESOURCE_GROUP"),
             workspace_name=os.getenv("WORKSPACE_NAME"),
             subscription_id=os.getenv("SUBSCRIPTION_ID"),
         )
         mlflow.set_tracking_uri(workspace.get_mlflow_tracking_uri())
-        experiment_name = settings["experiment_name"]
+        experiment_name = settings.experiment_name
         mlflow.set_experiment(experiment_name)
         with mlflow.start_run():
             mlflow.log_params(settings)
