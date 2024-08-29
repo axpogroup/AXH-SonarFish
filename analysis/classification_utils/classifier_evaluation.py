@@ -1,20 +1,14 @@
-from typing import Union
-
 import numpy as np
 import pandas as pd
+from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.svm import SVC
-from sklearn.ensemble import GradientBoostingClassifier, AdaBoostClassifier
-from sklearn.neighbors import KNeighborsClassifier
 from xgboost import XGBClassifier
 
 from analysis.classification_utils.metrics import (
-    calculate_f1_score,
     calculate_precision,
+    calculate_recall,
     f_beta,
 )
 
@@ -35,40 +29,44 @@ class RandomClassifier:
         return np.random.choice(classes, size=X.shape[0], p=probabilities)
 
 
-class ProbaClassifier:
+class ProbaLogisticRegression(LogisticRegression):
     """
-    Takes a base classifier and a probability threshold to classify samples.
+    Logistic regression classifier that predicts based on a probability threshold.
 
-    Parameters:
-    - base_estimator: The base classifier to use.
-    - base_estimator_kwargs: Keyword arguments to pass to the base classifier.
-    - proba_threshold: The probability threshold to use for classification.
-        If fish probability is greater than this threshold, the sample is classified as fish.
+    Parameters
+    ----------
+    proba_threshold : float
+        The probability threshold above which the classifier predicts a positive class.
     """
 
-    def __init__(
-        self,
-        base_estimator: Union[
-            LogisticRegression,
-            RandomForestClassifier,
-            SVC,
-            GradientBoostingClassifier,
-            AdaBoostClassifier,
-            KNeighborsClassifier,
-            XGBClassifier,
-        ],
-        base_estimator_kwargs: dict = {},
-        proba_threshold: float = 0.5,
-    ):
-        self.base_estimator = base_estimator(**base_estimator_kwargs)
+    def __init__(self, proba_threshold=0.5, **kwargs):
+        super().__init__(**kwargs)
         self.proba_threshold = proba_threshold
 
-    def fit(self, X, y):
-        self.base_estimator.fit(X, y)
+    def predict(self, X):
+        probabilities = self.predict_proba(X)
+        y_pred = (probabilities[:, 1] >= self.proba_threshold).astype(int)
+        return y_pred
+
+
+class ProbaXGBClassifier(XGBClassifier):
+    """
+    XGBoost classifier that predicts based on a probability threshold.
+
+    Parameters
+    ----------
+    proba_threshold : float
+        The probability threshold above which the classifier predicts a positive class.
+    """
+
+    def __init__(self, proba_threshold=0.5, **kwargs):
+        super().__init__(**kwargs)
+        self.proba_threshold = proba_threshold
 
     def predict(self, X):
-        probabilities = self.base_estimator.predict_proba(X)
-        return (probabilities[:, 1] >= self.proba_threshold).astype(int)
+        probabilities = self.predict_proba(X)
+        y_pred = (probabilities[:, 1] >= self.proba_threshold).astype(int)
+        return y_pred
 
 
 def train_and_predict(feature_df: pd.DataFrame, classifier, features: list[str]) -> np.ndarray:
@@ -103,14 +101,13 @@ def compute_metrics(confusion_matrix: np.ndarray) -> dict[str, float]:
     tn, fp, fn, tp = confusion_matrix.ravel()
     accuracy = (tp + tn) / (tp + tn + fp + fn)
     precision = calculate_precision(tp, fp)
-    recall = tp / (tp + fn)
-    f1_score = calculate_f1_score(precision, recall)
+    recall = calculate_recall(tp, fn)
 
     metrics = {
         "Accuracy": accuracy,
         "Precision": precision,
         "Recall": recall,
-        "F1_score": f1_score,
+        "F1_score": f_beta(1, precision, recall),
         "F_1_2_score": f_beta(0.5, precision, recall),
         "F2_score": f_beta(2, precision, recall),
         "confusion_matrix": confusion_matrix,

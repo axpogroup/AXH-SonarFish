@@ -747,11 +747,10 @@ class TrackPlotter(object):
             for column in classification_v2_df.columns:
                 if column in df.columns:
                     df.drop(columns=[column], inplace=True)
-            # self.measurements_dfs[idx] = df.merge(
-            #     right=classification_v2_df, left_on="id", right_index=True, how="left"
-            # )
+            self.measurements_dfs[idx] = df.merge(
+                right=classification_v2_df, left_on="id", right_index=True, how="left"
+            )
             for column in classification_v2_df.columns:
-                self.measurements_dfs[idx][column] = classification_v2_df[column]
                 self.measurements_dfs[idx][column] = self.measurements_dfs[idx][column].fillna(0)
 
 
