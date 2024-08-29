@@ -1,12 +1,10 @@
-from itertools import combinations
-from typing import Optional, Union
+from typing import Union
 
 import numpy as np
 import pandas as pd
 from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import StandardScaler
-from tqdm import tqdm
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
@@ -24,7 +22,6 @@ from analysis.classification_utils.metrics import (
 class RandomClassifier:
 
     def __init__(self, class_counts: dict[int, int]):
-        self.class_counts = class_counts
         total_count = sum(class_counts.values())
         self.class_probabilities = {k: v / total_count for k, v in class_counts.items()}
 
@@ -74,16 +71,11 @@ class ProbaClassifier:
         return (probabilities[:, 1] >= self.proba_threshold).astype(int)
 
 
-def train_and_evaluate_model(
-    feature_df: pd.DataFrame,
-    classifier,
-    features: list[str],
-    metrics_to_show: Optional[list[str]] = None,
-) -> dict[str, float]:
+def train_and_predict(feature_df: pd.DataFrame, classifier, features: list[str]) -> np.ndarray:
     X = feature_df[features]
     y = feature_df["gt_label"]
     num_fish = y.sum()
-    cv = StratifiedKFold(n_splits=num_fish)
+    cv = StratifiedKFold(n_splits=min(num_fish, 10))  # Ensure each split has at least one positive sample
 
     y_pred = np.zeros(y.shape)
     confusion_matrices = []
@@ -104,7 +96,11 @@ def train_and_evaluate_model(
         confusion_matrices.append(confusion)
 
     summed_confusion = np.sum(confusion_matrices, axis=0)
-    tn, fp, fn, tp = summed_confusion.ravel()
+    return summed_confusion, y_pred
+
+
+def compute_metrics(confusion_matrix: np.ndarray) -> dict[str, float]:
+    tn, fp, fn, tp = confusion_matrix.ravel()
     accuracy = (tp + tn) / (tp + tn + fp + fn)
     precision = calculate_precision(tp, fp)
     recall = tp / (tp + fn)
@@ -115,150 +111,20 @@ def train_and_evaluate_model(
         "Precision": precision,
         "Recall": recall,
         "F1_score": f1_score,
-        "F2_score": f_beta(2, precision, recall),
-        "F3_score": f_beta(3, precision, recall),
-        "F5_score": f_beta(5, precision, recall),
-        "F8_score": f_beta(8, precision, recall),
-        "F10_score": f_beta(10, precision, recall),
         "F_1_2_score": f_beta(0.5, precision, recall),
-        "confusion_matris": summed_confusion,
+        "F2_score": f_beta(2, precision, recall),
+        "confusion_matrix": confusion_matrix,
     }
-    if not metrics_to_show:
-        metrics_to_show = metrics.keys()
-
-    for k in metrics_to_show:
-        print(f"{k}: {metrics[k]}")
-    return metrics, y_pred, classifier
+    return metrics
 
 
-def find_best_feature_combination(
+def train_and_evaluate_model(
     feature_df: pd.DataFrame,
-    classifier: object,
-    all_features: list[str],
-    performance_metric: str = "F_1_2_Score",
-    max_features: Optional[int] = None,
-    force_features: list[str] = [],
-):
-    """
-    Takes a dataframe with features, a classifier, a list of all features to be explored, and a performance metric.
-    Goes through all possible combinations of features and returns the best combination.
-
-    :param feature_df: dataframe with features
-    :param classifier: classifier object
-    :param all_features: list of all features to be explored
-    :param performance_metric: performance metric to be used
-    :param max_features: maximum number of features to be used
-    :param force_features: features to be included in all combinations
-
-    :return: best feature combination and its score
-    """
-    all_features = list(set(all_features) - set(force_features))
-    if max_features is None:
-        max_features = len(all_features)
-
-    best_score = -np.inf
-    best_features = []
-
-    for r in range(1, max_features + 1 - len(force_features)):
-        for feature_combination in tqdm(combinations(all_features, r)):
-            feature_combination = list(set(feature_combination) | set(force_features))
-            metrics, _ = train_and_evaluate_model(
-                feature_df, classifier, feature_combination, metrics_to_show={performance_metric: True}
-            )
-            score = metrics.get(performance_metric, -np.inf)
-
-            if score > best_score:
-                best_score = score
-                best_features = feature_combination
-
-            print(f"Current best score: {best_score} with features: {best_features}")
-
-    return best_features, best_score
-
-
-import pandas as pd
-
-
-def greedy_feature_selection(
-    feature_df: pd.DataFrame,
-    classifier: object,
-    all_features: list[str],
-    performance_metric: str = "F_1_2_score",
-    max_features: int = None,
-    force_features: list[str] = [],
-) -> tuple[list[str], float]:
-    """
-    Greedy algorithm to find the best feature combination by adding one feature at a time.
-
-    :param feature_df: dataframe with features
-    :param classifier: classifier object
-    :param all_features: list of all features to be explored
-    :param performance_metric: performance metric to be used
-    :param max_features: maximum number of features to be used
-    :param force_features: features to be included in all combinations
-
-    :return: best feature combination and its score
-    """
-
-    if not max_features:
-        max_features = len(all_features) - 1
-
-    selected_features = force_features.copy()
-    remaining_features = list(set(all_features) - set(force_features))
-    best_score = -np.inf
-
-    while len(selected_features) < max_features:
-        best_feature = None
-        for feature in remaining_features:
-            current_features = selected_features + [feature]
-            metrics, _, _ = train_and_evaluate_model(
-                feature_df, classifier, current_features, metrics_to_show=[performance_metric]
-            )
-            score = metrics.get(performance_metric, -np.inf)
-
-            if score > best_score:
-                best_score = score
-                best_feature = feature
-
-        if best_feature is None:
-            break
-
-        selected_features.append(best_feature)
-        remaining_features.remove(best_feature)
-        print(f"Current best score: {best_score} with features: {selected_features}")
-
-    return selected_features, best_score
-
-
-def classifier_selection(
-    feature_df: pd.DataFrame,
-    classifiers: dict[str, object],
+    classifier,
     features: list[str],
-    target_metric: str = "F_1_2_score",
-) -> tuple[object, list[str], float]:
-    """
-    Function to find the best classifier and feature combination.
-
-    :param feature_df: dataframe with features
-    :param classifiers: list of classifiers
-    :param features: list of features
-    :param target_metric: performance metric to be used
-
-    :return: best classifier, best feature combination, and its score
-    """
-    best_score = -np.inf
-    best_classifier = None
-
-    for name, classifier in classifiers.items():
-        print(f"Training {name}")
-        metrics, _, trained_classifier = train_and_evaluate_model(
-            feature_df,
-            classifier,
-            features,
-        )
-        if metrics[target_metric] > best_score:
-            best_score = metrics[target_metric]
-            best_classifier = trained_classifier
-        print(f"{name} - {target_metric}: {metrics[target_metric]}")
-
-    return best_classifier, best_score
+    metrics_to_show: list = ["F_1_2_score"],
+) -> dict[str, float]:
+    summed_confusion, y_pred = train_and_predict(feature_df, classifier, features)
+    metrics = compute_metrics(summed_confusion)
+    print({k: metrics[k] for k in metrics_to_show}, features)
+    return metrics, y_pred
