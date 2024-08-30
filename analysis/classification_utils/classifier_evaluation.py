@@ -69,7 +69,11 @@ class ProbaXGBClassifier(XGBClassifier):
         return y_pred
 
 
-def train_and_predict(feature_df: pd.DataFrame, classifier, features: list[str]) -> np.ndarray:
+def train_and_predict(
+    feature_df: pd.DataFrame,
+    classifier,
+    features: list[str],
+) -> tuple[np.ndarray, np.ndarray, object, object]:
     X = feature_df[features]
     y = feature_df["gt_label"]
     num_fish = y.sum()
@@ -93,8 +97,13 @@ def train_and_predict(feature_df: pd.DataFrame, classifier, features: list[str])
         confusion = confusion_matrix(y_test, predictions)
         confusion_matrices.append(confusion)
 
+    # Train the final model on the entire dataset
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+    classifier.fit(X_scaled, y)
+
     summed_confusion = np.sum(confusion_matrices, axis=0)
-    return summed_confusion, y_pred
+    return summed_confusion, y_pred, classifier, scaler
 
 
 def compute_metrics(confusion_matrix: np.ndarray) -> dict[str, float]:
@@ -120,8 +129,8 @@ def train_and_evaluate_model(
     classifier,
     features: list[str],
     metrics_to_show: list = ["F_1_2_score"],
-) -> dict[str, float]:
-    summed_confusion, y_pred = train_and_predict(feature_df, classifier, features)
+) -> tuple[dict[str, float], np.ndarray, object, object]:
+    summed_confusion, y_pred, trained_classifier, trained_scaler = train_and_predict(feature_df, classifier, features)
     metrics = compute_metrics(summed_confusion)
     print({k: metrics[k] for k in metrics_to_show}, features)
-    return metrics, y_pred
+    return metrics, y_pred, trained_classifier, trained_scaler
