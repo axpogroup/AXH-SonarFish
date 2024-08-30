@@ -7,12 +7,18 @@ import pandas as pd
 from numpy import ndarray
 from scipy.signal import savgol_filter
 
+RIVER_VELOCITY = (0.33, -0.18)  # Lavey - Tourelle
+# RIVER_VELOCITY = (0., 0.)  # Lavey - Passe3
+# RIVER_VELOCITY = (2.35, -0.9)   # Stroppel
+
 
 def calculate_features(measurements_df: pd.DataFrame, masks: dict[str, np.ndarray]) -> pd.DataFrame:
     measurements_df["binary_image"], measurements_df["tile_blob_counts"] = grayscale_to_binary(
         measurements_df["image_tile"]
     )
     feature_df = measurements_df.groupby("id").apply(lambda x: trace_window_metrics(x, masks))
+    measurements_df["v_x"] = measurements_df[["id", "x"]].groupby("id").diff()
+    measurements_df["v_y"] = measurements_df[["id", "y"]].groupby("id").diff()
     return measurements_df.join(feature_df, on="id", how="left")
 
 
@@ -45,29 +51,38 @@ def calculate_average_pixel_intensity(detection):
 
 def trace_window_metrics(detection: pd.DataFrame, masks: dict[str, np.array]) -> pd.Series:
     frame_diff = detection["frame"].iloc[-1] - detection["frame"].iloc[0]
-    detection["v_parallel_river"], detection["v_orthogonal_river"] = velocity_relative_to_river_velocity(detection)
+    detection["v_parallel_river"], detection["v_orthogonal_river"] = v_river_projected(detection, RIVER_VELOCITY)
+    detection["v_x_relative_river"], detection["v_y_relative_river"] = v_relative_to_river(detection, RIVER_VELOCITY)
     time_ratio_near_rake, dist_near_rake = calculate_rake_path_ratio(detection, masks["rake_mask"])
     return pd.Series(
         {
-            "v_xr_avg": np.mean(np.diff(detection["x"])),
-            "v_yr_avg": np.mean(detection["v_yr"]),
-            "v_xr_median": np.median(detection["v_xr"]),
-            "v_yr_median": np.median(detection["v_yr"]),
-            "v_smoothed_avg": np.mean(calculate_velocity(detection, smoothing_window=25)),
-            "v_smoothed_std": np.std(calculate_velocity(detection, smoothing_window=25)),
-            "v_10th_percentile": np.percentile(calculate_velocity(detection, smoothing_window=25), 10),
-            "v_30th_percentile": np.percentile(calculate_velocity(detection, smoothing_window=25), 30),
-            "v_50th_percentile": np.percentile(calculate_velocity(detection, smoothing_window=25), 50),
-            "v_70th_percentile": np.percentile(calculate_velocity(detection, smoothing_window=25), 70),
-            "v_90th_percentile": np.percentile(calculate_velocity(detection, smoothing_window=25), 90),
-            "v_95th_percentile": np.percentile(calculate_velocity(detection, smoothing_window=25), 95),
-            "v_99th_percentile": np.percentile(calculate_velocity(detection, smoothing_window=25), 99),
+            "x_displacement": detection["x"].iloc[-1] - detection["x"].iloc[0],
+            "y_displacement": detection["y"].iloc[-1] - detection["y"].iloc[0],
+            "v_x_smoothed_avg": np.mean(calculate_velocity(detection, smoothing_window=20)[0]),
+            "v_y_smoothed_avg": np.mean(calculate_velocity(detection, smoothing_window=20)[1]),
+            "v_smoothed_avg": np.mean(absolute_velocity(detection, smoothing_window=20)),
+            "v_smoothed_std": np.std(absolute_velocity(detection, smoothing_window=20)),
+            "v_10th_percentile": np.percentile(absolute_velocity(detection, smoothing_window=20), 10),
+            "v_30th_percentile": np.percentile(absolute_velocity(detection, smoothing_window=20), 30),
+            "v_50th_percentile": np.percentile(absolute_velocity(detection, smoothing_window=20), 50),
+            "v_70th_percentile": np.percentile(absolute_velocity(detection, smoothing_window=20), 70),
+            "v_90th_percentile": np.percentile(absolute_velocity(detection, smoothing_window=20), 90),
+            "v_95th_percentile": np.percentile(absolute_velocity(detection, smoothing_window=20), 95),
+            "v_99th_percentile": np.percentile(absolute_velocity(detection, smoothing_window=20), 99),
             "v_parallel_river_avg": np.nanmean(detection["v_parallel_river"]),
             "v_orthogonal_river_avg": np.nanmean(detection["v_orthogonal_river"]),
-            "v_orthogonal_abs_sum": np.sum(np.abs(detection["v_orthogonal_river"])),
-            "v_orthogonal_abs_avg": np.mean(np.abs(detection["v_orthogonal_river"])),
             "v_parallel_river_median": np.nanmedian(detection["v_parallel_river"]),
             "v_orthogonal_river_median": np.nanmedian(detection["v_orthogonal_river"]),
+            "v_x_relative_river_avg": np.nanmean(detection["v_x_relative_river"]),
+            "v_y_relative_river_avg": np.nanmean(detection["v_y_relative_river"]),
+            "v_x_relative_river_median": np.nanmedian(detection["v_x_relative_river"]),
+            "v_y_relative_river_median": np.nanmedian(detection["v_y_relative_river"]),
+            "v_relative_river_avg": np.nanmean(
+                np.sqrt(detection["v_x_relative_river"] ** 2 + detection["v_y_relative_river"] ** 2)
+            ),
+            "v_relative_river_median": np.nanmedian(
+                np.sqrt(detection["v_x_relative_river"] ** 2 + detection["v_y_relative_river"] ** 2)
+            ),
             "x_avg": np.mean(detection["x"]),
             "y_avg": np.mean(detection["y"]),
             "traversed_distance": sum_euclidean_distance_between_positions(detection),
@@ -112,20 +127,28 @@ def calculate_average_bbox_size(group: pd.DataFrame) -> float:
     return np.mean(group["w"] * group["h"])
 
 
-def calculate_velocity(detection: pd.DataFrame, smoothing_window: int = 5) -> np.array:
+def calculate_velocity(
+    detection: pd.DataFrame,
+    smoothing_window: int = 5,
+) -> tuple[np.ndarray, np.ndarray]:
     v_x = np.diff(detection["x"])
     v_y = np.diff(detection["y"])
     try:
         smoothed_v_x = savgol_filter(v_x, window_length=smoothing_window, polyorder=2)
         smoothed_v_y = savgol_filter(v_y, window_length=smoothing_window, polyorder=2)
-        return np.sqrt(smoothed_v_x**2 + smoothed_v_y**2)
+        return smoothed_v_x, smoothed_v_y
     except ValueError:
-        return np.nan
+        return (np.array([]), np.array([]))
 
 
-def velocity_relative_to_river_velocity(
+def absolute_velocity(detection: pd.DataFrame, smoothing_window: int = 5) -> np.array:
+    smoothed_v_x, smoothed_v_y = calculate_velocity(detection, smoothing_window)
+    return np.sqrt(smoothed_v_x**2 + smoothed_v_y**2)
+
+
+def v_river_projected(
     detection: pd.DataFrame,
-    river_velocity: tuple[float, float] = np.array([2.35, -0.9]),
+    river_velocity: tuple[float, float],
 ) -> tuple[float, float]:
     v = np.vstack((np.diff(detection["x"]), np.diff(detection["y"]))).T
     river_velocity_normalized = river_velocity / np.linalg.norm(river_velocity)
@@ -134,6 +157,16 @@ def velocity_relative_to_river_velocity(
     v_parallel_river = np.hstack((np.nan, v_parallel_river))
     v_orthogonal_river = np.hstack((np.nan, v_orthogonal_river))
     return v_parallel_river, v_orthogonal_river
+
+
+def v_relative_to_river(
+    detection: pd.DataFrame,
+    river_velocity: tuple[float, float],
+) -> tuple[np.ndarray, np.ndarray]:
+    v = np.vstack((np.diff(detection["x"]), np.diff(detection["y"]))).T
+    v = np.vstack(((np.nan, np.nan), v))
+    v_relative_to_river = v - river_velocity
+    return v_relative_to_river[:, 0], v_relative_to_river[:, 1]
 
 
 def calculate_rake_path_ratio(detection: pd.DataFrame, rake_mask: np.array) -> tuple[float, float]:
