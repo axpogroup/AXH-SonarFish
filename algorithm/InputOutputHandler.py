@@ -357,6 +357,18 @@ class InputOutputHandler:
             "medium",
             str(compressed_output_video_path),
         ]
+
+        # Debug: Print the paths to verify them
+        print(f"Output video path: {self.output_video_path}")
+        print(f"Compressed output video path: {compressed_output_video_path}")
+        
+        # Check if the output directory exists
+        if not Path(self.output_dir_name).exists():
+            print(f"Error: Output directory {self.output_dir_name} does not exist.")
+            return
+
+
+
         print(f"Compressing output video to {compressed_output_video_path} ...")
         subprocess.run(command)
 
