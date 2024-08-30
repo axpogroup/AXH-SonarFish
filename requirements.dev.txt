@@ -1,0 +1,7 @@
+-r requirements.txt
+xgboost==2.1.1
+lightgbm==4.5.0
+
+#Dev typing
+types-PyYAML==6.0.12.12
+pandas-stubs==1.5.3.230321
