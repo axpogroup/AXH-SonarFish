@@ -9,15 +9,16 @@ from tqdm import tqdm
 sys.path.append(".")
 from algorithm.InputOutputHandler import InputOutputHandler
 from algorithm.run_algorithm import extract_labels_history, read_labels_into_dataframe
-from settings import settings
+from algorithm.settings import settings
+from algorithm.settings import Settings
 
 load_dotenv()
 
 
 class DummyFishDetector:
 
-    def __init__(self, settings):
-        self.__settings = settings
+    def __init__(self, local_settings:Settings):
+        self.__settings = local_settings
         self.__settings.show_detections = False
         self.__settings.downsample = 25
         self.__settings.verbosity = 1
@@ -28,8 +29,7 @@ def main_draw_annotations():
     labels_df = read_labels_into_dataframe(
         labels_path=settings.ground_truth_directory,
         labels_filename=settings.file_name.stem
-        + settings.labels_file_suffix + settings.ground_truth
-        + ".csv",
+        + settings.labels_file_suffix + settings.ground_truth + ".csv",
     )
 
     input_output_handler = InputOutputHandler()

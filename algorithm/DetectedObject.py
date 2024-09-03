@@ -134,8 +134,12 @@ class DetectedBlob(BoundingBox):
     def fft(self, frame: dict[str, np.ndarray]):
         feature_patch = self.get_feature_patch(frame, "difference_thresholded")
         try:
-            patch_resized = cv.resize(feature_patch, (64, 64))
-            return np.fft.fft2(patch_resized)
+            if feature_patch is not None and feature_patch.size > 0:
+                patch_resized = cv.resize(feature_patch, (64, 64), interpolation=cv.INTER_AREA)
+
+            
+                return np.fft.fft2(patch_resized)
+
         except Exception as e:
             print(str(e))
             print(feature_patch)

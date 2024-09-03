@@ -13,7 +13,7 @@ from algorithm.DetectedObject import KalmanTrackedBlob
 from algorithm.FishDetector import FishDetector
 from algorithm.utils import get_elapsed_ms
 from algorithm.settings import Settings
-from algorithm.settings import settings
+
 import subprocess
 
 
@@ -48,6 +48,16 @@ class InputOutputHandler:
         self.frame_retrieval_time = None
         self.last_output_time = None
         self.current_raw_frame = None
+
+
+        def check_directories(self):
+        # Check if the output directory exists
+            if not Path(self.output_dir_name).exists():
+                print(f"Error: Output directory {self.output_dir_name} does not exist.")
+                return
+
+
+
 
     def get_new_frame(self, start_at_frames_from_end: int = 0) -> bool:
         start = cv.getTickCount()
@@ -269,13 +279,13 @@ class InputOutputHandler:
                     f"Total: {total_time_per_frame} | FPS: {'{:.1f}'.format(self.frame_no/(2*total_runtime/1000))}"
                 )
         if self.__settings.display_output_video or self.__settings.record_output_video:
-            extensive = self.__settings.display_mode_extensive
+            
             disp = visualization_functions.get_visual_output(
                 object_history=object_history,
                 label_history=label_history,
                 detector=detector,
                 processed_frame=processed_frame,
-                extensive=extensive,
+                extensive = self.__settings.display_mode_extensive,
                 save_frame=self.__settings.record_processing_frame,
             )
 
@@ -358,14 +368,8 @@ class InputOutputHandler:
             str(compressed_output_video_path),
         ]
 
-        # Debug: Print the paths to verify them
-        print(f"Output video path: {self.output_video_path}")
-        print(f"Compressed output video path: {compressed_output_video_path}")
         
-        # Check if the output directory exists
-        if not Path(self.output_dir_name).exists():
-            print(f"Error: Output directory {self.output_dir_name} does not exist.")
-            return
+
 
 
 

@@ -12,13 +12,12 @@ from algorithm.flow_conditions import rotate_velocity_vectors
 from algorithm.matching.distance import DistanceMetric
 from algorithm.tracking_filters import kalman, nearest_neighbor
 from algorithm.utils import get_elapsed_ms, resize_img
+from algorithm.settings import Settings
 
-from settings import settings
-from settings import Settings
 
 
 class FishDetector:
-    def __init__(self, settings, init_detector: Optional["FishDetector"] = None):
+    def __init__(self, settings:Settings, init_detector: Optional["FishDetector"] = None):
         self.object_filter = None
         self.__settings = settings
         self.frame_number = 0
@@ -37,7 +36,7 @@ class FishDetector:
             self.burn_in_video_name = None
         self.short_mean_float = None
         self.long_mean_float = None
-        mask_file = self.__settings.mask_file if self.__settings.mask_file not in [None, ""] else "sonar_controls.png"
+        mask_file = self.__settings.mask_file or "sonar_controls.png"
         self.mask = cv.imread(
             (Path(self.__settings.mask_directory) / (mask_file)).as_posix(),
             cv.IMREAD_GRAYSCALE,
@@ -157,6 +156,7 @@ class FishDetector:
                 object_history=object_history,
                 frame_number=self.frame_number,
                 processed_frame_dict=processed_frame_dict,
+                settings=self.__settings,
             )
         else:
             raise ValueError(f"Invalid tracking method: {self.__settings.tracking_method}")
@@ -249,7 +249,7 @@ class FishDetector:
         elif self.__settings.video_colormap == "jet":
             return colormap_to_array(img)
         else:
-            raise ValueError(f"Invalid colormap: {self.__settings.ideo_colormap}, must be 'red' or 'jet'")
+            raise ValueError(f"Invalid colormap: {self.__settings.video_colormap}, must be 'red' or 'jet'")
 
     @staticmethod
     def ceil_to_odd_int(number):

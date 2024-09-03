@@ -3,7 +3,6 @@ import scipy
 from deepsort import iou_matching
 from deepsort.tracker import Track
 
-from algorithm.settings import settings
 from algorithm.settings import Settings
 from algorithm.DetectedObject import DetectedBlob, KalmanTrackedBlob
 from algorithm.flow_conditions import rot_mat_from_river_velocity
@@ -114,7 +113,8 @@ class KalmanFilter(object):
             state. Unobserved velocities are initialized to 0 mean.
         """
         std_trace = (
-            np.array(self.__settings.kalman_std_process_noise_trace) * self.__settings.kalman_std_obj_initialization_factor
+            np.array(self.__settings.kalman_std_process_noise_trace)
+            * self.__settings.kalman_std_obj_initialization_factor
         )
         bbox_height_scaling_selection = np.array([1, 1, 0, 1, 1, 1, 0, 1])
         std_trace = std_trace * (bbox_height_scaling_selection * mean[3] + 1 - bbox_height_scaling_selection)
@@ -452,6 +452,7 @@ def filter_detections(
 
 
 def tracks_to_object_history(
+    settings: Settings,
     object_filter: Tracker,
     object_history: dict[int, KalmanTrackedBlob],
     frame_number: int,
@@ -468,9 +469,9 @@ def tracks_to_object_history(
             detection_is_tracked=track.is_confirmed(),
             frame=processed_frame_dict,
         )
-        if obj.feature["bbox_size_to_stddev_ratio"] and obj.feature[
-            "bbox_size_to_stddev_ratio"
-        ] < settings.bbox_size_to_stddev_ratio_threshold:
+        if (
+            obj.feature["bbox_size_to_stddev_ratio"]
+            and obj.feature["bbox_size_to_stddev_ratio"] < settings.bbox_size_to_stddev_ratio_threshold        ):
             if track.track_id not in object_history.keys():
                 object_history[track.track_id] = obj
             else:

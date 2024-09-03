@@ -36,47 +36,65 @@ class Settings(BaseModel):
     feature_to_load: str
 
     # Size
-    input_pixels_per_mm: float
+    input_pixels_per_mm: float = 0.0838
 
     # Enhancement
-    downsample: int
-    contrast: int
-    brightness: int
-    long_mean_frames: int
-    short_mean_frames: int
-    difference_threshold_scaler: float
-    dilation_kernel_mm: int
-    median_filter_kernel_mm: int
-    erosion_kernel_mm: int
+    downsample: int = 25
+    contrast: int = 2
+    brightness: int = 30
+    long_mean_frames: int = 400
+    short_mean_frames: int = 10
+    difference_threshold_scaler: float = 0.30
+    dilation_kernel_mm: int = 500
+    median_filter_kernel_mm: int = 200
+    erosion_kernel_mm: int = 100
 
     # Tracking
     tracking_method: str
-    max_association_dist_mm: int
-    phase_out_after_x_frames: int
-    kalman_std_obj_initialization_factor: float
-    kalman_std_obj_initialization_trace: List[float]
-    kalman_std_process_noise_factor: float
-    kalman_std_process_noise_trace: List[float]
-    kalman_std_mmt_noise_factor: float
-    kalman_std_mmt_noise_trace: List[float]
+    max_association_dist_mm: int = 500
+    phase_out_after_x_frames: int = 30
+    kalman_std_obj_initialization_factor: float = 0.1
+    kalman_std_obj_initialization_trace: List[float] = [
+        1,
+        1,
+        0.1,
+        1,
+        0.5,
+        0.5,
+        0.0001,
+        0.5,
+    ]  # [x, y, w, h, vx, vy, va, vh]
+    kalman_std_process_noise_factor: float = 0.2
+    kalman_std_process_noise_trace: List[float] = [
+        1,
+        1,
+        0.1,
+        1,
+        0.05,
+        0.05,
+        0.0001,
+        0.05,
+    ]  # [x, y, w, h, vx, vy, va, vh]
+    kalman_std_mmt_noise_factor: float = 0.5
+    kalman_std_mmt_noise_trace: List[float] = [5, 1.7, 1, 0.05]  # [x, y, a, h]
     kalman_rotate_mmt_noise_in_river_direction: bool
-    kalman_trace_history_matching_budget: int
-    kalman_max_iou_distance: float
-    kalman_max_age: int
-    kalman_n_init: int
+    kalman_trace_history_matching_budget: int = 10
+    kalman_max_iou_distance: float = 0.5  # basically (1 - iou_min)
+    kalman_max_age: int = 35
+    kalman_n_init: int = 35
     filter_nearest_neighbor: Optional[str]
     filter_blob_matching_metric: str
-    filter_association_thresh: float
+    filter_association_thresh: float = 0.3
     filter_blob_elimination_metric: str
-    bbox_size_to_stddev_ratio_threshold: int
+    bbox_size_to_stddev_ratio_threshold: int = 100
 
     # Classification
-    river_pixel_velocity: List[float]
-    min_occurences_for_fish: int
-    deviation_from_river_velocity: float
+    river_pixel_velocity: List[float] = [2.35, -0.9]  # At full resolution
+    min_occurences_for_fish: int = 20
+    deviation_from_river_velocity: float = 0.5
 
     # Visualization
-    no_more_show_after_x_frames: int
+    no_more_show_after_x_frames: int = 1
     video_colormap: str
 
     # Logging

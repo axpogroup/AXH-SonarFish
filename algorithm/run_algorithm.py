@@ -137,10 +137,11 @@ def burn_in_algorithm_on_previous_video(settings: Settings, burn_in_file_name: s
     while input_output_handler.get_new_frame():
         _, _, _ = burn_in_detector.detect_objects(input_output_handler.current_raw_frame)
 
-    return burn_in_detector
+    return burn_in_detector, burn_in_settings
 
 
-def run_tracking_algorithm(settings: Settings, detector: FishDetector):
+
+def run_tracking_algorithm(detector: FishDetector):
     labels_filename = (
         Path(settings.file_name).stem + settings.labels_file_suffix + settings.ground_truth_directory + ".csv"
     )
@@ -185,43 +186,26 @@ def run_tracking_algorithm(settings: Settings, detector: FishDetector):
     return input_output_handler.output_csv_name
 
 
-def main_algorithm(settings):
-    # Debug: Print settings to verify content
-    print("Settings at the start of main_algorithm:", settings)
+def main_algorithm():
 
     previous_video = find_valid_previous_video(gap_seconds=5)
 
     if previous_video:
         try:
-            burn_in_detector = burn_in_algorithm_on_previous_video(settings, burn_in_file_name=previous_video)
-            detector = FishDetector(settings, init_detector=burn_in_detector)
+            burn_in_detector, burn_in_settings = burn_in_algorithm_on_previous_video(burn_in_settings, burn_in_file_name=previous_video)
+            detector = FishDetector(burn_in_settings, init_detector=burn_in_detector)
         except AssertionError:
             print("Burn-in algorithm failed. Starting algorithm without burn-in on previous video. Should not happen.")
-            detector = FishDetector(settings)
+            detector = FishDetector(burn_in_settings)
     else:
         print("Starting algorithm without burn-in on previous video.")
         detector = FishDetector(settings)
 
-    output_csv_name = run_tracking_algorithm(settings, detector)
+    output_csv_name = run_tracking_algorithm(detector)
 
     return output_csv_name
 
 
 if __name__ == "__main__":
 
-    main_algorithm(settings)
-
-    if settings.track_azure_ml == False:
-        workspace = Workspace(
-            resource_group=os.getenv("RESOURCE_GROUP"),
-            workspace_name=os.getenv("WORKSPACE_NAME"),
-            subscription_id=os.getenv("SUBSCRIPTION_ID"),
-        )
-        mlflow.set_tracking_uri(workspace.get_mlflow_tracking_uri())
-        experiment_name = settings.experiment_name
-        mlflow.set_experiment(experiment_name)
-        with mlflow.start_run():
-            mlflow.log_params(settings)
-            main_algorithm(settings)
-            metrics = compute_metrics(settings)
-            mlflow.log_metrics(metrics)
+    main_algorithm()

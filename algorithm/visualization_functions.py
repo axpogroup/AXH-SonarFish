@@ -6,7 +6,7 @@ import numpy as np
 
 from algorithm.DetectedObject import BoundingBox, DetectedBlob, KalmanTrackedBlob
 from algorithm.FishDetector import FishDetector
-from settings import settings
+from algorithm.settings import settings
 
 
 
