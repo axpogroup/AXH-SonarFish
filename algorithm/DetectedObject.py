@@ -71,9 +71,7 @@ class DetectedBlob(BoundingBox):
             # "sift": self.sift_features(self.get_feature_patch(frame, "difference_thresholded")),
             "histogram": self.histogram(frame=frame),
             "fft": self.fft(frame=frame),
-            "bbox_size_to_stddev_ratio": self.bbox_size_to_stddev_ratio(
-                settings.bbox_size_to_stddev_ratio_threshold
-            ),
+            "bbox_size_to_stddev_ratio": self.bbox_size_to_stddev_ratio(settings.bbox_size_to_stddev_ratio_threshold),
         }
         if settings.store_raw_image_patch:
             self.raw_image_patch = [self.get_feature_patch(frame, "raw")]
@@ -137,7 +135,6 @@ class DetectedBlob(BoundingBox):
             if feature_patch is not None and feature_patch.size > 0:
                 patch_resized = cv.resize(feature_patch, (64, 64), interpolation=cv.INTER_AREA)
 
-            
                 return np.fft.fft2(patch_resized)
 
         except Exception as e:

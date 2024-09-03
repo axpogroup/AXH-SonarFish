@@ -10,14 +10,13 @@ import scipy.cluster.vq as scv
 from algorithm.DetectedObject import DetectedBlob, KalmanTrackedBlob
 from algorithm.flow_conditions import rotate_velocity_vectors
 from algorithm.matching.distance import DistanceMetric
+from algorithm.settings import Settings
 from algorithm.tracking_filters import kalman, nearest_neighbor
 from algorithm.utils import get_elapsed_ms, resize_img
-from algorithm.settings import Settings
-
 
 
 class FishDetector:
-    def __init__(self, settings:Settings, init_detector: Optional["FishDetector"] = None):
+    def __init__(self, settings: Settings, init_detector: Optional["FishDetector"] = None):
         self.object_filter = None
         self.__settings = settings
         self.frame_number = 0
@@ -77,8 +76,6 @@ class FishDetector:
         runtimes_ms["total"] = get_elapsed_ms(start)
         return detections, frame_dict, runtimes_ms
 
-        
-
     def dilate_frame(self, frame_dict, thres):
         dilation_kernel_px = self.mm_to_px(self.__settings.dilation_kernel_mm)
         kernel = cv.getStructuringElement(
@@ -97,7 +94,9 @@ class FishDetector:
         else:
             frame_dict["gray"] = self.rgb_to_gray(frame_dict["raw"])
         enhanced_temp = self.mask_regions(frame_dict["gray"])
-        enhanced_temp = cv.convertScaleAbs(enhanced_temp, alpha=self.__settings.contrast, beta=self.__settings.brightness)
+        enhanced_temp = cv.convertScaleAbs(
+            enhanced_temp, alpha=self.__settings.contrast, beta=self.__settings.brightness
+        )
         self.update_buffers_calculate_means(enhanced_temp)
         frame_dict["gray_boosted"] = enhanced_temp
         return frame_dict
@@ -148,7 +147,7 @@ class FishDetector:
                 elimination_metric = None
 
             if not self.object_filter:
-                self.object_filter = kalman.Tracker(self.__settings,primary_metric, elimination_metric )
+                self.object_filter = kalman.Tracker(self.__settings, primary_metric, elimination_metric)
 
             kalman.filter_detections(detections, self.object_filter)
             return kalman.tracks_to_object_history(
@@ -257,7 +256,7 @@ class FishDetector:
         return number + 1 if number % 2 == 0 else number
 
     def mm_to_px(self, millimeters):
-        px = millimeters * self.__settings.input_pixels_per_mm* self.__settings.downsample / 100
+        px = millimeters * self.__settings.input_pixels_per_mm * self.__settings.downsample / 100
         return px
 
     def classify_detections(self, df):

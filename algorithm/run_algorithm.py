@@ -2,9 +2,9 @@ import argparse
 import datetime as dt
 import os
 import sys
+from copy import deepcopy
 from pathlib import Path
 from typing import Optional
-from copy import deepcopy
 
 import mlflow
 import numpy as np
@@ -17,11 +17,9 @@ sys.path.append(".")
 from algorithm.DetectedObject import BoundingBox, KalmanTrackedBlob
 from algorithm.FishDetector import FishDetector
 from algorithm.InputOutputHandler import InputOutputHandler
+from algorithm.settings import Settings, settings
 from algorithm.validation import mot16_metrics
 from algorithm.visualization_functions import TRUTH_LABEL_NO
-
-from algorithm.settings import settings
-from algorithm.settings import Settings
 
 load_dotenv()
 
@@ -140,7 +138,6 @@ def burn_in_algorithm_on_previous_video(settings: Settings, burn_in_file_name: s
     return burn_in_detector, burn_in_settings
 
 
-
 def run_tracking_algorithm(detector: FishDetector):
     labels_filename = (
         Path(settings.file_name).stem + settings.labels_file_suffix + settings.ground_truth_directory + ".csv"
@@ -192,7 +189,9 @@ def main_algorithm():
 
     if previous_video:
         try:
-            burn_in_detector, burn_in_settings = burn_in_algorithm_on_previous_video(burn_in_settings, burn_in_file_name=previous_video)
+            burn_in_detector, burn_in_settings = burn_in_algorithm_on_previous_video(
+                burn_in_settings, burn_in_file_name=previous_video
+            )
             detector = FishDetector(burn_in_settings, init_detector=burn_in_detector)
         except AssertionError:
             print("Burn-in algorithm failed. Starting algorithm without burn-in on previous video. Should not happen.")

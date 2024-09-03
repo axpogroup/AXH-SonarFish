@@ -3,7 +3,6 @@ import scipy
 from deepsort import iou_matching
 from deepsort.tracker import Track
 
-from algorithm.settings import Settings
 from algorithm.DetectedObject import DetectedBlob, KalmanTrackedBlob
 from algorithm.flow_conditions import rot_mat_from_river_velocity
 from algorithm.matching.distance import DistanceMetric
@@ -12,6 +11,7 @@ from algorithm.matching.linear_assignment import (
     matching_cascade,
     min_cost_matching,
 )
+from algorithm.settings import Settings
 
 
 class KalmanFilter(object):
@@ -471,7 +471,8 @@ def tracks_to_object_history(
         )
         if (
             obj.feature["bbox_size_to_stddev_ratio"]
-            and obj.feature["bbox_size_to_stddev_ratio"] < settings.bbox_size_to_stddev_ratio_threshold        ):
+            and obj.feature["bbox_size_to_stddev_ratio"] < settings.bbox_size_to_stddev_ratio_threshold
+        ):
             if track.track_id not in object_history.keys():
                 object_history[track.track_id] = obj
             else:

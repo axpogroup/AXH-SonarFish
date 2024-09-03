@@ -18,7 +18,6 @@ RED = "FF0000"
 GREEN = "00FF00"
 
 
-
 def get_logger(log_directory, nametag):
     logfolder_name = nametag + "_logs_session_" + dt.datetime.now(dt.timezone.utc).isoformat(timespec="milliseconds")
     logfolder_name = logfolder_name.replace(":", "-")

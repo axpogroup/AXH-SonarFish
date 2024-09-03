@@ -8,8 +8,6 @@ from algorithm.DetectedObject import BoundingBox, DetectedBlob, KalmanTrackedBlo
 from algorithm.FishDetector import FishDetector
 from algorithm.settings import settings
 
-
-
 FIRST_ROW = [
     "gray_boosted",
     "short_mean",
@@ -18,7 +16,6 @@ FIRST_ROW = [
 ]
 SECOND_ROW = ["difference_thresholded", "median_filter", "binary", "dilated"]
 TRUTH_LABEL_NO = -1
-
 
 
 def get_visual_output(
