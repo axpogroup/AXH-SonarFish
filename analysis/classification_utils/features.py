@@ -300,7 +300,7 @@ class FeatureGenerator(object):
 
         df_list = []
         for labels_df, cache_path, csv_path in zip(labels_dfs, cache_paths, csv_paths):
-            labels_df = calculate_features(labels_df, self.masks)
+            labels_df = calculate_features(labels_df, self.masks, smoothing_window_length=self.min_track_length - 1)
             labels_df = self.filter_features(labels_df)
             if not labels_df.empty:
                 save_df = labels_df.copy()
@@ -455,16 +455,16 @@ class TrackPlotter(object):
         save_dir: Optional[Union[str, Path]] = None,
         n_labels: Optional[int] = None,
         plot_results_individually: bool = False,
-        column_with_label: str = "classification_v2",
+        column_with_label: Optional[str] = None,
         figsize: tuple[int, int] = (10, 10),
     ) -> None:
         if plot_test_data:
-            if column_with_label not in self.test_dfs[0].columns:
+            if (column_with_label is not None) and (column_with_label not in self.test_dfs[0].columns):
                 raise ValueError("The selected column is not available.")
             ground_truth_dfs = self.test_gt_dfs
             dfs = self.test_dfs
         else:
-            if column_with_label not in self.measurements_dfs[0].columns:
+            if (column_with_label is not None) and (column_with_label not in self.measurements_dfs[0].columns):
                 raise ValueError("The selected column is not available.")
             ground_truth_dfs = self.gt_dfs
             dfs = self.measurements_dfs
@@ -628,7 +628,7 @@ class TrackPlotter(object):
             ax.plot(
                 track_df.x,
                 track_df.y,
-                color=colormap(int(track_df[column_to_plot].iloc[0]) + 1),
+                color=colormap(int(track_df[column_to_plot].iloc[0]) + 1) if column_to_plot else "blue",
             )
             metric_annotation = str(track_df[metric_to_show].iloc[0])[:6] if metric_to_show else ""
             if show_track_id:
