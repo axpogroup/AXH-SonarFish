@@ -12,11 +12,15 @@ RIVER_VELOCITY = (0.33, -0.18)  # Lavey - Tourelle
 # RIVER_VELOCITY = (2.35, -0.9)   # Stroppel
 
 
-def calculate_features(measurements_df: pd.DataFrame, masks: dict[str, np.ndarray]) -> pd.DataFrame:
+def calculate_features(
+    measurements_df: pd.DataFrame,
+    masks: dict[str, np.ndarray],
+    smoothing_window_length: int,
+) -> pd.DataFrame:
     measurements_df["binary_image"], measurements_df["tile_blob_counts"] = grayscale_to_binary(
         measurements_df["image_tile"]
     )
-    feature_df = measurements_df.groupby("id").apply(lambda x: trace_window_metrics(x, masks))
+    feature_df = measurements_df.groupby("id").apply(lambda x: trace_window_metrics(x, masks, smoothing_window_length))
     measurements_df["v_x"] = measurements_df[["id", "x"]].groupby("id").diff()
     measurements_df["v_y"] = measurements_df[["id", "y"]].groupby("id").diff()
     return measurements_df.join(feature_df, on="id", how="left")
@@ -49,7 +53,11 @@ def calculate_average_pixel_intensity(detection):
     return np.nanmean(stddevs)[0]
 
 
-def trace_window_metrics(detection: pd.DataFrame, masks: dict[str, np.array]) -> pd.Series:
+def trace_window_metrics(
+    detection: pd.DataFrame, 
+    masks: dict[str, np.array],
+    smoothing_window_length: int,
+) -> pd.Series:
     frame_diff = detection["frame"].iloc[-1] - detection["frame"].iloc[0]
     detection["v_parallel_river"], detection["v_orthogonal_river"] = v_river_projected(detection, RIVER_VELOCITY)
     detection["v_x_relative_river"], detection["v_y_relative_river"] = v_relative_to_river(detection, RIVER_VELOCITY)
@@ -58,17 +66,17 @@ def trace_window_metrics(detection: pd.DataFrame, masks: dict[str, np.array]) ->
         {
             "x_displacement": detection["x"].iloc[-1] - detection["x"].iloc[0],
             "y_displacement": detection["y"].iloc[-1] - detection["y"].iloc[0],
-            "v_x_smoothed_avg": np.mean(calculate_velocity(detection, smoothing_window=20)[0]),
-            "v_y_smoothed_avg": np.mean(calculate_velocity(detection, smoothing_window=20)[1]),
-            "v_smoothed_avg": np.mean(absolute_velocity(detection, smoothing_window=20)),
-            "v_smoothed_std": np.std(absolute_velocity(detection, smoothing_window=20)),
-            "v_10th_percentile": np.percentile(absolute_velocity(detection, smoothing_window=20), 10),
-            "v_30th_percentile": np.percentile(absolute_velocity(detection, smoothing_window=20), 30),
-            "v_50th_percentile": np.percentile(absolute_velocity(detection, smoothing_window=20), 50),
-            "v_70th_percentile": np.percentile(absolute_velocity(detection, smoothing_window=20), 70),
-            "v_90th_percentile": np.percentile(absolute_velocity(detection, smoothing_window=20), 90),
-            "v_95th_percentile": np.percentile(absolute_velocity(detection, smoothing_window=20), 95),
-            "v_99th_percentile": np.percentile(absolute_velocity(detection, smoothing_window=20), 99),
+            "v_x_smoothed_avg": np.mean(calculate_velocity(detection, smoothing_window_length)[0]),
+            "v_y_smoothed_avg": np.mean(calculate_velocity(detection, smoothing_window_length)[1]),
+            "v_smoothed_avg": np.mean(absolute_velocity(detection, smoothing_window_length)),
+            "v_smoothed_std": np.std(absolute_velocity(detection, smoothing_window_length)),
+            "v_10th_percentile": np.percentile(absolute_velocity(detection, smoothing_window_length), 10),
+            "v_30th_percentile": np.percentile(absolute_velocity(detection, smoothing_window_length), 30),
+            "v_50th_percentile": np.percentile(absolute_velocity(detection, smoothing_window_length), 50),
+            "v_70th_percentile": np.percentile(absolute_velocity(detection, smoothing_window_length), 70),
+            "v_90th_percentile": np.percentile(absolute_velocity(detection, smoothing_window_length), 90),
+            "v_95th_percentile": np.percentile(absolute_velocity(detection, smoothing_window_length), 95),
+            "v_99th_percentile": np.percentile(absolute_velocity(detection, smoothing_window_length), 99),
             "v_parallel_river_avg": np.nanmean(detection["v_parallel_river"]),
             "v_orthogonal_river_avg": np.nanmean(detection["v_orthogonal_river"]),
             "v_parallel_river_median": np.nanmedian(detection["v_parallel_river"]),
@@ -91,15 +99,9 @@ def trace_window_metrics(detection: pd.DataFrame, masks: dict[str, np.array]) ->
             "average_smoothed_curvature_15": calculate_curvature(
                 detection, operator="mean", window_length=15, polyorder=2
             ),
-            "average_smoothed_curvature_25": calculate_curvature(
-                detection, operator="mean", window_length=25, polyorder=2
-            ),
             "median_curvature": calculate_curvature(detection, operator="median"),
             "median_smoothed_curvature_15": calculate_curvature(
                 detection, operator="median", window_length=15, polyorder=2
-            ),
-            "median_smoothed_curvature_25": calculate_curvature(
-                detection, operator="median", window_length=25, polyorder=2
             ),
             "average_overlap_ratio": calculate_average_overlap_ratio(detection),
             "average_bbox_size": calculate_average_bbox_size(detection),
@@ -203,10 +205,6 @@ def calculate_curvature(
     window_length: int = 7,
     polyorder: int = 2,
 ) -> float:
-    if len(detection["x"]) < 2 or len(detection["y"]) < 2:
-        print(f"Skipping detection {detection['id']} because it has too few points.")
-        return 0
-
     try:
         # Apply Savitzky-Golay filter to smooth the trajectory
         x_smooth = savgol_filter(detection["x"], window_length, polyorder)

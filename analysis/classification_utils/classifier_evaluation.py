@@ -106,6 +106,19 @@ def train_and_predict(
     return summed_confusion, y_pred, classifier, scaler
 
 
+def predict(
+    feature_df: pd.DataFrame,
+    classifier: object,
+    scaler: object,
+    features: list[str],
+) -> tuple[np.ndarray, np.ndarray]:
+    X = feature_df[features]
+    X_scaled = scaler.transform(X)
+    y_pred = classifier.predict(X_scaled)
+    y_proba = classifier.predict_proba(X_scaled)
+    return y_pred, y_proba
+
+
 def compute_metrics(confusion_matrix: np.ndarray) -> dict[str, float]:
     tn, fp, fn, tp = confusion_matrix.ravel()
     accuracy = (tp + tn) / (tp + tn + fp + fn)
