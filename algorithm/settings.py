@@ -1,10 +1,9 @@
 import argparse
-from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
 import yaml
 from pydantic import BaseModel
-from pydantic_yaml import parse_yaml_raw_as, to_yaml_str
+from pydantic_yaml import parse_yaml_raw_as
 
 
 class Settings(BaseModel):

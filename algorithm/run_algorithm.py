@@ -1,16 +1,11 @@
-import argparse
 import datetime as dt
-import os
 import sys
 from copy import deepcopy
 from pathlib import Path
 from typing import Optional
 
-import mlflow
 import numpy as np
 import pandas as pd
-import yaml
-from azureml.core import Workspace
 from dotenv import load_dotenv
 
 sys.path.append(".")
@@ -185,6 +180,7 @@ def run_tracking_algorithm(detector: FishDetector):
 
 def main_algorithm():
 
+    burn_in_settings = deepcopy(settings)
     previous_video = find_valid_previous_video(gap_seconds=5)
 
     if previous_video:

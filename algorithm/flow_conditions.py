@@ -3,7 +3,7 @@ from math import atan, cos, sin
 import numpy as np
 import pandas as pd
 
-from settings import settings
+from algorithm.settings import settings
 
 
 def rot_mat_from_river_velocity() -> np.ndarray:

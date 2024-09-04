@@ -1,8 +1,6 @@
 import argparse
 import sys
-from pathlib import Path
 
-import yaml
 from dotenv import load_dotenv
 from tqdm import tqdm
 
@@ -44,7 +42,7 @@ def main_draw_annotations():
                 labels_df,
                 input_output_handler.frame_no,
                 down_sample_factor=input_output_handler.down_sample_factor,
-                feature_to_load=self.__settings.feature_to_load,
+                feature_to_load=settings.feature_to_load,
             )
             input_output_handler.handle_output(
                 processed_frame=frame_dict,
@@ -68,11 +66,5 @@ if __name__ == "__main__":
     argParser.add_argument("-if", "--input_file", help="path to the input video file")
 
     args = argParser.parse_args()
-
-    with open(args.yaml_file) as f:
-        settings = yaml.load(f, Loader=yaml.SafeLoader)
-        if args.input_file is not None:
-            print("replacing input file.")
-            settings["file_name"] = args.input_file
 
     main_draw_annotations(settings)

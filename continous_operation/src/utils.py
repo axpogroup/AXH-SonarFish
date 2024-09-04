@@ -7,9 +7,6 @@ import pymsteams
 from azure.storage.blob import BlobServiceClient
 from dotenv import load_dotenv
 
-from algorithm.FishDetector import FishDetector
-from algorithm.InputOutputHandler import InputOutputHandler
-
 TEAMS_LINK = (
     "https://axpogrp.webhook.office.com/webhookb2/1c7d8e30-f530-4faf-acc0-7ef098a2a388@8619c67c-945a-48ae-8e77-"
     "35b1b71c9b98/IncomingWebhook/c065e1582cc24039a640a25ba0b953e7/adfeab72-7d9c-4e19-a21b-6781b139b707"
