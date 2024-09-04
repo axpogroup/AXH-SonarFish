@@ -54,7 +54,7 @@ def calculate_average_pixel_intensity(detection):
 
 
 def trace_window_metrics(
-    detection: pd.DataFrame, 
+    detection: pd.DataFrame,
     masks: dict[str, np.array],
     smoothing_window_length: int,
 ) -> pd.Series:
