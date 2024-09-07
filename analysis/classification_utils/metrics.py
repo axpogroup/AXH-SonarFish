@@ -28,23 +28,25 @@ def calculate_recall(tp, fn):
     return recall
 
 
-def plot_confusion_matrix(
+def get_confusion_matrix(
     y_true: np.ndarray,
     y_pred: np.ndarray,
     classifier_name: Optional[str] = None,
+    plot: bool = False,
 ) -> None:
     cm = confusion_matrix(y_true, y_pred)
-    plt.figure(figsize=(10, 7))
-    sns.heatmap(
-        cm,
-        annot=True,
-        fmt="d",
-        cmap="Blues",
-        norm=LogNorm(),
-        xticklabels=["Predicted Negative", "Predicted Fish"],
-        yticklabels=["Actual Negative", "Actual Fish"],
-    )
-    plt.xlabel("Predicted")
-    plt.ylabel("Actual")
-    plt.title(f"Confusion Matrix for {classifier_name}")
-    plt.show()
+    if plot:
+        plt.figure(figsize=(10, 7))
+        sns.heatmap(
+            cm,
+            annot=True,
+            fmt="d",
+            cmap="Blues",
+            norm=LogNorm(),
+            xticklabels=["Predicted Negative", "Predicted Fish"],
+            yticklabels=["Actual Negative", "Actual Fish"],
+        )
+        plt.xlabel("Predicted")
+        plt.ylabel("Actual")
+        plt.title(f"Confusion Matrix for {classifier_name}")
+        plt.show()
