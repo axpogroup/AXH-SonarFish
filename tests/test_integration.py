@@ -8,6 +8,7 @@ from algorithm.run_algorithm import compute_metrics
 from algorithm.run_algorithm import main_algorithm as run_algorithm_main
 from algorithm.scripts.extract_labels_from_videos import main as label_extraction_main
 from algorithm.scripts.preprocess_raw_videos import main as preprocess_main
+from algorithm.settings import Settings
 
 
 @pytest.fixture(scope="session")
@@ -82,11 +83,13 @@ class TestIntegration:
     ):
         with open("../settings/preprocessing_settings.yaml") as f:
             preprocess_settings = yaml.load(f, Loader=yaml.SafeLoader)
+        preprocess_settings = Settings(**preprocess_settings)
 
         preprocess_main(preprocess_settings)
 
         with open("../settings/tracking_box_settings.yaml") as f:
             label_extraction_settings = yaml.load(f, Loader=yaml.SafeLoader)
+        label_extraction_settings = Settings(**label_extraction_settings)
         label_extraction_main(label_extraction_settings)
 
         intermediate_labels = os.listdir(intermediate_labels_directory)
@@ -100,8 +103,9 @@ class TestIntegration:
 
         with open("../settings/demo_settings.yaml") as f:
             detection_settings = yaml.load(f, Loader=yaml.SafeLoader)
-        detection_settings["mask_directory"] = "../analysis/demo/masks"
-        detection_settings["display_output_video"] = False
+        detection_settings = Settings(**detection_settings)
+        detection_settings.mask_directory = "../analysis/demo/masks"
+        detection_settings.display_output_video = False
         run_algorithm_main(detection_settings)
         detections_csv = pd.read_csv(f"{model_output_directory}/start_2023-05-08T18-00-05.025+00-00.csv")
         assert list(detections_csv.columns)[:6] == relevant_csv_columns

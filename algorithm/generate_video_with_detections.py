@@ -1,6 +1,7 @@
 import argparse
 import sys
 
+import yaml
 from dotenv import load_dotenv
 from tqdm import tqdm
 
@@ -66,5 +67,10 @@ if __name__ == "__main__":
     argParser.add_argument("-if", "--input_file", help="path to the input video file")
 
     args = argParser.parse_args()
+    with open(args.yaml_file) as f:
+        local_settings = yaml.load(f, Loader=yaml.SafeLoader)
+        if args.input_file is not None:
+            print("replacing input file.")
+            local_settings["file_name"] = args.input_file
 
-    main_draw_annotations(settings)
+    main_draw_annotations(local_settings)

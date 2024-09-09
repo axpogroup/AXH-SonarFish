@@ -6,7 +6,7 @@ import numpy as np
 
 from algorithm.DetectedObject import BoundingBox, DetectedBlob, KalmanTrackedBlob
 from algorithm.FishDetector import FishDetector
-from algorithm.settings import settings
+from algorithm.settings import Settings
 
 FIRST_ROW = [
     "gray_boosted",
@@ -23,6 +23,7 @@ def get_visual_output(
     label_history: Optional[dict[int, BoundingBox]],
     detector: FishDetector,
     processed_frame: dict[str, np.ndarray],
+    settings: Settings,
     extensive=False,
     color=(255, 200, 200),
     save_frame: str = "raw",
@@ -53,6 +54,7 @@ def get_visual_output(
             label_history=label_history,
             detector=detector,
             processed_frame=_retrieve_frame("binary", processed_frame, puttext="detections"),
+            settings=settings,
             paths=True,
             association_dist=True,
             color=color,
@@ -63,6 +65,7 @@ def get_visual_output(
             label_history=label_history,
             detector=detector,
             processed_frame=_retrieve_frame("raw_downsampled", processed_frame, puttext="Final"),
+            settings=settings,
             color=color,
         )
 
@@ -85,6 +88,7 @@ def get_visual_output(
                 object_history=object_history,
                 label_history=label_history,
                 processed_frame=_retrieve_frame("raw", processed_frame),
+                settings=settings,
                 color=color,
                 paths=True,
                 fullres=True,
@@ -100,6 +104,7 @@ def _draw_detections_and_labels(
     object_history: dict[int, KalmanTrackedBlob],
     label_history: Optional[dict[int, BoundingBox]],
     processed_frame: dict[str, np.ndarray],
+    settings: Settings,
     color: tuple,
     **kwargs,
 ):
@@ -109,11 +114,12 @@ def _draw_detections_and_labels(
             object_history,
             detector,
             processed_frame,
+            settings=settings,
             color=color,
             **kwargs,
         )
     if label_history is not None:
-        disp = _draw_labels(label_history, detector, disp, **kwargs)
+        disp = _draw_labels(label_history, detector, disp, settings=settings, **kwargs)
     return disp
 
 
@@ -148,13 +154,14 @@ def _draw_labels(
     label_history: dict[int, BoundingBox],
     detector,
     img,
+    settings: Settings,
     paths=False,
     fullres=False,
     association_dist=False,
 ):
     labels_map = {0: "noise", 1: "fish", 2: "floating debris", -1: "truth"}
     for ID, obj in label_history.items():
-        if is_detection_outdated(obj, detector):
+        if is_detection_outdated(obj, detector, settings):
             continue
         label = labels_map.get(obj.label)
         if label == "fish" or label == "truth":
@@ -171,6 +178,7 @@ def _draw_detector_output(
     object_history: dict[int, KalmanTrackedBlob],
     detector,
     img,
+    settings: Settings,
     paths=False,
     fullres=False,
     association_dist=False,
@@ -178,10 +186,10 @@ def _draw_detector_output(
     color=(255, 200, 200),
 ):
     for ID, obj in object_history.items():
-        if is_detection_outdated(obj, detector) or obj.detection_is_tracked is False:
+        if is_detection_outdated(obj, detector, settings) or obj.detection_is_tracked is False:
             continue
         h, scale, w, x, y = draw_basic_bounding_box_and_path(
-            association_dist, color, detector, fullres, img, obj, paths
+            association_dist, color, detector, fullres, img, obj, paths, settings
         )
         if annotate:
             if obj.ellipse_angles[-1] is not None and obj.ellipse_axes_lengths_pairs[-1] is not None:
@@ -217,7 +225,15 @@ def _draw_detector_output(
 
 
 def draw_basic_bounding_box_and_path(
-    association_dist, color, detector, fullres, img, obj, paths, label: Optional[str] = None
+    association_dist,
+    color,
+    detector,
+    fullres,
+    img,
+    obj,
+    paths,
+    settings,
+    label: Optional[str] = None,
 ):
     if fullres:
         scale = int(100 / settings.downsample)
@@ -291,5 +307,5 @@ def draw_associations(associations, detections, object_history, img, color):
     return img
 
 
-def is_detection_outdated(obj, detector: Optional[FishDetector] = None):
+def is_detection_outdated(obj, settings, detector: Optional[FishDetector] = None):
     return detector.frame_number - obj.frames_observed[-1] > settings.no_more_show_after_x_frames

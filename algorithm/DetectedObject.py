@@ -3,7 +3,7 @@ from typing import Optional
 import cv2 as cv
 import numpy as np
 
-from algorithm.settings import settings
+from algorithm import settings
 
 
 class BoundingBox:

@@ -3,7 +3,6 @@ from typing import List, Optional
 
 import yaml
 from pydantic import BaseModel
-from pydantic_yaml import parse_yaml_raw_as
 
 
 class Settings(BaseModel):
@@ -101,20 +100,19 @@ class Settings(BaseModel):
     verbosity: int
 
 
-argParser = argparse.ArgumentParser(description="Run the fish detection algorithm with a settings .yaml file.")
-argParser.add_argument("-yf", "--yaml_file", help="path to the YAML settings file", required=True)
-argParser.add_argument("-if", "--input_file", help="path to the input video file")
+def main():
+    argParser = argparse.ArgumentParser(description="Run the fish detection algorithm with a settings .yaml file.")
+    argParser.add_argument("-yf", "--yaml_file", help="path to the YAML settings file", required=True)
+    argParser.add_argument("-if", "--input_file", help="path to the input video file")
 
-args = argParser.parse_args()
+    args = argParser.parse_args()
 
-with open(args.yaml_file) as f:
-    yml = yaml.load(f, Loader=yaml.SafeLoader)
-    if args.input_file is not None:
-        print("replacing input file.")
-        yml["file_name"] = args.input_file
+    with open(args.yaml_file) as f:
+        yml = yaml.load(f, Loader=yaml.SafeLoader)
+        if args.input_file is not None:
+            print("replacing input file.")
+            yml["file_name"] = args.input_file
 
-
-settings = parse_yaml_raw_as(Settings, str(yml))
 
 if __name__ == "__main__":
-    print(settings)
+    main()

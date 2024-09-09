@@ -3,10 +3,11 @@ from math import atan, cos, sin
 import numpy as np
 import pandas as pd
 
-from algorithm.settings import settings
+from algorithm.settings import Settings
 
 
-def rot_mat_from_river_velocity() -> np.ndarray:
+def rot_mat_from_river_velocity(settings: Settings) -> np.ndarray:
+
     vx = settings.river_pixel_velocity[0]
     vy = settings.river_pixel_velocity[1]
 
