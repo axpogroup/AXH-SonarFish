@@ -14,7 +14,7 @@ from settings import classification_settings, args
 def main(args):
     train_val_data_files = sorted(list(Path(args.train_val_gt_data_dir).rglob("*.csv")))
     train_val_gt_data_files = sorted(list(Path(args.train_val_gt_data_dir).rglob("*.csv")))
-    test_data_files = sorted(list(Path(args.test_data_dir).rglob("*.csv")))
+    test_data_files = sorted(list(Path(args.files_to_classify_dir).rglob("*.csv")))
     print(f"Found {train_val_data_files} training data files.")
     print(f"Found {train_val_gt_data_files} training ground truth data files.")
     print(f"Found {test_data_files} test data files.")
@@ -23,7 +23,7 @@ def main(args):
     gen = FeatureGenerator(
         gt_fish_id_yaml=Path(args.train_val_gt_data_dir) / args.train_val_data_yaml,
         measurements_csv_dir=args.train_val_gt_data_dir,
-        test_csv_paths=list(Path(args.test_data_dir).rglob("*.csv")),
+        test_csv_paths=list(Path(args.files_to_classify_dir).rglob("*.csv")),
         min_track_length=classification_settings.min_track_length,
         force_feature_recalc=True,
         force_test_feature_recalc=True,
