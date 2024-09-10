@@ -14,7 +14,7 @@ def save_classified_trajectories(
     Dump a list of dataframes to CSV files in the specified directory.
     Names of the CSV files are based on the input measurement CSV files.
     """
-    
+
     if len(dump_df_list) != len(measurement_csv_paths):
         raise ValueError("The number of video IDs does not match the number of file paths.")
     Path(save_dir).mkdir(parents=True, exist_ok=True)
