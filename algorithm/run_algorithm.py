@@ -177,10 +177,10 @@ def run_tracking_algorithm(detector: FishDetector, settings: Settings):
     return input_output_handler.output_csv_name
 
 
-def main_algorithm(settings: Settings):
+def main_algorithm(settings: Settings) -> str:
 
     burn_in_settings = deepcopy(settings)
-    previous_video = find_valid_previous_video(gap_seconds=5)
+    previous_video = find_valid_previous_video(gap_seconds=5, settings=settings)
 
     if previous_video:
         try:
@@ -195,7 +195,7 @@ def main_algorithm(settings: Settings):
         print("Starting algorithm without burn-in on previous video.")
         detector = FishDetector(settings)
 
-    output_csv_name = run_tracking_algorithm(detector)
+    output_csv_name = run_tracking_algorithm(detector, settings)
 
     return output_csv_name
 

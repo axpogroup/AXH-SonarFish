@@ -10,18 +10,19 @@ import yaml
 from tqdm import tqdm
 
 from algorithm.label_extraction.BoxDetector import BoxDetector
+from algorithm.settings import Settings
 
 
-def main(settings_dict: dict):
-    filenames = glob.glob(settings_dict["input_directory"] + "*.mp4")
+def main(settings: Settings):
+    filenames = glob.glob(settings.input_directory + "*.mp4")
 
     print("Found the following files: \n")
     latest_persistent_object_id = 250
 
     for file in filenames:
         file_name = Path(file).stem
-        csv_path = Path(settings_dict["csv_output_directory"] + file_name + settings_dict["csv_output_suffix"])
-        if csv_path.exists() and not settings_dict["overwrite_existing_csv"]:
+        csv_path = Path(settings.csv_output_directory + file_name + settings.csv_output_suffix)
+        if csv_path.exists() and not settings.overwrite_existing_csv:
             print(f"File {csv_path} already exists. Skipping.")
             continue
         print(f"\nProcessing  {file}")
@@ -42,7 +43,7 @@ def main(settings_dict: dict):
             ]
         )
         video_cap = cv.VideoCapture(file)
-        detector = BoxDetector(settings_dict, latest_persistent_object_id)
+        detector = BoxDetector(settings, latest_persistent_object_id)
         frame_no = 0
         frames_total = int(video_cap.get(cv.CAP_PROP_FRAME_COUNT))
         fps = int(video_cap.get(cv.CAP_PROP_FPS))
@@ -71,7 +72,7 @@ def main(settings_dict: dict):
             frame_no += 1
 
         video_cap.release()
-        if "csv_output_directory" in settings_dict.keys():
+        if settings.csv_output_directory in settings.keys():
             csv_file.close()
         cv.destroyAllWindows()
 

@@ -4,15 +4,17 @@ import cv2
 import yaml
 from tqdm import tqdm
 
+from algorithm.settings import Settings
 
-def main(settings_dict: dict):
-    input_directory_path = Path(settings_dict["input_directory"])
-    output_directory_path = Path(settings_dict["output_directory"])
+
+def main(settings: Settings):
+    input_directory_path = Path(settings.input_directory)
+    output_directory_path = Path(settings.output_directory)
     input_video_file_paths = list(input_directory_path.glob("**/*.mp4"))
 
     for file_path in tqdm(input_video_file_paths, desc="Processing videos"):
         output_file_path = output_directory_path / file_path.relative_to(input_directory_path)
-        if output_file_path.exists() and not settings_dict["overwrite_existing_files"]:
+        if output_file_path.exists() and not settings.overwrite_existing_files:
             print(f"Skipping {file_path} since it already exists")
             continue
 
@@ -20,7 +22,7 @@ def main(settings_dict: dict):
         down_sample_frame_rate_of_video(
             input_file=file_path,
             output_file=output_file_path,
-            fps_out=settings_dict["target_fps"],
+            fps_out=settings.target_fps,
         )
 
 
@@ -65,5 +67,5 @@ def down_sample_frame_rate_of_video(input_file: Path, output_file: Path, fps_out
 
 if __name__ == "__main__":
     with open("settings/preprocessing_settings.yaml") as f:
-        settings_dict = yaml.load(f, Loader=yaml.SafeLoader)
-    main(settings_dict)
+        settings = yaml.load(f, Loader=yaml.SafeLoader)
+    main(settings)

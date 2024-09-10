@@ -62,7 +62,13 @@ def clear_directory(directory):
 
 
 def assert_directory_empty(directory: str):
-    allowed_files = [".gitkeep", "trimmed_video.mp4"]
+    allowed_files = [
+        ".gitkeep",
+        "trimmed_video.mp4",
+        "trimmed_video_minimal.mp4",
+        "start_2023-05-08T18-00-05.025+00-00_ground_truth.csv",
+        "start_2023-05-08T18-00-05.025+00-00.mp4",
+    ]
     files = os.listdir(directory)
     disallowed_files = [file for file in files if file not in allowed_files]
     if disallowed_files:
@@ -84,7 +90,6 @@ class TestIntegration:
         with open("../settings/preprocessing_settings.yaml") as f:
             preprocess_settings = yaml.load(f, Loader=yaml.SafeLoader)
         preprocess_settings = Settings(**preprocess_settings)
-
         preprocess_main(preprocess_settings)
 
         with open("../settings/tracking_box_settings.yaml") as f:
@@ -103,9 +108,8 @@ class TestIntegration:
 
         with open("../settings/demo_settings.yaml") as f:
             detection_settings = yaml.load(f, Loader=yaml.SafeLoader)
+
         detection_settings = Settings(**detection_settings)
-        detection_settings.mask_directory = "../analysis/demo/masks"
-        detection_settings.display_output_video = False
         run_algorithm_main(detection_settings)
         detections_csv = pd.read_csv(f"{model_output_directory}/start_2023-05-08T18-00-05.025+00-00.csv")
         assert list(detections_csv.columns)[:6] == relevant_csv_columns

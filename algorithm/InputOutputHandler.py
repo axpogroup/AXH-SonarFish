@@ -281,6 +281,7 @@ class InputOutputHandler:
                 processed_frame=processed_frame,
                 extensive=self.__settings.display_mode_extensive,
                 save_frame=self.__settings.record_processing_frame,
+                settings=self.__settings,
             )
 
             # Put timestamp on frame

@@ -14,8 +14,8 @@ full_area_mask = None
 
 
 class BoxDetector:
-    def __init__(self, settings_dict, latest_persistent_object_id):
-        self.settings_dict = settings_dict
+    def __init__(self, settings, latest_persistent_object_id):
+        self.settings = settings
         self.frame_number = 0  # TOD Must not overflow - recycle
         self.total_runtime_ms = None
         self.current_raw = None
@@ -42,13 +42,13 @@ class BoxDetector:
         self.enhance_time_ms = None
         self.current_long_mean_uint8 = None
         self.current_blurred_enhanced = None
-        self.downsample = settings_dict["downsample"]
-        self.long_mean_frames = settings_dict["long_mean_frames"]
-        self.current_mean_frames = settings_dict["current_mean_frames"]
-        self.std_dev_threshold = settings_dict["std_dev_threshold"]
-        self.median_filter_kernel = settings_dict["median_filter_kernel"]
-        self.blur_filter_kernel = settings_dict["blur_filter_kernel"]
-        self.threshold_contours = settings_dict["threshold_contours"]
+        self.downsample = settings.downsample
+        self.long_mean_frames = settings.long_mean_frames
+        self.current_mean_frames = settings.current_mean_frames
+        self.std_dev_threshold = settings.std_dev_threshold
+        self.median_filter_kernel = settings.median_filter_kernel
+        self.blur_filter_kernel = settings.blur_filter_kernel
+        self.threshold_contours = settings.threshold_contours
 
         # Detection and Tracking
         self.detections = {}
@@ -58,13 +58,13 @@ class BoxDetector:
         self.latest_obj_index = 0
         self.latest_persistent_object_id = latest_persistent_object_id
         self.detection_tracking_time_ms = None
-        self.max_association_dist = settings_dict["max_association_dist"]
-        self.phase_out_after_x_frames = settings_dict["phase_out_after_x_frames"]
-        self.min_occurences_in_last_x_frames = settings_dict["min_occurences_in_last_x_frames"]
+        self.max_association_dist = settings.max_association_dist
+        self.phase_out_after_x_frames = settings.phase_out_after_x_frames
+        self.min_occurences_in_last_x_frames = settings.min_occurences_in_last_x_frames
 
         # Classification
-        self.river_pixel_velocity = settings_dict["river_pixel_velocity"]
-        self.rotation_rad = settings_dict["rotation_rad"]
+        self.river_pixel_velocity = settings.river_pixel_velocity
+        self.rotation_rad = settings.rotation_rad
 
     def extract_green_red(self, current_raw):
         green = copy.deepcopy(current_raw[:, :, 1])
