@@ -28,7 +28,7 @@ def read_labels_into_dataframe(labels_path: Path, labels_filename: str) -> Optio
     if labels_path.exists():
         print(f"Found labels file: {labels_path}")
     else:
-        print("No labels file found.")
+        print(f"No labels file found at: {labels_path}")
         return None
     return pd.read_csv(labels_path)
 
