@@ -2,7 +2,6 @@ from typing import Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
-import seaborn as sns
 from matplotlib.colors import LogNorm
 from sklearn.metrics import confusion_matrix
 
@@ -36,6 +35,9 @@ def get_confusion_matrix(
 ) -> None:
     cm = confusion_matrix(y_true, y_pred)
     if plot:
+        # the confusion matrix is only plotted during development locally
+        import seaborn as sns
+
         plt.figure(figsize=(10, 7))
         sns.heatmap(
             cm,
@@ -50,3 +52,4 @@ def get_confusion_matrix(
         plt.ylabel("Actual")
         plt.title(f"Confusion Matrix for {classifier_name}")
         plt.show()
+    return cm

@@ -39,7 +39,7 @@ def find_valid_previous_video(settings_dict, gap_seconds: int):
         settings_dict["file_name"], settings_dict["file_timestamp_format"]
     )
     if current_timestamp is None:
-        print("Could not extract timestamp from current video.")
+        print("Could not extract timestamp from current video...")
         return None
 
     # video files with the same starting letters as the current video

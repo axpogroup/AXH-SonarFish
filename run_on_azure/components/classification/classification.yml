@@ -22,7 +22,7 @@ inputs:
 outputs:
   classified_detections_dir:
     type: uri_folder
-environment: azureml:fishy_environment:8
+environment: azureml:fishy_environment@latest
 code: src
 command: >-
   python run_classifier.py
