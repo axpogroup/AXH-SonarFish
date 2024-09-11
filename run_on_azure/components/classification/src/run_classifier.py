@@ -79,7 +79,7 @@ def main(args):
         mask_to_show="flow_area_mask",
         column_with_label="classification_v2",
         figsize=(20, 20),
-        save_dir=args.job_output_dir,
+        save_dir=args.classified_detections_dir,
         n_labels=3,
         plot_results_individually=True,
     )
@@ -88,7 +88,7 @@ def main(args):
     save_classified_trajectories(
         test_plotter.measurements_dfs,
         test_data_files,
-        save_dir=args.job_output_dir,
+        save_dir=args.classified_detections_dir,
         name_extension=f"_classification_min_track_length_{classification_settings.min_track_length}",
     )
 
