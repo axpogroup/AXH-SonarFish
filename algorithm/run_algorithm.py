@@ -18,6 +18,7 @@ from algorithm.FishDetector import FishDetector
 from algorithm.InputOutputHandler import InputOutputHandler
 from algorithm.validation import mot16_metrics
 from algorithm.visualization_functions import TRUTH_LABEL_NO
+from algorithm.inputs import video_reading
 
 load_dotenv()
 
@@ -34,22 +35,24 @@ def read_labels_into_dataframe(labels_path: Path, labels_filename: str) -> Optio
 
 def find_valid_previous_video(settings_dict, gap_seconds: int):
     print("Finding a valid previous video...")
-    current_timestamp = InputOutputHandler.extract_timestamp_from_filename(
+    current_timestamp = video_reading.extract_timestamp_from_filename(
         settings_dict["file_name"], settings_dict["file_timestamp_format"]
     )
     if current_timestamp is None:
         print("Could not extract timestamp from current video.")
         return None
 
-    video_files = sorted(Path(settings_dict["input_directory"]).glob("*.mp4"))
+    # video files with the same starting letters as the current video
+    video_files = sorted(Path(settings_dict["input_directory"]).glob(f"{settings_dict['file_name'][:4]}*.mp4"))
     closest_video = None
 
     min_time_difference = None
     for video_file in video_files:
-        video_timestamp = InputOutputHandler.extract_timestamp_from_filename(
-            video_file.name, settings_dict["file_timestamp_format"]
-        )
-        if video_timestamp is None:
+        try:
+            video_timestamp = video_reading.extract_timestamp_from_filename(
+                video_file.name, settings_dict["file_timestamp_format"]
+            )
+        except ValueError:
             continue
         time_difference = current_timestamp - video_timestamp
         if time_difference.total_seconds() <= 0:
@@ -61,7 +64,7 @@ def find_valid_previous_video(settings_dict, gap_seconds: int):
     # Check the duration of the closest video to make sure there is no gap
     if closest_video:
         duration = InputOutputHandler.get_video_duration(closest_video)
-        end_timestamp = InputOutputHandler.extract_timestamp_from_filename(
+        end_timestamp = video_reading.extract_timestamp_from_filename(
             closest_video.name, settings_dict["file_timestamp_format"]
         ) + dt.timedelta(seconds=duration)
         if abs(current_timestamp - end_timestamp) <= dt.timedelta(seconds=gap_seconds):

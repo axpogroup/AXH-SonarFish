@@ -14,9 +14,9 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description="Classify the Tracked Objects")
     parser.add_argument("--classification_settings_file", required=True)
     parser.add_argument("--train_val_gt_data_dir", required=True)
-    parser.add_argument("--train_val_data_yaml", required=False, default="fish_labels.yaml")
     parser.add_argument("--files_to_classify_dir", required=True)
-    parser.add_argument("--job_output_dir", required=True)
+    parser.add_argument("--classified_detections_dir", required=True)
+    parser.add_argument("--train_val_data_yaml", default="fish_labels.yaml")
     parser.add_argument("--log_level", default="INFO")
     args = parser.parse_args()
     return args
