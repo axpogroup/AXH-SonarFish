@@ -1,7 +1,7 @@
 import re
 from datetime import datetime
-from typing import Optional, Union
 from pathlib import Path
+from typing import Optional, Union
 
 
 def extract_timestamp_from_filename(

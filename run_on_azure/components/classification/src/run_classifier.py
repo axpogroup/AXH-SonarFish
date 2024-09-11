@@ -4,11 +4,16 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from analysis.classification_utils.classifier_evaluation import predict, train_and_evaluate_model
-from analysis.classification_utils.dataframe_manipulations import save_classified_trajectories
+from analysis.classification_utils.classifier_evaluation import (
+    predict,
+    train_and_evaluate_model,
+)
+from analysis.classification_utils.dataframe_manipulations import (
+    save_classified_trajectories,
+)
 from analysis.classification_utils.features import FeatureGenerator, TrackPlotter
 from analysis.classification_utils.metrics import get_confusion_matrix
-from settings import classification_settings, args
+from settings import args, classification_settings
 
 
 def main(args):

@@ -11,9 +11,8 @@ import pandas as pd
 from algorithm import visualization_functions
 from algorithm.DetectedObject import KalmanTrackedBlob
 from algorithm.FishDetector import FishDetector
-from algorithm.utils import get_elapsed_ms
-
 from algorithm.inputs import video_reading
+from algorithm.utils import get_elapsed_ms
 
 
 class InputOutputHandler:
