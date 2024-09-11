@@ -1,9 +1,11 @@
-import yaml
+import argparse
 from copy import deepcopy
 from pathlib import Path
-from typing import List, Union, Type
-import argparse
+from typing import List, Type, Union
+
+import yaml
 from pydantic import BaseModel, field_validator
+
 from analysis.classification_utils.classifier_evaluation import (
     ProbaLogisticRegression,
     ProbaXGBClassifier,

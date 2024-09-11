@@ -16,9 +16,9 @@ sys.path.append(".")
 from algorithm.DetectedObject import BoundingBox, KalmanTrackedBlob
 from algorithm.FishDetector import FishDetector
 from algorithm.InputOutputHandler import InputOutputHandler
+from algorithm.inputs import video_reading
 from algorithm.validation import mot16_metrics
 from algorithm.visualization_functions import TRUTH_LABEL_NO
-from algorithm.inputs import video_reading
 
 load_dotenv()
 
