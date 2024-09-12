@@ -195,7 +195,7 @@ def main_algorithm(settings: Settings) -> str:
         print("Starting algorithm without burn-in on previous video.")
         detector = FishDetector(settings)
 
-    output_csv_name = run_tracking_algorithm(detector, settings)
+    output_csv_name = run_tracking_algorithm(detector)
 
     return output_csv_name
 
