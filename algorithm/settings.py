@@ -15,16 +15,16 @@ class Settings(BaseModel):
     target_fps: Optional[int] = Field(default=10)
 
     # Input / Output
-    file_name: Optional[str] = None
+    file_name: Optional[str] = Field(default="start_2023-05-08T18-00-05.025+00-00.mp4")
     keys: Optional[str] = None
     input_directory: Optional[str] = Field(default=None)
-    mask_directory: Optional[str] = None
+    mask_directory: Optional[str] = Field(default=r"analysis\demo\masks")
     output_directory: Optional[str] = None
     ground_truth_directory: Optional[str] = None
     labels_file_suffix: Optional[str] = None
-    mask_file: Optional[str] = None
+    mask_file: Optional[str] = Field(default=r"analysis\demo\masks\sonar_controls.png")
     mask_directory: Optional[str] = None
-    file_timestamp_format: Optional[str] = Field(default="%Y-%m-%dT%H-%M-%S.%f")
+    file_timestamp_format: Optional[str] = Field(default="start_%Y-%m-%dT%H-%M-%S.%f")
     output_csv_name: Optional[str] = Field(default=None)
     csv_output_directory: Optional[str] = None
     csv_output_suffix: Optional[str] = None

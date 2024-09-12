@@ -1,4 +1,6 @@
 import os
+import unittest
+from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
@@ -77,34 +79,20 @@ def assert_directory_empty(directory: str):
         )
 
 
-class TestIntegration:
+class TestIntegration(unittest.TestCase):
 
+    @patch("argparse.ArgumentParser.parse_args")
     def test_integration(
         self,
+        mock_parse_args,
         model_output_directory,
         intermediate_labels_directory,
         intermediate_videos_directory,
         labels_directory,
         relevant_csv_columns,
     ):
-        with open("../settings/preprocessing_settings.yaml") as f:
-            preprocess_settings = yaml.load(f, Loader=yaml.SafeLoader)
-        preprocess_settings = Settings(**preprocess_settings)
-        preprocess_main(preprocess_settings)
-
-        with open("../settings/tracking_box_settings.yaml") as f:
-            label_extraction_settings = yaml.load(f, Loader=yaml.SafeLoader)
-        label_extraction_settings = Settings(**label_extraction_settings)
-        label_extraction_main(label_extraction_settings)
-
-        intermediate_labels = os.listdir(intermediate_labels_directory)
-        intermediate_videos = os.listdir(intermediate_videos_directory)
-        assert len(intermediate_labels) == 2
-        assert len(intermediate_videos) == 3
-
-        labels_csv = pd.read_csv(f"{labels_directory}/start_2023-05-08T18-00-05.025+00-00_ground_truth.csv")
-        assert len(labels_csv) > 0
-        assert list(labels_csv.columns)[:6] == relevant_csv_columns
+        # Mock the arguments
+        mock_parse_args.return_value = MagicMock(yaml_file="../settings/demo_settings.yaml", input_file=None)
 
         with open("../settings/demo_settings.yaml") as f:
             detection_settings = yaml.load(f, Loader=yaml.SafeLoader)

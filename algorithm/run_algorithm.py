@@ -12,7 +12,7 @@ sys.path.append(".")
 from algorithm.DetectedObject import BoundingBox, KalmanTrackedBlob
 from algorithm.FishDetector import FishDetector
 from algorithm.InputOutputHandler import InputOutputHandler
-from algorithm.settings import Settings
+from algorithm.settings import Settings, settings
 from algorithm.validation import mot16_metrics
 from algorithm.visualization_functions import TRUTH_LABEL_NO
 
@@ -29,7 +29,11 @@ def read_labels_into_dataframe(labels_path: Path, labels_filename: str) -> Optio
     return pd.read_csv(labels_path)
 
 
-def find_valid_previous_video(gap_seconds: int, settings: Settings):
+def find_valid_previous_video(gap_seconds: int, settings: Settings) -> Optional[str]:
+    if settings.file_name is None:
+        print("No video file name provided.")
+        return None
+
     current_timestamp = InputOutputHandler.extract_timestamp_from_filename(
         settings.file_name, settings.file_timestamp_format
     )
@@ -105,7 +109,7 @@ def extract_labels_history(
     return label_history
 
 
-def compute_metrics(settings):
+def compute_metrics(settings: Settings):
     if settings.ground_truth_directory:
         file_name_prefix = Path(settings.file_name).stem
         ground_truth_source = Path(settings.ground_truth_directory) / f"{file_name_prefix}_ground_truth.csv"
@@ -180,10 +184,12 @@ def run_tracking_algorithm(detector: FishDetector, settings: Settings):
 def main_algorithm(settings: Settings) -> str:
 
     burn_in_settings = deepcopy(settings)
+
     previous_video = find_valid_previous_video(gap_seconds=5, settings=settings)
 
     if previous_video:
         try:
+
             burn_in_detector, burn_in_settings = burn_in_algorithm_on_previous_video(
                 burn_in_settings, burn_in_file_name=previous_video
             )
@@ -202,4 +208,4 @@ def main_algorithm(settings: Settings) -> str:
 
 if __name__ == "__main__":
 
-    main_algorithm()
+    main_algorithm(settings=settings)

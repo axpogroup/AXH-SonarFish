@@ -8,7 +8,7 @@ from tqdm import tqdm
 sys.path.append(".")
 from algorithm.InputOutputHandler import InputOutputHandler
 from algorithm.run_algorithm import extract_labels_history, read_labels_into_dataframe
-from algorithm.settings import Settings, settings
+from algorithm.settings import Settings
 
 load_dotenv()
 
@@ -23,7 +23,7 @@ class DummyFishDetector:
         self.frame_number = 0
 
 
-def main_draw_annotations():
+def main_draw_annotations(settings: Settings):
     labels_df = read_labels_into_dataframe(
         labels_path=settings.ground_truth_directory,
         labels_filename=settings.file_name.stem + settings.labels_file_suffix + settings.ground_truth + ".csv",

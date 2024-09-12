@@ -382,12 +382,13 @@ class InputOutputHandler:
     @staticmethod
     def extract_timestamp_from_filename(filename: str, file_timestamp_format: str) -> Optional[dt.datetime]:
         try:
+            filename = Path(filename)
             if file_timestamp_format == "start_%Y-%m-%dT%H-%M-%S.%f%z.mp4":
                 return dt.datetime.strptime(str(Path(filename).stem[:-6]), "start_%Y-%m-%dT%H-%M-%S.%f")
             else:
                 return dt.datetime.strptime(str(Path(filename)), file_timestamp_format)
         except Exception as e:
-            print(f"{e}")
+            print(f"Error parsing timestamp from filename: {e}")
             return None
 
     @staticmethod
