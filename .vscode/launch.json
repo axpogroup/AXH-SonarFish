@@ -13,11 +13,11 @@
             "cwd": "${workspaceFolder}",
             "justMyCode": false,
             "args": [
-                "-yf", "settings/settings_lavey.yaml",
-                // "--classification_settings_file", "classification_settings_lavey_tourelle.yaml",
-                // "--train_val_gt_data_dir", "./data/labels/Tourelle/",
-                // "--test_data_dir", "./data/fake_model_output/Tourelle/",
-                // "--job_output_dir", "./data/classification_test_output/",
+                // "-yf", "settings/settings_lavey.yaml",
+                "--classification_settings_file", "classification_settings_lavey_tourelle.yaml",
+                "--train_val_gt_data_dir", "./data/labels/Tourelle/",
+                "--files_to_classify_dir", "./data/fake_model_output/Tourelle/",
+                "--classified_detections_dir", "./data/classification_test_output/",
             ],
             "env": {
                 "PYTHONPATH": "${workspaceFolder};${env:PYTHONPATH}"
