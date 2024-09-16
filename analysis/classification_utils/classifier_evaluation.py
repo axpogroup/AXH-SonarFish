@@ -29,9 +29,9 @@ class RandomClassifier:
         return np.random.choice(classes, size=X.shape[0], p=probabilities)
 
 
-class ProbaClassifier:
+class ProbaLogisticRegression(LogisticRegression):
     """
-    Base classifier that predicts based on a probability threshold.
+    Logistic regression classifier that predicts based on a probability threshold.
 
     Parameters
     ----------
@@ -40,31 +40,33 @@ class ProbaClassifier:
     """
 
     def __init__(self, proba_threshold=0.5, **kwargs):
-        self.proba_threshold = proba_threshold
         super().__init__(**kwargs)
+        self.proba_threshold = proba_threshold
 
     def predict(self, X):
-        y_prob = self.predict_proba(X)
-        y_pred = (y_prob[:, 1] >= self.proba_threshold).astype(int)
+        probabilities = self.predict_proba(X)
+        y_pred = (probabilities[:, 1] >= self.proba_threshold).astype(int)
         return y_pred
 
 
-class ProbaLogisticRegression(ProbaClassifier, LogisticRegression):
-    """
-    Logistic regression classifier that predicts based on a probability threshold.
-    """
-
-    def __init__(self, proba_threshold=0.5, **kwargs):
-        super().__init__(proba_threshold=proba_threshold, **kwargs)
-
-
-class ProbaXGBClassifier(ProbaClassifier, XGBClassifier):
+class ProbaXGBClassifier(XGBClassifier):
     """
     XGBoost classifier that predicts based on a probability threshold.
+
+    Parameters
+    ----------
+    proba_threshold : float
+        The probability threshold above which the classifier predicts a positive class.
     """
 
     def __init__(self, proba_threshold=0.5, **kwargs):
-        super().__init__(proba_threshold=proba_threshold, **kwargs)
+        super().__init__(**kwargs)
+        self.proba_threshold = proba_threshold
+
+    def predict(self, X):
+        probabilities = self.predict_proba(X)
+        y_pred = (probabilities[:, 1] >= self.proba_threshold).astype(int)
+        return y_pred
 
 
 def train_and_predict(

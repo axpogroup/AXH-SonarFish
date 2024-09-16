@@ -3,7 +3,9 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import sys
 
+sys.path.append(".")
 from analysis.classification_utils.classifier_evaluation import (
     predict,
     train_and_evaluate_model,
@@ -49,7 +51,7 @@ def main(args):
     if classification_settings.classifier_name == "ProbaXGBClassifier":
         classifier.scale_pos_weight = imbalance  # We need to know the training data distribution to set this parameter
 
-    metrics, y_pred, trained_classifier, trained_scaler = train_and_evaluate_model(
+    metrics, _, trained_classifier, trained_scaler = train_and_evaluate_model(
         feature_df,
         classifier,
         metrics_to_show=["Accuracy", "Precision", "Recall", "F1_score", "F2_score"],
