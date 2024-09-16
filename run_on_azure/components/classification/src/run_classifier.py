@@ -1,9 +1,9 @@
+import sys
 from copy import deepcopy
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import sys
 
 sys.path.append(".")
 from analysis.classification_utils.classifier_evaluation import (
