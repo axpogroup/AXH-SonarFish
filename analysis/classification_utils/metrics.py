@@ -27,29 +27,26 @@ def calculate_recall(tp, fn):
     return recall
 
 
-def get_confusion_matrix(
+def plot_confusion_matrix(
     y_true: np.ndarray,
     y_pred: np.ndarray,
     classifier_name: Optional[str] = None,
-    plot: bool = False,
 ) -> None:
-    cm = confusion_matrix(y_true, y_pred)
-    if plot:
-        # the confusion matrix is only plotted during development locally
-        import seaborn as sns
+    import seaborn as sns  # only used locally, no need to be installed for AzureML pipeline
 
-        plt.figure(figsize=(10, 7))
-        sns.heatmap(
-            cm,
-            annot=True,
-            fmt="d",
-            cmap="Blues",
-            norm=LogNorm(),
-            xticklabels=["Predicted Negative", "Predicted Fish"],
-            yticklabels=["Actual Negative", "Actual Fish"],
-        )
-        plt.xlabel("Predicted")
-        plt.ylabel("Actual")
-        plt.title(f"Confusion Matrix for {classifier_name}")
-        plt.show()
+    cm = confusion_matrix(y_true, y_pred)
+    plt.figure(figsize=(10, 7))
+    sns.heatmap(
+        cm,
+        annot=True,
+        fmt="d",
+        cmap="Blues",
+        norm=LogNorm(),
+        xticklabels=["Predicted Negative", "Predicted Fish"],
+        yticklabels=["Actual Negative", "Actual Fish"],
+    )
+    plt.xlabel("Predicted")
+    plt.ylabel("Actual")
+    plt.title(f"Confusion Matrix for {classifier_name}")
+    plt.show()
     return cm

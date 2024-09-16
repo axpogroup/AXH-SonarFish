@@ -1,115 +1,21 @@
 import argparse
-import datetime as dt
 import os
 import sys
 from pathlib import Path
-from typing import Optional
 
 import mlflow
-import numpy as np
-import pandas as pd
 import yaml
 from azureml.core import Workspace
 from dotenv import load_dotenv
 
 sys.path.append(".")
-from algorithm.DetectedObject import BoundingBox, KalmanTrackedBlob
+from algorithm.DetectedObject import KalmanTrackedBlob
 from algorithm.FishDetector import FishDetector
 from algorithm.InputOutputHandler import InputOutputHandler
-from algorithm.inputs import video_reading
+from algorithm.inputs import video_reading, labels
 from algorithm.validation import mot16_metrics
-from algorithm.visualization_functions import TRUTH_LABEL_NO
 
 load_dotenv()
-
-
-def read_labels_into_dataframe(labels_path: Path, labels_filename: str) -> Optional[pd.DataFrame]:
-    labels_path = Path(labels_path) / labels_filename
-    if labels_path.exists():
-        print(f"Found labels file: {labels_path}")
-    else:
-        print(f"No labels file found at: {labels_path}")
-        return None
-    return pd.read_csv(labels_path)
-
-
-def find_valid_previous_video(settings_dict, gap_seconds: int):
-    print("Finding a valid previous video...")
-    current_timestamp = video_reading.extract_timestamp_from_filename(
-        settings_dict["file_name"], settings_dict["file_timestamp_format"]
-    )
-    if current_timestamp is None:
-        print("Could not extract timestamp from current video...")
-        return None
-
-    # video files with the same starting letters as the current video
-    video_files = sorted(Path(settings_dict["input_directory"]).glob(f"{settings_dict['file_name'][:4]}*.mp4"))
-    closest_video = None
-
-    min_time_difference = None
-    for video_file in video_files:
-        try:
-            video_timestamp = video_reading.extract_timestamp_from_filename(
-                video_file.name, settings_dict["file_timestamp_format"]
-            )
-        except ValueError:
-            continue
-        time_difference = current_timestamp - video_timestamp
-        if time_difference.total_seconds() <= 0:
-            continue
-        elif min_time_difference is None or abs(time_difference) < abs(min_time_difference):
-            closest_video = video_file
-            min_time_difference = time_difference
-
-    # Check the duration of the closest video to make sure there is no gap
-    if closest_video:
-        duration = InputOutputHandler.get_video_duration(closest_video)
-        end_timestamp = video_reading.extract_timestamp_from_filename(
-            closest_video.name, settings_dict["file_timestamp_format"]
-        ) + dt.timedelta(seconds=duration)
-        if abs(current_timestamp - end_timestamp) <= dt.timedelta(seconds=gap_seconds):
-            print(
-                print(
-                    f"Closest video found: {closest_video.name}, "
-                    f"time gap between recordings: {(current_timestamp - end_timestamp).total_seconds()} seconds."
-                )
-            )
-            return closest_video.name
-        else:
-            print(
-                f"Closest video {closest_video.name} ends {(current_timestamp - end_timestamp)} "
-                f"before the current video, which is outside the tolerance ({gap_seconds} seconds)."
-            )
-            return None
-    else:
-        print("No previous video found.")
-        return None
-
-
-def extract_labels_history(
-    label_history: dict[int, BoundingBox],
-    labels: Optional[pd.DataFrame],
-    current_frame: int,
-    down_sample_factor: int = 1,
-    feature_to_load: Optional[str] = None,
-) -> Optional[dict[int, BoundingBox]]:
-    if labels is None:
-        return None
-    # current_frame_df = labels[labels["frame"] == int(current_frame * down_sample_factor)]
-    current_frame_df = labels[labels["frame"] == current_frame]
-    for _, row in current_frame_df.iterrows():
-        truth_detected = BoundingBox(
-            identifier=row["id"],
-            frame_number=row["frame"],
-            contour=np.array(row[["x", "y", "w", "h"]]),
-            label=int(row.get("assigned_label") or row.get("classification_v2", TRUTH_LABEL_NO)),
-            precalculated_feature=row.get(feature_to_load, None),
-        )
-        if row["id"] not in label_history:
-            label_history[row["id"]] = truth_detected
-        else:
-            label_history[row["id"]].update_object(truth_detected)
-    return label_history
 
 
 def compute_metrics(settings_dict):
@@ -140,7 +46,7 @@ def burn_in_algorithm_on_previous_video(settings_dict: dict, burn_in_file_name: 
 
 
 def run_tracking_algorithm(settings_dict: dict, detector: FishDetector):
-    labels_df = read_labels_into_dataframe(
+    labels_df = labels.read_labels_into_dataframe(
         labels_path=Path(settings_dict.get("ground_truth_directory", "")),
         labels_filename=Path(settings_dict["file_name"]).stem
         + settings_dict.get("labels_file_suffix", "_ground_truth")
@@ -156,7 +62,7 @@ def run_tracking_algorithm(settings_dict: dict, detector: FishDetector):
         object_history = detector.associate_detections(
             detections=detections, object_history=object_history, processed_frame_dict=processed_frame_dict
         )
-        label_history = extract_labels_history(
+        label_history = labels.extract_labels_history(
             label_history,
             labels_df,
             input_output_handler.frame_no,
@@ -183,7 +89,7 @@ def run_tracking_algorithm(settings_dict: dict, detector: FishDetector):
 
 
 def main_algorithm(settings_dict: dict):
-    previous_video = find_valid_previous_video(settings_dict, gap_seconds=5)
+    previous_video = video_reading.find_valid_previous_video(settings_dict, gap_seconds=5)
 
     if previous_video:
         try:
