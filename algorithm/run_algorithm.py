@@ -12,7 +12,7 @@ sys.path.append(".")
 from algorithm.DetectedObject import KalmanTrackedBlob
 from algorithm.FishDetector import FishDetector
 from algorithm.InputOutputHandler import InputOutputHandler
-from algorithm.inputs import video_reading, labels
+from algorithm.inputs import labels, video_reading
 from algorithm.validation import mot16_metrics
 
 load_dotenv()

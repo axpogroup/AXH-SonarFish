@@ -1,8 +1,8 @@
 from pathlib import Path
 from typing import Optional
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 from algorithm.DetectedObject import BoundingBox
 from algorithm.visualization_functions import TRUTH_LABEL_NO
