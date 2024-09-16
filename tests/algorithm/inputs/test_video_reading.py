@@ -1,6 +1,7 @@
 import sys
-import pytest
 from datetime import datetime, timezone
+
+import pytest
 
 sys.path.append("..")
 from algorithm.inputs.video_reading import (

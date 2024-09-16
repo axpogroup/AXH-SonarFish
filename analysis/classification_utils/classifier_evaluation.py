@@ -53,6 +53,7 @@ class ProbaLogisticRegression(ProbaClassifier, LogisticRegression):
     """
     Logistic regression classifier that predicts based on a probability threshold.
     """
+
     def __init__(self, proba_threshold=0.5, **kwargs):
         super().__init__(proba_threshold=proba_threshold, **kwargs)
 
@@ -61,6 +62,7 @@ class ProbaXGBClassifier(ProbaClassifier, XGBClassifier):
     """
     XGBoost classifier that predicts based on a probability threshold.
     """
+
     def __init__(self, proba_threshold=0.5, **kwargs):
         super().__init__(proba_threshold=proba_threshold, **kwargs)
 
