@@ -12,7 +12,6 @@ from analysis.classification_utils.dataframe_manipulations import (
     save_classified_trajectories,
 )
 from analysis.classification_utils.features import FeatureGenerator, TrackPlotter
-from analysis.classification_utils.metrics import get_confusion_matrix
 from settings import args, classification_settings
 
 
@@ -56,9 +55,7 @@ def main(args):
         metrics_to_show=["Accuracy", "Precision", "Recall", "F1_score", "F2_score"],
         features=classification_settings.features_to_use,
     )
-    confusion_matrix = get_confusion_matrix(feature_df["gt_label"], y_pred)
     print("Metrics: ", metrics)
-    print("Confusion matrix: ", confusion_matrix)
 
     print("Calculating train/val performance metrics... ")
     test_plotter = TrackPlotter(deepcopy(gen.test_dfs), gen.masks)

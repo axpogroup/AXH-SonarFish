@@ -29,44 +29,40 @@ class RandomClassifier:
         return np.random.choice(classes, size=X.shape[0], p=probabilities)
 
 
-class ProbaLogisticRegression(LogisticRegression):
+class ProbaClassifier:
+    """
+    Base classifier that predicts based on a probability threshold.
+
+    Parameters
+    ----------
+    proba_threshold : float
+        The probability threshold above which the classifier predicts a positive class.
+    """
+
+    def __init__(self, proba_threshold=0.5, **kwargs):
+        self.proba_threshold = proba_threshold
+        super().__init__(**kwargs)
+
+    def predict(self, X):
+        y_prob = self.predict_proba(X)
+        y_pred = (y_prob[:, 1] >= self.proba_threshold).astype(int)
+        return y_pred
+
+
+class ProbaLogisticRegression(ProbaClassifier, LogisticRegression):
     """
     Logistic regression classifier that predicts based on a probability threshold.
-
-    Parameters
-    ----------
-    proba_threshold : float
-        The probability threshold above which the classifier predicts a positive class.
     """
-
     def __init__(self, proba_threshold=0.5, **kwargs):
-        super().__init__(**kwargs)
-        self.proba_threshold = proba_threshold
-
-    def predict(self, X):
-        probabilities = self.predict_proba(X)
-        y_pred = (probabilities[:, 1] >= self.proba_threshold).astype(int)
-        return y_pred
+        super().__init__(proba_threshold=proba_threshold, **kwargs)
 
 
-class ProbaXGBClassifier(XGBClassifier):
+class ProbaXGBClassifier(ProbaClassifier, XGBClassifier):
     """
     XGBoost classifier that predicts based on a probability threshold.
-
-    Parameters
-    ----------
-    proba_threshold : float
-        The probability threshold above which the classifier predicts a positive class.
     """
-
     def __init__(self, proba_threshold=0.5, **kwargs):
-        super().__init__(**kwargs)
-        self.proba_threshold = proba_threshold
-
-    def predict(self, X):
-        probabilities = self.predict_proba(X)
-        y_pred = (probabilities[:, 1] >= self.proba_threshold).astype(int)
-        return y_pred
+        super().__init__(proba_threshold=proba_threshold, **kwargs)
 
 
 def train_and_predict(
@@ -86,7 +82,6 @@ def train_and_predict(
         X_train, X_test = X.iloc[train_index], X.iloc[test_index]
         y_train, y_test = y.iloc[train_index], y.iloc[test_index]
 
-        # Scaling the features
         scaler = StandardScaler()
         X_train = scaler.fit_transform(X_train)
         X_test = scaler.transform(X_test)

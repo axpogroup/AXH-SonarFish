@@ -372,12 +372,3 @@ class InputOutputHandler:
         if self.settings_dict.get("record_output_video"):
             self.video_writer.release()
         cv.destroyAllWindows()
-
-    @staticmethod
-    def get_video_duration(filepath: Path):
-        video = cv.VideoCapture(str(filepath))
-        frames = video.get(cv.CAP_PROP_FRAME_COUNT)
-        fps = video.get(cv.CAP_PROP_FPS)
-        duration = frames / fps
-        video.release()
-        return duration
