@@ -11,6 +11,7 @@ import pandas as pd
 from algorithm import visualization_functions
 from algorithm.DetectedObject import KalmanTrackedBlob
 from algorithm.FishDetector import FishDetector
+from algorithm.inputs import video_reading
 from algorithm.utils import get_elapsed_ms
 
 
@@ -25,7 +26,7 @@ class InputOutputHandler:
         self.input_filename = Path(self.settings_dict["file_name"])
         self.set_video_cap()
 
-        self.start_timestamp = self.extract_timestamp_from_filename(
+        self.start_timestamp = video_reading.extract_timestamp_from_filename(
             self.input_filename, self.settings_dict["file_timestamp_format"]
         )
 
@@ -371,26 +372,3 @@ class InputOutputHandler:
         if self.settings_dict.get("record_output_video"):
             self.video_writer.release()
         cv.destroyAllWindows()
-
-    @staticmethod
-    def extract_timestamp_from_filename(filename: str, file_timestamp_format: str) -> Optional[dt.datetime]:
-        try:
-            if file_timestamp_format == "start_%Y-%m-%dT%H-%M-%S.%f%z.mp4":
-                return dt.datetime.strptime(str(Path(filename).stem[:-6]), "start_%Y-%m-%dT%H-%M-%S.%f")
-            else:
-                return dt.datetime.strptime(str(Path(filename)), file_timestamp_format)
-        except Exception as e:
-            print(f"{e}")
-            return None
-
-    @staticmethod
-    def get_video_duration(filepath: Path):
-        video = cv.VideoCapture(str(filepath))
-        frames = video.get(cv.CAP_PROP_FRAME_COUNT)
-        fps = video.get(cv.CAP_PROP_FPS)
-        try:
-            duration = frames / fps
-        except ZeroDivisionError:
-            duration = 0
-        video.release()
-        return duration

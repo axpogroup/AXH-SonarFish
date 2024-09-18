@@ -1,10 +1,11 @@
 # Input / Output
 file_name: "."
+file_timestamp_format: "sonarname_%b%d_%H-%M-%S.mp4" # one of ["sonarname_%b%d_%H-%M-%S.mp4", "start_%Y-%m-%dT%H-%M-%S.%f%z.mp4"]
 input_directory:  "."
 mask_directory: "./masks/"
 output_directory: "."
 ground_truth_directory: "."
-labels_file_suffix: "_ground_truth"
+labels_file_suffix: "_classification_min_track_length_20"
 mask_file: "sonar_controls.png" # one of ["sonar_controls.png", "stroppel_non_object_space.png", "herrendoebeli_non_object_space.png", "lavey_non_object_space.png"]
 
 # Azure ML
@@ -13,6 +14,7 @@ track_azure_ml: False
 
 tag: "label"
 record_output_video: True # Only works for full resolution output
+compress_output_video: True
 record_processing_frame: "raw" # one of ['raw', 'raw_downsampled', 'gray', 'gray_boosted', 'long_mean', 'short_mean', 'difference', 'absolute_difference', 'difference_thresholded', 'difference_thresholded_abs', 'median_filter', 'binary', 'dilated']
 draw_detections_on_saved_video: True
 store_raw_image_patch: False
@@ -73,3 +75,6 @@ deviation_from_river_velocity: 0.5
 # Visualization
 no_more_show_after_x_frames: 1
 video_colormap: "red"
+
+# Logs
+verbosity: 2
