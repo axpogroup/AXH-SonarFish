@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 sys.path.append(".")
 from algorithm.InputOutputHandler import InputOutputHandler
-from algorithm.run_algorithm import extract_labels_history, read_labels_into_dataframe
+from algorithm.inputs.labels import extract_labels_history, read_labels_into_dataframe
 
 load_dotenv()
 
