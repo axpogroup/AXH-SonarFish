@@ -131,7 +131,7 @@ class FeatureGenerator(object):
         if test_gt_fish_id_yaml:
             self.test_gt_fish_ids, self.test_csv_paths = self._parse_gt_fish_id_yaml(test_gt_fish_id_yaml, test_csv_dir)
         else:
-            self.test_csv_paths = [Path(p) for p in test_csv_paths]
+            self.test_csv_paths = self._filter_empty_csv_files(test_csv_paths)
             self.test_gt_fish_ids = None
 
         self.measurements_dfs = None
@@ -226,6 +226,8 @@ class FeatureGenerator(object):
         for video in fish_id_file:
             fish_ids.append(video["fish_track_IDs"])
             tracking_files.append(csv_dir / f"teams_{video['file'].replace('_raw_output.mp4', '.csv')}")
+        
+        tracking_files = self._filter_empty_csv_files(tracking_files)
 
         return fish_ids, tracking_files
 
@@ -300,6 +302,7 @@ class FeatureGenerator(object):
 
         df_list = []
         for labels_df, cache_path, csv_path in zip(labels_dfs, cache_paths, csv_paths):
+            print(f"Calculating features for {csv_path}")
             labels_df = calculate_features(labels_df, self.masks, smoothing_window_length=self.min_track_length - 1)
             labels_df = self.filter_features(labels_df)
             if not labels_df.empty:
@@ -413,6 +416,16 @@ class FeatureGenerator(object):
         ).T
 
         return measurements_gt_pairs, (dist_matrix_row_indices, dist_matrix_col_indices)
+
+    @staticmethod
+    def _filter_empty_csv_files(csv_paths: list[Union[Path, str]]) -> list[Path]:
+        filtered_paths = []
+        for path in csv_paths:
+            if pd.read_csv(path).shape[0] >= 20:
+                filtered_paths.append(path)
+            else:
+                print(f"Skipping {path} as it contains less than 20 rows.")
+        return filtered_paths
 
     @property
     def feature_names(self):

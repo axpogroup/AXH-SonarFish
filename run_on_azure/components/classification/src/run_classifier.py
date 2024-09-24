@@ -91,7 +91,7 @@ def main(args):
     print("Saving classified tracks to csv...")
     save_classified_trajectories(
         test_plotter.measurements_dfs,
-        test_data_files,
+        gen.test_csv_paths,
         save_dir=args.classified_detections_dir,
         name_extension=f"_classification_min_track_length_{classification_settings.min_track_length}",
     )
