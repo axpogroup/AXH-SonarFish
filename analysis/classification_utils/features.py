@@ -226,7 +226,7 @@ class FeatureGenerator(object):
         for video in fish_id_file:
             fish_ids.append(video["fish_track_IDs"])
             tracking_files.append(csv_dir / f"teams_{video['file'].replace('_raw_output.mp4', '.csv')}")
-        
+
         tracking_files = self._filter_empty_csv_files(tracking_files)
 
         return fish_ids, tracking_files
