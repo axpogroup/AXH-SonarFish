@@ -178,6 +178,7 @@ def _draw_labels(
             color = (0, 255, 255)
         else:
             color = (57, 30, 255)
+        label = f"ID:{ID}, {label}"
         draw_basic_bounding_box_and_path(association_dist, color, detector, fullres, img, obj, paths, label=label)
     return img
 
@@ -214,9 +215,8 @@ def _draw_detector_output(
                         color,
                         1,
                     )
-            text = ""
+            text = f"ID:{obj.ID}"
             if len(obj.means_of_pixels_intensity) > 0:
-                text = f"ID:{obj.ID}"
                 for feature in detector.conf.get("features_to_annotate", []):
                     if feature == "velocity":
                         if len(obj.velocities) > 0:
@@ -233,6 +233,7 @@ def _draw_detector_output(
                     color,
                     2,
                 )
+            print(f"text: {text}")
     return img
 
 
