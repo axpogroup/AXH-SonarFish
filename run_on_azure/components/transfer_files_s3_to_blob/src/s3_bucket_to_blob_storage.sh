@@ -15,6 +15,7 @@ YEAR=$2
 MONTH=$3
 START_DAY=$4
 END_DAY=$5
+STORAGE_TIER=${6:-cool}
 
 # Base directories
 TEMP_DIR="./temp_videos"
@@ -40,16 +41,13 @@ do
     s3cmd get --recursive $S3_PATH $LOCAL_DIR --host=$ENDPOINT_URL
     
     # Upload from local directory to Azure
-    azcopy copy "$LOCAL_DIR" "$AZURE_PATH" --recursive
+    azcopy copy "$LOCAL_DIR" "$AZURE_PATH" --recursive --block-blob-tier=$STORAGE_TIER
     
-    # Remove local directory contents
+    # Remove local directory contents securely
     rm -rf $LOCAL_DIR
 done
 
 # Cleanup: Ensure the base temporary directory is also removed after processing
-rmdir "$TEMP_DIR/${SONAR_NAME}/${YEAR}/${MONTH}"
-rmdir "$TEMP_DIR/${SONAR_NAME}/${YEAR}"
-rmdir "$TEMP_DIR/${SONAR_NAME}"
-rmdir "$TEMP_DIR"
+rm -rf "$TEMP_DIR/${SONAR_NAME}"
 
 echo "Data transfer complete."
