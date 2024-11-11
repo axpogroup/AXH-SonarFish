@@ -2,8 +2,6 @@ import argparse
 import logging
 import os
 from pathlib import Path
-import sys
-sys.path.append(".")
 
 import cv2 as cv
 import mlflow
