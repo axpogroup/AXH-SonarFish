@@ -233,7 +233,6 @@ def _draw_detector_output(
                     color,
                     2,
                 )
-            print(f"text: {text}")
     return img
 
 
