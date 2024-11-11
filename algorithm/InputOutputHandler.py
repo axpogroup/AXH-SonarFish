@@ -3,6 +3,7 @@ import json
 import subprocess
 from pathlib import Path
 from typing import Optional
+import shutil
 
 import cv2 as cv
 import numpy as np
@@ -358,7 +359,11 @@ class InputOutputHandler:
             str(compressed_output_video_path),
         ]
         print(f"Compressing output video to {compressed_output_video_path} ...")
-        subprocess.run(command)
+        try:
+            subprocess.run(command, check=True)
+        except subprocess.CalledProcessError:
+            print("Compression failed, copying the video without compression.")
+            shutil.copy(self.output_video_path, compressed_output_video_path)
 
     def delete_temp_output_dir(self):
         if self.temp_output_dir_name.exists():
