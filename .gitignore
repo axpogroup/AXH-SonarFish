@@ -145,3 +145,5 @@ demo_*
 .vscode
 .env
 *.pkl
+mlflow.*
+meta.yaml

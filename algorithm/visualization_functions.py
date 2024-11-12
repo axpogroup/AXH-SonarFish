@@ -215,8 +215,9 @@ def _draw_detector_output(
                         color,
                         1,
                     )
-            text = f"ID:{obj.ID}"
+            text = ""
             if len(obj.means_of_pixels_intensity) > 0:
+                text = f"ID:{obj.ID}"
                 for feature in detector.conf.get("features_to_annotate", []):
                     if feature == "velocity":
                         if len(obj.velocities) > 0:
