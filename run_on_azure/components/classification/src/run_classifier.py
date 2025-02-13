@@ -60,7 +60,7 @@ def main(args):
     print("Metrics: ", metrics)
 
     print("Calculating train/val performance metrics... ")
-    test_plotter = TrackPlotter(deepcopy(gen.test_dfs), gen.masks)
+    test_plotter = TrackPlotter(deepcopy(gen.test_dfs), gen.masks, csv_paths=gen.test_csv_paths)
     test_feature_df = (
         pd.concat(deepcopy(test_plotter.measurements_dfs)).groupby("id").first().select_dtypes(include=[np.number])
     )
@@ -91,7 +91,7 @@ def main(args):
     print("Saving classified tracks to csv...")
     save_classified_trajectories(
         test_plotter.measurements_dfs,
-        gen.test_csv_paths,
+        test_plotter.csv_paths,
         save_dir=args.classified_detections_dir,
         name_extension=f"_classification_min_track_length_{classification_settings.min_track_length}",
     )
