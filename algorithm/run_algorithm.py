@@ -123,6 +123,7 @@ if __name__ == "__main__":
 
     if settings.get("track_azure_ml", False):
         from azureml.core import Workspace
+
         workspace = Workspace(
             resource_group=os.getenv("RESOURCE_GROUP"),
             workspace_name=os.getenv("WORKSPACE_NAME"),
