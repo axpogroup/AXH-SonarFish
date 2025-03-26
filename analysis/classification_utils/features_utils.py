@@ -13,17 +13,19 @@ RIVER_VELOCITY = (0.33, -0.18)  # Lavey - Tourelle
 
 
 def calculate_features(
-    measurements_df: pd.DataFrame,
+    measurements_tracks_df: pd.DataFrame,
     masks: dict[str, np.ndarray],
     smoothing_window_length: int,
 ) -> pd.DataFrame:
+    measurements_df = measurements_tracks_df.copy(deep=True)
     measurements_df["binary_image"], measurements_df["tile_blob_counts"] = grayscale_to_binary(
         measurements_df["image_tile"]
     )
     feature_df = measurements_df.groupby("id").apply(lambda x: trace_window_metrics(x, masks, smoothing_window_length))
     measurements_df["v_x"] = measurements_df[["id", "x"]].groupby("id").diff()
     measurements_df["v_y"] = measurements_df[["id", "y"]].groupby("id").diff()
-    return measurements_df.join(feature_df, on="id", how="left")
+    return_df = measurements_df.join(feature_df, on="id", how="left", rsuffix="_tracking_df")
+    return return_df
 
 
 def calculate_distance_between_starting_and_ending_point(detection):
