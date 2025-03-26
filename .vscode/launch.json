@@ -12,15 +12,22 @@
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}",
             "justMyCode": false,
+            // classification passe3
             "args": [
                 // "-yf", "settings/settings_lavey.yaml",
-                "--classification_settings_file", "classification_settings_lavey_tourelle.yaml",
-                "--train_val_gt_data_dir", "./data/labels/Tourelle/",
-                "--files_to_classify_dir", "./data/fake_model_output/Tourelle/",
-                "--classified_detections_dir", "./data/classification_test_output/",
+                "--classification_settings_file", "classification_settings_lavey_passe3.yaml",
+                "--train_val_gt_data_dir", "./data/classification_inputs/lavey_classification/train_data/passe3",
+                "--files_to_classify_dir", "./data/model_output/2024/08/01/",
+                "--classified_detections_dir", "./data/classification_output/",
             ],
+            // "args": [
+            //     "--job_inputs_path", "./data/sanity_check/raw/",
+            //     "--job_output_path", "./data/sanity_check/intermediate/",
+            //     "--tracking_config", "./run_on_azure/components/kalman_tracking/src/pre_labeling_settings.yaml",
+            //     "--labels_dir", "./data/sanity_check/intermediate/"
+            // ],
             "env": {
-                "PYTHONPATH": "${workspaceFolder};${env:PYTHONPATH}"
+                "PYTHONPATH": "${workspaceFolder};${workspaceFolder}/analysis;${env:PYTHONPATH}",
             }
         }
     ]

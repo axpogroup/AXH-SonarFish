@@ -178,6 +178,7 @@ def _draw_labels(
             color = (0, 255, 255)
         else:
             color = (57, 30, 255)
+        label = f"ID:{ID}, {label}"
         draw_basic_bounding_box_and_path(association_dist, color, detector, fullres, img, obj, paths, label=label)
     return img
 

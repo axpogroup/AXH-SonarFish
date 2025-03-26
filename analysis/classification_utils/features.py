@@ -316,9 +316,8 @@ class FeatureGenerator(object):
                     save_df.to_csv(cache_path, index=False)
                 except OSError as e:
                     print(f"Error writing to file {cache_path}: {e}. Not saving features to csv.")
-                df_list.append(labels_df)
-            else:
-                df_list.append(pd.DataFrame())
+
+            df_list.append(labels_df)
 
         return df_list
 
@@ -446,18 +445,31 @@ class TrackPlotter(object):
         self,
         measurements_dfs: list[pd.DataFrame],
         masks: dict[str, np.ndarray],
-        gt_dfs: list[pd.DataFrame] = [],
+        gt_dfs: list[pd.DataFrame] = None,
+        csv_paths: list[Path] = None,
     ):
-        self.measurements_dfs = [df.copy(deep=True) for df in measurements_dfs]
-        self.gt_dfs = gt_dfs
         self.masks = masks
 
-        if self.measurements_dfs[0].id.dtype == int:
-            for idx, df in enumerate(self.measurements_dfs):
-                self.measurements_dfs[idx]["id"] = df.video_id.apply(str) + "-" + df.id.apply(str)
-        if self.gt_dfs and self.gt_dfs[0].id.dtype == int:
-            for idx, df in enumerate(self.gt_dfs):
-                self.gt_dfs[idx]["id"] = df.video_id.apply(str) + "-" + df.id.apply(str)
+        # some dataframes are empty due to the filtering based on features, we need to drop them
+        self.measurements_dfs = []
+        self.gt_dfs = []
+        self.csv_paths = []
+        if measurements_dfs[0].id.dtype == int:
+            for idx in range(len(measurements_dfs)):
+                plotter_df = measurements_dfs[idx].copy(deep=True)
+                if plotter_df.empty:
+                    continue
+
+                plotter_df["id"] = plotter_df.video_id.apply(str) + "-" + plotter_df.id.apply(str)
+                self.measurements_dfs.append(plotter_df)
+
+                if csv_paths:
+                    self.csv_paths.append(csv_paths[idx])
+
+                if gt_dfs:
+                    gt_df = gt_dfs[idx].copy(deep=True)
+                    gt_df["id"] = gt_df.video_id.apply(str) + "-" + gt_df.id.apply(str)
+                    self.gt_dfs.append(gt_df)
 
     def plot_track_pairings(
         self,
@@ -496,6 +508,8 @@ class TrackPlotter(object):
             save_dir.mkdir(parents=True, exist_ok=True)
 
         for i, (labels_df, gt_df) in enumerate(itertools.zip_longest(dfs, ground_truth_dfs)):
+            if labels_df.empty:
+                continue
             _, ax = plt.subplots(nrows=1, ncols=1, sharex=True, figsize=figsize)
             if mask_to_show:
                 ax.imshow(self.masks[mask_to_show], cmap="gray", alpha=0.2)
