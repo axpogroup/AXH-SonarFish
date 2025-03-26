@@ -5,7 +5,6 @@ from pathlib import Path
 
 import mlflow
 import yaml
-from azureml.core import Workspace
 from dotenv import load_dotenv
 
 sys.path.append(".")
@@ -123,6 +122,7 @@ if __name__ == "__main__":
     main_algorithm(settings)
 
     if settings.get("track_azure_ml", False):
+        from azureml.core import Workspace
         workspace = Workspace(
             resource_group=os.getenv("RESOURCE_GROUP"),
             workspace_name=os.getenv("WORKSPACE_NAME"),
