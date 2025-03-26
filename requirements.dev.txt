@@ -1,6 +1,6 @@
 -r requirements.txt
 xgboost==2.1.1
-lightgbm==4.5.0
+lightgbm==4.6.0
 
 #Dev typing
 types-PyYAML==6.0.12.12
