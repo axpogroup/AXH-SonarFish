@@ -6,6 +6,11 @@ the fish detection algorithm on the data and stores the output and records the s
 facilitate continuous operation the Raspberry Pi sends regular heartbeats to a hardware watchdog. At a later stage a 
 Grafana dashboard could act as cloud-based watchdog and alert users if the system is not running as expected.
 
+# Sample Results - Powerplant Stroppel
+<p align="center">
+  <img src="data/sample_tracking/stroppel.gif" alt="Fish Detection Demo" width="900">
+</p>
+
 # Stucture
 The codebase is structured into the following sections:
 - **algorithm**: the fish detection algorithm, taking a video file as an input and giving .csv / visual / video 
@@ -14,7 +19,7 @@ The codebase is structured into the following sections:
 - **analysis**: all code related to applications of the algorithm for development or special 
   projects. This section stores input files, output files and tools.
 - **continous_operation**: all code pertaining to the setup, initialization and continuous operation of the 
-  Raspberry Pi.
+  Raspberry Pi for tracking in Stroppel.
 
 ## Data Structure
 The data structure is as follows:
@@ -61,11 +66,27 @@ This is a high-level overview of the steps needed to run the continous operation
 - Install Requirements from requirements.txt
 - Add .env file with the following contents in the top level folder:
     ```
-        RESOURCE_GROUP=axsa-lab-appl-fishsonar-rg
-        WORKSPACE_NAME=axsa-lab-appl-fishsonar-ml
-        SUBSCRIPTION_ID=your-azure-subscription-id
+        RESOURCE_GROUP=<your-azure-resource-group>
+        WORKSPACE_NAME=<your-azure-ml-workspace>
+        SUBSCRIPTION_ID=<your-azure-subscription-id>
   ```
-
+- Create a virtual environment:
+  ```bash
+    uv venv --python 3.11 .venv
+  ```
+- install dependencies
+  ```bash
+    source .venv/bin/activate
+    uv pip install -r requirements.dev.txt
+  ```
+- add the path to the demo yaml settings to your launch.json in VS-Code
+    "env": {
+        "PYTHONPATH": "${workspaceFolder}:${workspaceFolder}/analysis:${env:PYTHONPATH}",
+    },
+    "args": [
+        "--yaml_file", "settings/settings_stroppel.yaml",
+    ]
+  The processing oftentimes takes some seconds to start. Once the video pops up, it will take several seconds more of processing video material for tracks to show up. These tracks do not contain labels since tracking and classification are split into two different steps.
 
 # Running the algorithm
 
