@@ -1,10 +1,5 @@
 # Introduction 
-This is the codebase for the fish sonar project. The goal of this project is to provide a continuous 
-sonar based fish detection solution for HTU. To that end a sonar sensor is placed in the water and connected to a 
-Raspberry Pi via a HDMI capture device. The Raspberry Pi receives the stream of sonar images, runs 
-the fish detection algorithm on the data and stores the output and records the stream of sonar images. To 
-facilitate continuous operation the Raspberry Pi sends regular heartbeats to a hardware watchdog. At a later stage a 
-Grafana dashboard could act as cloud-based watchdog and alert users if the system is not running as expected.
+The fish sonar tracks fish and floating debris in front of run-of-river powerplants and classifies the trajectories into either fish or object. Based on the tracked fish, a bypass in the run-of-river powerplant can be opened to allow the fish to travel downstream safely. The current version of the fishsonar is not set up for real time classification of trajectories but instead runs tracking, saves trajectories, and then classifies the trajectories in batch.
 
 # Sample Results - Powerplant Stroppel
 <p align="center">
@@ -13,13 +8,11 @@ Grafana dashboard could act as cloud-based watchdog and alert users if the syste
 
 # Stucture
 The codebase is structured into the following sections:
-- **algorithm**: the fish detection algorithm, taking a video file as an input and giving .csv / visual / video 
-  output. This part of the code shall be open-sourced at a later stage of the project and can function independently 
-  of the rest of the continuous operation setup.
-- **analysis**: all code related to applications of the algorithm for development or special 
-  projects. This section stores input files, output files and tools.
-- **continous_operation**: all code pertaining to the setup, initialization and continuous operation of the 
-  Raspberry Pi for tracking in Stroppel.
+- **algorithm**: The fish detection algorithm, taking a video file as an input and giving .csv / visual / video 
+  output for trajectories. 
+- **analysis**: All code associated with the classification of trajectories into the categories fish and 
+- **continous_operation (deprecated)**: Code pertaining to the setup, initialization and continuous operation of the 
+  Raspberry Pi for tracking in Stroppel. This part is deprecated since for Lavey and all future sonar installations, a more professional setup for video capture and storage will be used.
 
 ## Data Structure
 The data structure is as follows:
@@ -27,40 +20,14 @@ The data structure is as follows:
     - data
         - labels
         - model_output
-        - intermediate
-          - videos
-          - labels
         - raw
           - videos
           - labels 
 
-- *labeled_videos* : contains the labeled videos.
-- *labels*: this is where the output of *extract_labels_from_videos.py* is stored.
-- *model_output* : contains the output of the fish detection algorithm. This includes a folder for each video file 
-    containing the .csv file with the fish detections and the visual output.
+- *model_output* : Contains the output of the fish detection algorithm as video and csv. 
 - *raw*: contains the raw video files.
-  - videos: contains the raw video files.
-  - labels: contains the labels video files
-- *intermediate*: cotaions the output of the *reduce_frame_rate.py* script. This includes a folder for each video file 
-    containing the reduced frame rate video file.
-
-# Continuous operation
-This is a high-level overview of the steps needed to run the continous operation.
-1. Assemble the hardware as described in [Mingle](https://mingle.axpo.com/display/HTD/System+Overview) 
-2. Follow the instructions in continous_operation/raspberry_pi_setup_instructions.md to prepare the Raspberry Pi 
-   software. This includes installing Ubuntu, git, getting the repo, installing the requirements and setting up 
-   autostart on reboot and the watchdog.
-3. Specify the desired output directory, detector setup and other settings in continous_operation/settings. When 
-   establishing a new location or sonar settings be sure to adapt the settings and masks of the algorithm on a 
-   sample recording file using the algorithms interactive visual output.
-4. Reboot the system and the recording should start after 2 minutes. 
-5. Monitor the recording and the outputs using the commands in continous_operation/src/controller.py. They should be 
-   accessible via an alias, e.g., "control check_status". 
-
-# Running Tests
-- For now, tests have to be executed from the tests folder.
-  - This is due to the fact that the algorithm relies on relative paths, and this behaviour should be tested in the tests
-- use this to run it: ```export PYTHONPATH=${PYTHONPATH}:$(pwd); cd tests; pytest```
+  - videos: Contains the raw video files.
+  - labels: Contains the labels video files. If a csv with labeled fish tracks exists in this directory, they are read and displayed in the output video. This way videos with labeled trajectories can be generated
 
 # Running Locally
 - Install Requirements from requirements.txt
@@ -87,6 +54,19 @@ This is a high-level overview of the steps needed to run the continous operation
         "--yaml_file", "settings/settings_stroppel.yaml",
     ]
   The processing oftentimes takes some seconds to start. Once the video pops up, it will take several seconds more of processing video material for tracks to show up. These tracks do not contain labels since tracking and classification are split into two different steps.
+- install `ffmpeg` for compression of the mp4 (this might take several minutes)
+  ```bash
+  sudo apt install ffmpeg
+  ```
+  or with brew
+  ```bash
+    brew install ffmpeg
+  ```
+
+# Running Tests
+- For now, tests have to be executed from the tests folder.
+  - This is due to the fact that the algorithm relies on relative paths, and this behaviour should be tested in the tests
+- use this to run it: ```export PYTHONPATH=${PYTHONPATH}:$(pwd); cd tests; pytest```
 
 # Running the algorithm
 

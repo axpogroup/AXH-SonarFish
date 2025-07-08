@@ -1,5 +1,5 @@
 # Input / Output
-file_name: "start_2023-11-21T17-37-01.696+00-00.mp4"
+file_name: "start_2023-11-21T17-37-01.697+00-00.mp4" # the format has to follow this form for the date to be parsed correctly
 input_directory:  "data/raw/videos/"
 mask_directory: "analysis/demo/masks"
 output_directory: "data/model_output/"
