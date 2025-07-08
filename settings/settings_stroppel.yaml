@@ -21,7 +21,7 @@ store_raw_image_patch: False
 store_median_image_patch: False
 show_detections: True
 display_output_video: True
-display_mode_extensive: False
+display_mode_extensive: False # Let's you control video processing parameters during processing
 display_trackbars: False
 feature_to_load: "max_blob_count"
 
