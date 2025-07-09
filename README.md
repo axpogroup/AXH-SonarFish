@@ -24,18 +24,6 @@ Install dependencies:
   source .venv/bin/activate
   uv pip install -r requirements.txt
   ```
-Configure VS Code for debugging by adding the following to your `launch.json`:
-  ```json
-  {
-    "env": {
-      "PYTHONPATH": "${workspaceFolder}:${workspaceFolder}/analysis:${env:PYTHONPATH}"
-    },
-    "args": [
-      "--yaml_file", "settings/settings_stroppel.yaml"
-    ]
-  }
-  ```
-  The processing oftentimes takes some seconds to start. Once the video pops up, it will take several seconds more of processing video material for tracks to show up. These tracks do not contain labels since tracking and classification are split into two different steps.
 Install `ffmpeg` for compression of the mp4 (this might take several minutes):
   ```bash
   # Ubuntu/Debian
@@ -58,6 +46,7 @@ You can now run the `algorithm/run_algorithm.py` file in debugging mode in VS Co
 ```bash
 python algorithm/run_algorithm.py --yaml_file settings/settings_stroppel.yaml
 ```
+The processing oftentimes takes some seconds to start. Once the video pops up, it will take several seconds more of processing video material for tracks to show up. These tracks do not contain labels since tracking and classification are split into two different steps.
 
 ### Run on a batch of files and evaluating the output on Azure-ML
 You can run the tracking and classification algorithms as Azure-ML pipelines with the [run_on_azure/](run_on_azure/launch_kalman_tracking_azure.ipynb) notebook. The notebook has different pipelines that either launch only tracking, tracking and classification, or tracking, classification, and labeling of videos with labeled trajectories. For classification you will need ground truth data for training the classification model and reference the correct path on your Azure ML workspace.
