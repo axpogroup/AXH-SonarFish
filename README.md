@@ -1,105 +1,144 @@
+# AXH-SonarFish
+
+[![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/release/python-3110/)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
+[![Azure ML](https://img.shields.io/badge/Azure-ML-0078D4?logo=microsoft-azure)](https://azure.microsoft.com/en-us/services/machine-learning/)
+[![OpenCV](https://img.shields.io/badge/OpenCV-computer%20vision-5C3EE8?logo=opencv)](https://opencv.org/)
+
 # Introduction 
-This is the codebase for the fish sonar project. The goal of this project is to provide a continuous 
-sonar based fish detection solution for HTU. To that end a sonar sensor is placed in the water and connected to a 
-Raspberry Pi via a HDMI capture device. The Raspberry Pi receives the stream of sonar images, runs 
-the fish detection algorithm on the data and stores the output and records the stream of sonar images. To 
-facilitate continuous operation the Raspberry Pi sends regular heartbeats to a hardware watchdog. At a later stage a 
-Grafana dashboard could act as cloud-based watchdog and alert users if the system is not running as expected.
+The fish sonar tracks fish and floating debris in front of run-of-river powerplants and classifies the trajectories into either fish or object. Based on the tracked fish, a bypass in the run-of-river powerplant can be opened to allow the fish to travel downstream safely. The current version of the fishsonar is not set up for real time classification of trajectories but instead runs tracking, saves trajectories, and then classifies the trajectories in batch.
 
-# Stucture
-The codebase is structured into the following sections:
-- **algorithm**: the fish detection algorithm, taking a video file as an input and giving .csv / visual / video 
-  output. This part of the code shall be open-sourced at a later stage of the project and can function independently 
-  of the rest of the continuous operation setup.
-- **analysis**: all code related to applications of the algorithm for development or special 
-  projects. This section stores input files, output files and tools.
-- **continous_operation**: all code pertaining to the setup, initialization and continuous operation of the 
-  Raspberry Pi.
+### Powerplant Stroppel Example Results
+<p align="center">
+  <img src="data/sample_tracking/stroppel.gif" alt="Fish Detection Demo" width="900">
+</p>
 
-## Data Structure
-The data structure is as follows:
-
-    - data
-        - labels
-        - model_output
-        - intermediate
-          - videos
-          - labels
-        - raw
-          - videos
-          - labels 
-
-- *labeled_videos* : contains the labeled videos.
-- *labels*: this is where the output of *extract_labels_from_videos.py* is stored.
-- *model_output* : contains the output of the fish detection algorithm. This includes a folder for each video file 
-    containing the .csv file with the fish detections and the visual output.
-- *raw*: contains the raw video files.
-  - videos: contains the raw video files.
-  - labels: contains the labels video files
-- *intermediate*: cotaions the output of the *reduce_frame_rate.py* script. This includes a folder for each video file 
-    containing the reduced frame rate video file.
-
-# Continuous operation
-This is a high-level overview of the steps needed to run the continous operation.
-1. Assemble the hardware as described in [Mingle](https://mingle.axpo.com/display/HTD/System+Overview) 
-2. Follow the instructions in continous_operation/raspberry_pi_setup_instructions.md to prepare the Raspberry Pi 
-   software. This includes installing Ubuntu, git, getting the repo, installing the requirements and setting up 
-   autostart on reboot and the watchdog.
-3. Specify the desired output directory, detector setup and other settings in continous_operation/settings. When 
-   establishing a new location or sonar settings be sure to adapt the settings and masks of the algorithm on a 
-   sample recording file using the algorithms interactive visual output.
-4. Reboot the system and the recording should start after 2 minutes. 
-5. Monitor the recording and the outputs using the commands in continous_operation/src/controller.py. They should be 
-   accessible via an alias, e.g., "control check_status". 
-
-# Running Tests
-- For now, tests have to be executed from the tests folder.
-  - This is due to the fact that the algorithm relies on relative paths, and this behaviour should be tested in the tests
-- use this to run it: ```export PYTHONPATH=${PYTHONPATH}:$(pwd); cd tests; pytest```
-
-# Running Locally
-- Install Requirements from requirements.txt
-- Add .env file with the following contents in the top level folder:
-    ```
-        RESOURCE_GROUP=axsa-lab-appl-fishsonar-rg
-        WORKSPACE_NAME=axsa-lab-appl-fishsonar-ml
-        SUBSCRIPTION_ID=your-azure-subscription-id
+# Environment Setup
+Create a virtual environment with uv:
+  ```bash
+  uv venv --python 3.11 .venv
   ```
-
+Install dependencies:
+  ```bash
+  source .venv/bin/activate
+  uv pip install -r requirements.txt
+  ```
+Install `ffmpeg` for compression of the mp4 (this might take several minutes):
+  ```bash
+  # Ubuntu/Debian
+  sudo apt install ffmpeg
+  
+  # macOS with Homebrew
+  brew install ffmpeg
+  ```
+optional: Add .env file with the following contents in the top level folder:
+  ```bash
+    RESOURCE_GROUP=<your-azure-resource-group>
+    WORKSPACE_NAME=<your-azure-ml-workspace>
+    SUBSCRIPTION_ID=<your-azure-subscription-id>
+  ```
 
 # Running the algorithm
 
-## Run on a batch of files and evaluating the output
-
-1. Store your prelabeled videos in the folder `data/raw/labels`
-2. If you want to reduce the frame rate of the videos, run the script `analysis/reduce_frame_rate.py`. This script needs `settings/preprocessing_settings.yaml` file where you have to choose:
-   1. fps: the desired frame rate
-   You will need to do this both for the raw videos and the labeled videos in order for the labels to match.
-3. To extract the labels in csv run `algorithm/scripts/extract_labels_from_videos.py` with settings file tracking_box_settings.yaml.
-   in the folder `data/intermediate/labels`
-4. Run the algorithm for one video using `algorithm/run_algorithm.py`. E.g.: `python3 algorithm/run_algorithm.py -yf 
-   settings/demo_settings.yaml`. Specify the name of the video file in the settings file. 
-5. Use the settings "display_output_video: True" and "display_mode_extensive: True" to tune the settings in an 
-   interactive window and "display_mode_extensive: False" to read the velocity of the river. 
-6. Evaluate the output using the script `algorithm/validation/mot16_metrics.py`.
-
-
-## Run on a sample video
-1. Download the sample sonar video from here: [demo_sample_sonar_recording.mp4 - Sharepoint](https://axpogrp.sharepoint.com/:v:/s/DEPTHTD-A/ESdKpDEWDEBDqYR6KVFZ0D8BJrxKcDi6F8JaenjD0YhWWw?e=5jNCLF) 
-2. Place the video in the following folder: `data/raw/videos/`
-3. Do the same steps as in the previous section and comment out the ground_truth_directory in the settings file. This will cause the algorithm to not compare the output with the ground truth.
-
-# Labeling Videos
-We use the video editing tool shotcut to label videos.
-## Converting Colormaps
-You can convert the red colormap the sonar videos are stored in to a jet colormap, which is easier to interpret for the human eye. The script, `convert_video_red_to_jet.py`, does this transformation.
-You can (after activating the `.venv` of the project) run the script with
+### Run on a sample video
+You can now run the `algorithm/run_algorithm.py` file in debugging mode in VS Code or with:
 ```bash
-python .algorithm/convert_video_red_to_jet.py </path/to/your/video.mp4>
+python algorithm/run_algorithm.py --yaml_file settings/settings_stroppel.yaml
 ```
-Replace `</path/to/your/video.mp4>` with the path to the video file you want to process.
-You can also specify the boosting $\alpha$ and $\beta$ for the conversion with the `--boosting_alpha` and `--boosting_beta` flags. The defaults are 2.0 and 30.0 respectively.
+The processing oftentimes takes some seconds to start. Once the video pops up, it will take several seconds more of processing video material for tracks to show up. These tracks do not contain labels since tracking and classification are split into two different steps.
 
-# Comments
-Tested with Python 3.10, 
-direct questions to the Axpo HTD-A team 
+### Run on a batch of files and evaluating the output on Azure-ML
+You can run the tracking and classification algorithms as Azure-ML pipelines with the [run_on_azure/](run_on_azure/launch_kalman_tracking_azure.ipynb) notebook. The notebook has different pipelines that either launch only tracking, tracking and classification, or tracking, classification, and labeling of videos with labeled trajectories. For classification you will need ground truth data for training the classification model and reference the correct path on your Azure ML workspace.
+
+# Structure
+
+<details>
+<summary><b>Click to expand project structure</b></summary>
+
+The codebase is structured into the following sections:
+- **algorithm:** The fish detection algorithm, taking a video file as an input and giving .csv / visual / video 
+  output for trajectories. 
+- **analysis:** All code associated with the classification of trajectories into the categories fish and object.
+- **continous_operation (deprecated):** Code pertaining to the setup, initialization and continuous operation of the 
+  Raspberry Pi for tracking in Stroppel. This part is deprecated since for Lavey and all future sonar installations, a more professional setup for video capture and storage will be used.
+- **run_on_azure:** definitions of Azure-ML pipelines and launch notebook to run tracking and classification on a large number of videos in a blob storage. We have run analysis on up to 80'000 videos, the equivalent of 1 year of continuous video material.
+
+### Data Structure
+The data structure is as follows:
+
+```
+data/
+├── labels/
+├── model_output/
+└── raw/
+    ├── videos/
+    └── labels/
+```
+
+- **model_output**: Contains the output of the fish detection algorithm as video and csv. 
+- **raw**: contains the raw video files.
+  - **videos**: Contains the raw video files.
+  - **labels**: Contains the labels video files. If a csv with labeled fish tracks exists in this directory, they are read and displayed in the output video. This way videos with labeled trajectories can be generated
+
+</details>
+
+# How to Contribute
+
+<details>
+<summary><b>Click to expand contribution guidelines</b></summary>
+
+We welcome contributions to the Fish Sonar project! Here's how you can help:
+
+### Getting Started
+1. Fork the repository and create your feature branch from `main`
+2. Set up the development environment following the [Environment Setup](#environment-setup) instructions
+3. Install pre-commit hooks to ensure code quality:
+   ```bash
+   pre-commit install
+   ```
+4. Install dev requirements
+    ```bash
+    uv pip install -r requirements.dev.txt
+    ```
+
+### Running Tests
+For now, tests have to be executed from the tests folder. This is due to the fact that the algorithm relies on relative paths, and this behaviour should be tested in the tests. Use this command to run tests:
+  ```bash
+  export PYTHONPATH=${PYTHONPATH}:$(pwd); cd tests; pytest
+  ```
+
+### Development Guidelines
+- **Code Style**: We use [Black](https://github.com/psf/black) for Python formatting, [isort](https://github.com/PyCQA/isort) for import sorting, and [Flake8](https://flake8.pycqa.org/) for linting. These are automatically enforced through pre-commit hooks
+- **Testing**: Add tests for new features in the [`tests/`](tests/) directory. Run tests with:
+  ```bash
+  export PYTHONPATH=${PYTHONPATH}:$(pwd); cd tests; pytest
+  ```
+- **Documentation**: Update the README and add docstrings to new functions and classes
+
+### Making a Pull Request
+1. Ensure your code passes all pre-commit checks
+2. Write clear commit messages describing your changes
+3. Create a pull request with a description of what you've done
+4. Link any relevant issues in your PR description
+
+### Reporting Issues
+- Use GitHub Issues to report bugs or suggest features
+- Include relevant information: Python version, error messages, and steps to reproduce
+
+### Areas We Need Help
+- Improving real-time classification capabilities
+- Enhancing trajectory classification accuracy
+- Documentation improvements
+- Test coverage expansion
+- Performance optimizations for video processing
+
+</details>
+
+# Creating Ground Truth Data
+The easiest way to create ground truth data is to run the tracking on the videos you want to use to extract ground truth trajectories. You can run the tracking and select the dual output mode in the tracking settings yaml. This will save a single video with two versions of the sonar video next to eachother, the original and the video with tracks and ids displayed. Noting down the tracks of fish in a csv can then be joined onto the output track csv to have tracks with labels.
+
+An alternative approach is the use of a video editing tool that allows to track a trajectory with your mouse pointer. We have found this approach more cumbersome than the one described above.
+
+# Acknowledgements
+Development of this project was financed by the Swiss Bundesamt für Umwelt BAFU. Further details can be found in the [notice file](NOTICE).

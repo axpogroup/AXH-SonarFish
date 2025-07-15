@@ -1,5 +1,5 @@
 # Input / Output
-file_name: "start_2023-05-08T18-00-05.025+00-00.mp4"
+file_name: "start_2023-11-21T17-37-01.697+00-00.mp4" # the format has to follow this form for the date to be parsed correctly
 input_directory:  "data/raw/videos/"
 mask_directory: "analysis/demo/masks"
 output_directory: "data/model_output/"
@@ -20,8 +20,8 @@ draw_detections_on_saved_video: True
 store_raw_image_patch: False
 store_median_image_patch: False
 show_detections: True
-display_output_video: False
-display_mode_extensive: False
+display_output_video: True
+display_mode_extensive: False # Let's you control video processing parameters during processing
 display_trackbars: False
 feature_to_load: "max_blob_count"
 
