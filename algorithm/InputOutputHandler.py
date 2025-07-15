@@ -1,6 +1,9 @@
+import datetime as dt
 import json
-import os
+import shutil
+import subprocess
 from pathlib import Path
+from typing import Optional
 
 import cv2 as cv
 import numpy as np
@@ -8,21 +11,30 @@ import pandas as pd
 
 from algorithm import visualization_functions
 from algorithm.DetectedObject import KalmanTrackedBlob
+from algorithm.FishDetector import FishDetector
+from algorithm.inputs import video_reading
 from algorithm.utils import get_elapsed_ms
 
 
 class InputOutputHandler:
-    def __init__(self, settings_dict):
+    def __init__(
+        self,
+        settings_dict: dict,
+    ):
         self.fps_out = 10
         self.video_writer = None
         self.settings_dict = settings_dict
-        self.video_cap = cv.VideoCapture(
-            str(Path(self.settings_dict["input_directory"]) / self.settings_dict["file_name"])
-        )
         self.input_filename = Path(self.settings_dict["file_name"])
+        self.set_video_cap()
+
+        self.start_timestamp = video_reading.extract_timestamp_from_filename(
+            self.input_filename, self.settings_dict["file_timestamp_format"]
+        )
+
         self.output_dir_name = self.settings_dict["output_directory"]
-        self.output_csv_name = None
-        self.output_csv_name = os.path.join(self.output_dir_name, (self.input_filename.stem + ".csv"))
+        self.temp_output_dir_name = Path.cwd() / "temp"
+        self.temp_output_dir_name.mkdir(exist_ok=True)
+        self.output_csv_name = Path(self.output_dir_name) / (self.input_filename.stem + ".csv")
         self.playback_paused = False
         self.usr_input = None
         self.frame_no = 0
@@ -31,14 +43,36 @@ class InputOutputHandler:
         self.start_ticks = 1
         self.index_in = -1
         self.index_out = -1
+        self.down_sample_factor = self.fps_in / self.fps_out
         self.frame_retrieval_time = None
         self.last_output_time = None
         self.current_raw_frame = None
+        self.created_trackbars = False
 
-    def get_new_frame(self):
+    def get_new_frame(self, start_at_frames_from_end: int = 0) -> bool:
         start = cv.getTickCount()
         tries = 0
+
         if self.video_cap.isOpened():
+            if start_at_frames_from_end > 0:
+                # before we can set the index, we need to grab a frame successfully
+                while tries < 5:
+                    success = self.video_cap.grab()
+                    if success:
+                        break
+                    tries += 1
+                if not success:
+                    print("Can't receive frame (stream end?). Exiting ...")
+                    self.shutdown()
+                    self.frame_retrieval_time = get_elapsed_ms(start)
+                    return False
+
+                tries = 0
+                total_frames = int(self.video_cap.get(cv.CAP_PROP_FRAME_COUNT))
+                start_frame = max(0, total_frames - start_at_frames_from_end)
+                self.video_cap.set(cv.CAP_PROP_POS_FRAMES, start_frame)
+                self.index_in = start_frame
+
             while tries < 5:
                 success = self.video_cap.grab()
                 if success:
@@ -64,8 +98,15 @@ class InputOutputHandler:
             self.frame_retrieval_time = get_elapsed_ms(start)
             return False
 
+    def set_video_cap(self):
+        input_file_path = Path(self.settings_dict["input_directory"]) / self.settings_dict["file_name"]
+        assert input_file_path.exists(), f"Error: Input file {input_file_path} does not exist."
+
+        self.video_cap = cv.VideoCapture(str(input_file_path))
+        assert self.video_cap.isOpened(), "Error: Video Capturer could not be opened."
+
     @staticmethod
-    def get_detections_pd(object_history: dict[int, KalmanTrackedBlob]) -> pd.DataFrame:
+    def get_detections_pd(object_history: dict[int, KalmanTrackedBlob], detector: FishDetector) -> pd.DataFrame:
         rows = []
         for _, obj in object_history.items():
             if obj.detection_is_tracked:
@@ -105,6 +146,7 @@ class InputOutputHandler:
             ],
         )
         detections_df["image_tile"] = detections_df["image_tile"].apply(lambda x: json.dumps(x.tolist()))
+        detections_df["burn_in_video"] = detector.burn_in_video_name
         # detections_df["raw_image_tile"] = detections_df["raw_image_tile"].apply(lambda x: json.dumps(x.tolist()))
         return detections_df
 
@@ -127,7 +169,7 @@ class InputOutputHandler:
             detector.conf["brightness"] = value
 
         def change_diff_thresh(value):
-            detector.conf["difference_threshold_scaler"] = value / 10
+            detector.conf["difference_threshold_scaler"] = value / 100
 
         def change_median_filter_kernel(value):
             detector.conf["median_filter_kernel_mm"] = value
@@ -158,9 +200,9 @@ class InputOutputHandler:
             change_long_mean_frames,
         )
         cv.createTrackbar(
-            "diff_thresh*10",
+            "diff_thresh*100",
             "frame",
-            int(detector.conf["difference_threshold_scaler"] * 10),
+            int(detector.conf["difference_threshold_scaler"] * 100),
             127,
             change_diff_thresh,
         )
@@ -178,11 +220,12 @@ class InputOutputHandler:
             1200,
             change_dilatation_kernel,
         )
+        self.created_trackbars = True
 
     def show_image(self, img, detector):
         cv.imshow("frame", img)
 
-        if "display_trackbars" in self.settings_dict.keys() and self.settings_dict["display_trackbars"]:
+        if self.settings_dict.get("display_trackbars", False) and not self.created_trackbars:
             self.trackbars(detector)
 
         # Wait briefly for user input unless the video is paused
@@ -208,31 +251,48 @@ class InputOutputHandler:
         self,
         processed_frame,
         object_history: dict[int, KalmanTrackedBlob],
-        runtimes,
+        runtimes: Optional[dict[str, float]],
         detector,
         label_history=None,
     ):
         total_runtime, total_time_per_frame = self.calculate_total_time()
-        if self.frame_no % 20 == 0:
+        if self.frame_no % 20 == 0 and detector.conf.get("verbosity", 2) > 1:
             if total_time_per_frame == 0:
                 total_time_per_frame = 1
-            down_sample_factor = self.fps_in / self.fps_out
             print(
-                f"Processed {'{:.1f}'.format(self.frame_no * down_sample_factor / self.frames_total * 100)} % of video."
-                f"Runtimes [ms]: getFrame: {self.frame_retrieval_time} | Enhance: {runtimes['enhance']} | "
-                f"DetectTrack: {runtimes['detection_tracking']} | "
-                f"Total: {total_time_per_frame} | FPS: {'{:.1f}'.format(self.frame_no/(2*total_runtime/1000))}"
+                f"Processed {'{:.1f}'.format(self.frame_no * self.down_sample_factor / self.frames_total * 100)} \
+                    % of video."
             )
+            if runtimes:
+                print(
+                    f"Runtimes [ms]: getFrame: {self.frame_retrieval_time} | Enhance: {runtimes['enhance']} | "
+                    f"DetectTrack: {runtimes['detection_tracking']} | "
+                    f"Total: {total_time_per_frame} | FPS: {'{:.1f}'.format(self.frame_no/(2*total_runtime/1000))}"
+                )
         if self.settings_dict["display_output_video"] or self.settings_dict["record_output_video"]:
-            extensive = self.settings_dict["display_mode_extensive"]
             disp = visualization_functions.get_visual_output(
                 object_history=object_history,
                 label_history=label_history,
                 detector=detector,
                 processed_frame=processed_frame,
-                extensive=extensive,
+                extensive=self.settings_dict.get("display_mode_extensive", False),
+                dual_output=self.settings_dict.get("display_mode_dual", False),
                 save_frame=self.settings_dict["record_processing_frame"],
             )
+
+            # Put timestamp on frame
+            timestamp = self.start_timestamp + dt.timedelta(seconds=self.index_in / self.fps_in)
+            text_location = (int((0.74 * disp.shape[1])), int((0.907 * disp.shape[0])))
+            cv.putText(
+                disp,
+                timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+                text_location,
+                cv.FONT_HERSHEY_SIMPLEX,
+                1,
+                (255, 255, 255),
+                2,
+            )
+
             if self.settings_dict["record_output_video"]:
                 if not self.video_writer:
                     self.initialize_output_recording(
@@ -267,15 +327,50 @@ class InputOutputHandler:
             fps = fps // 2
 
         output_video_name = f"{self.input_filename.stem}_{self.settings_dict['record_processing_frame']}_output.mp4"
+        if self.settings_dict.get("compress_output_video", False):
+            self.output_video_path = Path(self.temp_output_dir_name) / output_video_name
+        else:
+            self.output_video_path = Path(self.output_dir_name) / output_video_name
 
         # initialize the FourCC and a video writer object
         fourcc = cv.VideoWriter_fourcc("m", "p", "4", "v")
         self.video_writer = cv.VideoWriter(
-            os.path.join(self.output_dir_name, output_video_name),
+            str(self.output_video_path),
             fourcc,
             fps,
             (frame_width, frame_height),
         )
+
+    def compress_output_video(self):
+        compressed_output_video_path = Path(self.output_dir_name) / self.output_video_path.name
+        command = [
+            "ffmpeg",
+            "-y",  # Overwrite output file if it exists
+            "-i",
+            str(self.output_video_path),
+            "-vf",
+            "format=yuv420p",
+            "-c:v",
+            "libx264",
+            "-crf",
+            str(35),  # Constant Rate Factor (0-51, 0 is lossless)
+            "-preset",
+            "medium",
+            str(compressed_output_video_path),
+        ]
+        print(f"Compressing output video to {compressed_output_video_path} ...")
+        try:
+            subprocess.run(command, check=True)
+        except subprocess.CalledProcessError:
+            print("Compression failed, copying the video without compression.")
+            shutil.copy(self.output_video_path, compressed_output_video_path)
+
+    def delete_temp_output_dir(self):
+        if self.temp_output_dir_name.exists():
+            print("Deleting temporary output directory ...")
+            for file in self.temp_output_dir_name.iterdir():
+                file.unlink()
+            self.temp_output_dir_name.rmdir()
 
     def shutdown(self):
         self.video_cap.release()

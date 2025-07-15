@@ -53,6 +53,10 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get install ffmpeg
       
       - name: Run tests
         run: |

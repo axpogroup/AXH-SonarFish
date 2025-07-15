@@ -1,0 +1,80 @@
+# Input / Output
+file_name: "."
+file_timestamp_format: "sonarname_%b%d_%H-%M-%S.mp4" # one of ["sonarname_%b%d_%H-%M-%S.mp4", "start_%Y-%m-%dT%H-%M-%S.%f%z.mp4"]
+input_directory:  "."
+mask_directory: "./masks/"
+output_directory: "."
+ground_truth_directory: "."
+labels_file_suffix: ""
+mask_file: "lavey_passe3_flow_area_mask.png" # one of ["sonar_controls.png", "stroppel_non_object_space.png", "herrendoebeli_non_object_space.png", "lavey_non_object_space.png"]
+
+# Azure ML
+experiment_name: "how_much_is_the_fish_at_lavey"
+track_azure_ml: False
+
+tag: "label"
+record_output_video: True # Only works for full resolution output
+compress_output_video: True
+record_processing_frame: "raw" # one of ['raw', 'raw_downsampled', 'gray', 'gray_boosted', 'long_mean', 'short_mean', 'difference', 'absolute_difference', 'difference_thresholded', 'difference_thresholded_abs', 'median_filter', 'binary', 'dilated']
+draw_detections_on_saved_video: True
+store_raw_image_patch: False
+store_median_image_patch: True
+show_detections: True
+annotate_detections: True
+features_to_annotate: [] # ["bbox_size_to_stddev_ratio", "velocity"]
+display_output_video: False
+display_mode_extensive: False
+display_mode_dual: True
+display_trackbars: False
+feature_to_load: "max_blob_count"
+
+# TODO: check saving video with dual output mode, then run on Passe videos
+
+# Size
+input_pixels_per_mm: 0.0838
+
+# Enhancement
+downsample: 25
+contrast: 1.5
+brightness: 30
+long_mean_frames: 200
+short_mean_frames: 5
+difference_threshold_scaler: 0.25
+dilation_kernel_mm: 50
+median_filter_kernel_mm: 75
+erosion_kernel_mm: 100
+
+
+# Tracking
+tracking_method: "kalman" # one of ['nearest_neighbor', 'kalman']
+max_association_dist_mm: 70
+phase_out_after_x_frames: 20
+kalman_std_obj_initialization_factor: 0.2
+kalman_std_obj_initialization_trace: [1, 1, 0.1, 1, 0.5, 0.5, 0.0001, 0.5] # [x, y, w, h, vx, vy, va, vh]
+kalman_std_process_noise_factor: 2
+kalman_std_process_noise_trace: [1, 1, 0.1, 1, 0.05, 0.05, 0.0001, 0.05] # [x, y, w, h, vx, vy, va, vh]
+kalman_std_mmt_noise_factor: 50
+kalman_std_mmt_noise_trace: [5, 5, 1, 0.05] # [x, y, a, h]
+kalman_rotate_mmt_noise_in_river_direction: False
+kalman_trace_history_matching_budget: 5
+kalman_max_iou_distance: 0.85 # basically (1 - iou_min)
+kalman_max_age: 20
+kalman_n_init: 20
+filter_nearest_neighbor:
+filter_blob_matching_metric: "histogram" # one of ['euclidean_distance', 'blob_area', 'histogram', 'mutual_information', 'fft']
+filter_association_thresh: 0.2 # not relevant if euclidean_distance is chosen (uses max_association_dist_mm)
+filter_blob_elimination_metric: "euclidean_distance" # one of ['euclidean_distance']
+bbox_size_to_stddev_ratio_threshold: 10
+
+
+# Classification
+river_pixel_velocity: [0.1, 0.1] # At full resolution, used to limit velocity
+min_occurences_for_fish: 20 # should be at least 20 for sensible calculation of velocity
+deviation_from_river_velocity: 0.5
+
+# Visualization
+no_more_show_after_x_frames: 1
+video_colormap: "red"
+
+# Logs
+verbosity: 2

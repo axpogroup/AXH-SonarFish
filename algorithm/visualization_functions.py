@@ -14,6 +14,7 @@ FIRST_ROW = [
     "difference",
 ]
 SECOND_ROW = ["difference_thresholded", "median_filter", "binary", "dilated"]
+TRUTH_LABEL_NO = -1
 
 
 def get_visual_output(
@@ -22,10 +23,30 @@ def get_visual_output(
     detector: FishDetector,
     processed_frame: dict[str, np.ndarray],
     extensive=False,
+    dual_output=False,
     color=(255, 200, 200),
     save_frame: str = "raw",
 ):
-    if extensive:
+    assert not (dual_output and extensive), "dual_output and extensive can't both be True"
+
+    if dual_output:
+        # Get the raw frame without detections
+        raw_frame = _retrieve_frame(save_frame, processed_frame)
+
+        # Get the raw frame with detections
+        detected_frame = _draw_detections_and_labels(
+            detector=detector,
+            object_history=object_history,
+            label_history=label_history,
+            processed_frame=_retrieve_frame(save_frame, processed_frame),
+            color=color,
+            paths=True,
+            fullres=True,
+        )
+
+        # Concatenate the two frames horizontally
+        disp = np.concatenate((raw_frame, detected_frame), axis=1)
+    elif extensive:
         first_row_images = np.ndarray(shape=(270, 0, 3), dtype="uint8")
         second_row_images = np.ndarray(shape=(270, 0, 3), dtype="uint8")
         for frame_type in FIRST_ROW:
@@ -76,19 +97,15 @@ def get_visual_output(
         disp = np.concatenate((first_row_images, second_row_images, third_row_images))
 
     else:
-        img = _retrieve_frame(save_frame, processed_frame)
-        if _draw_detections_and_labels:
-            disp = _draw_detections_and_labels(
-                detector=detector,
-                object_history=object_history,
-                label_history=label_history,
-                processed_frame=_retrieve_frame("raw", processed_frame),
-                color=color,
-                paths=True,
-                fullres=True,
-            )
-        else:
-            disp = img
+        disp = _draw_detections_and_labels(
+            detector=detector,
+            object_history=object_history,
+            label_history=label_history,
+            processed_frame=_retrieve_frame("raw", processed_frame),
+            color=color,
+            paths=True,
+            fullres=True,
+        )
 
     return disp
 
@@ -102,8 +119,14 @@ def _draw_detections_and_labels(
     **kwargs,
 ):
     disp = processed_frame
-    if detector.conf["show_detections"]:
-        disp = _draw_detector_output(object_history, detector, processed_frame, color=color, **kwargs)
+    if detector.conf["show_detections"] or detector.conf["draw_detections_on_saved_video"]:
+        disp = _draw_detector_output(
+            object_history,
+            detector,
+            processed_frame,
+            color=color,
+            **kwargs,
+        )
     if label_history is not None:
         disp = _draw_labels(label_history, detector, disp, **kwargs)
     return disp
@@ -144,15 +167,18 @@ def _draw_labels(
     fullres=False,
     association_dist=False,
 ):
-    labels_map = {0: "noise", 1: "fish", 2: "truth"}
+    labels_map = {0: "noise", 1: "fish", 2: "floating debris", -1: "truth"}
     for ID, obj in label_history.items():
         if is_detection_outdated(obj, detector):
             continue
         label = labels_map.get(obj.label)
         if label == "fish" or label == "truth":
             color = (57, 255, 20)
+        elif label == "floating debris":
+            color = (0, 255, 255)
         else:
             color = (57, 30, 255)
+        label = f"ID:{ID}, {label}"
         draw_basic_bounding_box_and_path(association_dist, color, detector, fullres, img, obj, paths, label=label)
     return img
 
@@ -164,7 +190,8 @@ def _draw_detector_output(
     paths=False,
     fullres=False,
     association_dist=False,
-    annotate=True,
+    draw_detections: bool = True,
+    annotate: bool = True,
     color=(255, 200, 200),
 ):
     for ID, obj in object_history.items():
@@ -173,36 +200,40 @@ def _draw_detector_output(
         h, scale, w, x, y = draw_basic_bounding_box_and_path(
             association_dist, color, detector, fullres, img, obj, paths
         )
-        if annotate:
+        if draw_detections:
             if obj.ellipse_angles[-1] is not None and obj.ellipse_axes_lengths_pairs[-1] is not None:
                 if not np.isnan(obj.ellipse_axes_lengths_pairs[-1]).any():
                     ellipse_axes_lengths = obj.ellipse_axes_lengths_pairs[-1].astype(int)
                     # if no nan in ellipse_axes_lengths:
                     cv.ellipse(
                         img,
-                        (obj.midpoints[-1][0], obj.midpoints[-1][1]),
-                        (ellipse_axes_lengths[0], ellipse_axes_lengths[1]),
+                        (obj.midpoints[-1][0] * scale, obj.midpoints[-1][1] * scale),
+                        (ellipse_axes_lengths[0] * scale, ellipse_axes_lengths[1] * scale),
                         obj.ellipse_angles[-1],
                         0,
                         360,
                         color,
-                        1 * scale,
+                        1,
                     )
             text = ""
             if len(obj.means_of_pixels_intensity) > 0:
-                ratio = obj.feature["bbox_size_to_stddev_ratio"]
-                text = f"ID:{obj.ID}, ratio: {int(ratio)}"
-                if len(obj.velocities) > 100:
-                    text += f", v [px/frame]: {obj.velocities[-1] * scale}"
-            cv.putText(
-                img,
-                text,
-                (x - int(w / 2), y - int(h / 2) - 2 * scale),
-                cv.FONT_HERSHEY_SIMPLEX,
-                0.5,
-                color,
-                2,
-            )
+                text = f"ID:{obj.ID}"
+                for feature in detector.conf.get("features_to_annotate", []):
+                    if feature == "velocity":
+                        if len(obj.velocities) > 0:
+                            text += f", {feature}: {obj.velocities[-1] * scale}"
+                    else:
+                        text += f", {feature}: {obj.feature[feature]}"
+            if detector.conf.get("annotate_detections", False):
+                cv.putText(
+                    img,
+                    text,
+                    (x - int(w / 2), y - int(h / 2) - 2 * scale),
+                    cv.FONT_HERSHEY_SIMPLEX,
+                    0.5,
+                    color,
+                    2,
+                )
     return img
 
 
@@ -226,14 +257,14 @@ def draw_basic_bounding_box_and_path(
         (x - int(w / 2), y - int(h / 2)),
         (x + int(w / 2), y + int(h / 2)),
         color,
-        thickness=1 * scale,
+        thickness=1,
     )
     if paths:
         for point in obj.midpoints:
             cv.circle(
                 img,
                 (point[0] * scale, point[1] * scale),
-                1 * scale,
+                1,
                 color,
                 thickness=-1,
             )
@@ -281,5 +312,5 @@ def draw_associations(associations, detections, object_history, img, color):
     return img
 
 
-def is_detection_outdated(obj, detector):
+def is_detection_outdated(obj, detector: FishDetector):
     return detector.frame_number - obj.frames_observed[-1] > detector.conf["no_more_show_after_x_frames"]

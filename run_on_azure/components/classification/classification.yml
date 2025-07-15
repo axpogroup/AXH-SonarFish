@@ -1,0 +1,35 @@
+# <component>
+$schema: https://azuremlschemas.azureedge.net/latest/commandComponent.schema.json
+type: command
+
+name: track_classification
+display_name: Classify the Tracked Objects
+inputs:
+  classification_settings_file:
+    type: string
+  train_val_gt_data_dir:
+    type: uri_folder
+  train_val_data_yaml:
+    type: string
+    default: "fish_labels.yaml"
+    optional: true
+  files_to_classify_dir:
+    type: uri_folder
+  log_level:
+    type: string
+    default: "INFO"
+    optional: true
+outputs:
+  classified_detections_dir:
+    type: uri_folder
+environment: azureml:fishy_environment@latest
+code: src
+command: >-
+  python run_classifier.py
+  --classification_settings_file ${{inputs.classification_settings_file}}
+  --train_val_gt_data_dir ${{inputs.train_val_gt_data_dir}}
+  --files_to_classify_dir ${{inputs.files_to_classify_dir}}
+  --classified_detections_dir ${{outputs.classified_detections_dir}}
+  $[[--train_val_data_yaml ${{inputs.train_val_data_yaml}}]]
+  $[[--log_level ${{inputs.log_level}}]]
+# </component>
