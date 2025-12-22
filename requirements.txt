@@ -38,4 +38,4 @@ isort==5.13.2
 mypy==1.8.0
 pytest==8.0.0
 
-marshmallow==3.23.2
+marshmallow==3.26.2
